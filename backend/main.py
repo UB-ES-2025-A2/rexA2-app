@@ -24,7 +24,6 @@ app.add_middleware(
 @app.on_event("startup")
 async def on_startup():
     await init_db()
-    print("BD conectada")
 
 # Incluir routers
 app.include_router(users.router)

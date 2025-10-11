@@ -22,7 +22,7 @@ async def register_user(payload: UserCreate):
     return {
         "id": str(user["_id"]),
         "email": user["email"],
-        "full_name": user.get("full_name"),
+        "username": user.get("username"),
         "is_active": user["is_active"],
     }
 
