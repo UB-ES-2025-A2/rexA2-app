@@ -1,0 +1,290 @@
+:root{
+  --bg:#0b0f17;
+  --card:#ffffff10;
+  --panel:#0e1421c7;
+  --text:#e9eef9;
+  --muted:#adbbd4;
+  --brand:#6ea8fe;
+  --brand-2:#8a5cff;
+  --ring:#ffffff55;
+  --error:#ff6b6b;
+  --close-from:#c7d2fe; /* lila claro */
+  --close-to:#8b5cf6;   /* lila */
+  --close-border:#1b2236;
+
+}
+
+*{box-sizing:border-box}
+html,body,#root{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #1d2436 0%, #0b0f17 60%) fixed; color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;}
+
+button{font:inherit}
+
+/* ========== Home skeleton ========== */
+.home__header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-bottom:1px solid #ffffff14;background:#0d1320aa;backdrop-filter: blur(6px); position:sticky;top:0}
+.brand{font-weight:700; letter-spacing:.2px}
+.icon-btn{width:36px;height:36px;border-radius:999px;border:1px solid #ffffff22;background:#ffffff0d;color:#fff;cursor:pointer;display:grid;place-items:center}
+.icon-btn:hover{background:#ffffff1e}
+
+.home__content{display:grid;grid-template-columns:340px 1fr;gap:18px;padding:18px;position:relative}
+.home__left-skeleton{height:70vh;border:1px dashed #ffffff25;border-radius:14px;background:#ffffff07}
+.home__map-skeleton{height:70vh;border:1px dashed #ffffff25;border-radius:14px;background:
+  linear-gradient(120deg,#ffffff06 25%,transparent 25% 35%,#ffffff06 35% 45%,transparent 45% 55%,#ffffff06 55% 65%,transparent 65%)}
+.fab{position:absolute;right:26px;bottom:26px;width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#0b0f17;border:none;
+  box-shadow:0 10px 30px #0008;cursor:pointer;font-size:22px;transition:transform .15s ease}
+.fab:hover{transform:translateY(-2px)}
+
+/* ========== Modal ========== */
+.modal__backdrop{
+  position:fixed;inset:0;background:rgba(6,10,18,.55);
+  backdrop-filter: blur(6px); display:grid; place-items:center; padding:20px; z-index:50;
+  animation:fadeIn .15s ease-out;
+}
+@keyframes fadeIn{from{opacity:0} to{opacity:1}}
+.modal__panel{
+  position:relative; width:min(680px,96vw); background:linear-gradient(180deg,#111827cc,#0b1222cc);
+  border:1px solid #ffffff2b; border-radius:18px; box-shadow:0 30px 80px #000a; padding:34px 26px;
+  overflow:hidden; isolation:isolate;
+}
+.modal__panel:before{
+  content:""; position:absolute; inset:-20%; background: radial-gradient(600px 300px at 80% -10%, #6ea8fe22, transparent 60%),
+                                   radial-gradient(400px 200px at -10% 120%, #8a5cff22, transparent 60%);
+  filter: blur(30px); z-index:-1;
+}
+.modal__close{
+  position:absolute; top:10px; right:12px; width:34px; height:34px; border-radius:10px;
+  background:#ffffff10; color:#fff; border:1px solid #ffffff22; cursor:pointer;
+}
+.modal__close:hover{background:#ffffff1e}
+
+/* ========== Auth Card ========== */
+.auth{max-width:420px;margin:0 auto;text-align:center}
+.auth__avatar{width:88px;height:88px;margin:0 auto 10px;position:relative}
+.auth__avatar-ring{
+  position:absolute;inset:0;border-radius:50%;border:2px dashed #ffffff3a; animation:spin 10s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+.auth__avatar-img{
+  width:88px;height:88px;border-radius:50%;display:grid;place-items:center;
+  background:#ffffff10;border:1px solid #ffffff2a;font-size:36px;
+}
+.auth__title{margin:8px 0 4px;font-size:24px;font-weight:800;letter-spacing:.2px}
+.auth__subtitle{margin:0 0 16px;color:var(--muted);font-size:14px}
+
+.auth__form{display:grid;gap:12px;margin-top:10px}
+
+.auth__utils{display:flex;justify-content:space-between;align-items:center;margin-top:2px}
+.auth__checkbox{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:14px}
+.auth__link{background:none;border:none;color:#bcd3ff;cursor:pointer;font-weight:600}
+.auth__link:hover{text-decoration:underline}
+
+.auth__switch{margin:12px 0 4px;color:var(--muted);font-size:14px}
+
+.auth__divider{display:grid;place-items:center;margin:10px 0 6px}
+.auth__divider span{
+  display:inline-block;padding:0 10px;color:#c7d5ff88;background:#0b1222;border:1px solid #ffffff22;border-radius:999px;font-size:12px
+}
+.auth__socials{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ========== Floating Inputs (Uiverse-like) ========== */
+.field{position:relative}
+.field__input{
+  width:100%; padding:14px 14px 14px 14px; border-radius:12px;
+  border:1px solid #ffffff2d; background:#0c1322; color:var(--text); outline:none;
+  transition:border .15s ease, box-shadow .15s ease;
+}
+.field__input:focus{border-color:#9db7ff; box-shadow:0 0 0 4px #6ea8fe22}
+.field__label{
+  position:absolute; left:12px; top:50%; transform:translateY(-50%);
+  color:#c7d5ff88; pointer-events:none; padding:0 6px; background:#0c1322; transition:all .15s ease;
+}
+.field__input:not(:placeholder-shown) + .field__label,
+.field__input:focus + .field__label{
+  top:-8px; font-size:12px; color:#bcd3ff; border-radius:8px;
+}
+.field__error{color:var(--error);font-size:12px;margin-top:4px;display:block}
+.field--error .field__input{border-color:var(--error)}
+.field--error .field__label{color:var(--error)}
+
+/* Password toggle */
+.pw{position:relative}
+.pw__toggle{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);border:none;background:none;color:#cbd7ff;
+  cursor:pointer;font-size:16px;padding:4px 6px;border-radius:8px;
+}
+.pw__toggle:hover{background:#ffffff14}
+
+/* Buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:12px 14px;border-radius:12px;border:1px solid #ffffff25;cursor:pointer;transition:transform .08s ease, box-shadow .15s ease;
+}
+.btn:active{transform:translateY(1px)}
+.btn--primary{
+  color:#0b0f17;background:
+    linear-gradient(135deg,var(--brand),var(--brand-2));
+  box-shadow:0 10px 30px #0008;
+}
+.btn--primary:hover{box-shadow:0 16px 40px #000a}
+.btn--ghost{
+  background:#0c1322;border:1px solid #ffffff26;color:#e9eef9;
+}
+.btn--ghost:hover{background:#111a2b}
+
+/* Responsive */
+@media (max-width:720px){
+  .home__content{grid-template-columns:1fr}
+}
+
+/* ====== Password eye (Uiverse moody-mole-16) ====== */
+.pw .field__input { padding-right: 58px; } /* espacio para el ojo */
+
+.pw-eye{
+  /* Vars del componente */
+  --color:#a5a5b0;
+  --size:16px;
+
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  cursor:pointer;
+  user-select:none;
+  font-size:var(--size);
+  fill:var(--color);
+
+  width:40px; height:32px; /* hit area cómoda */
+}
+
+/* Oculta el checkbox por defecto */
+.pw-eye input{
+  position:absolute;
+  opacity:0;
+  cursor:pointer;
+  height:0; width:0;
+}
+
+/* SVGs */
+.pw-eye .pw-eye__open,
+.pw-eye .pw-eye__closed{
+  position:absolute;
+  height:1em; width:auto;
+  animation:pw-eye-fill .5s;
+}
+
+/* estado por defecto: ojo abierto visible, tachado oculto */
+.pw-eye .pw-eye__closed{ display:none; }
+
+/* al marcar (mostrar contraseña) se invierte en Uiverse; aquí queremos:
+   checked = mostrar TEXTO = ojo "abierto" visible.
+   Si prefieres lo contrario, invierte estas dos reglas. */
+.pw-eye input:checked ~ .pw-eye__open{ display:block; }
+.pw-eye input:checked ~ .pw-eye__closed{ display:none; }
+
+/* si desmarcado (oculto), mostramos tachado */
+.pw-eye input:not(:checked) ~ .pw-eye__open{ display:none; }
+.pw-eye input:not(:checked) ~ .pw-eye__closed{ display:block; }
+
+@keyframes pw-eye-fill{
+  0%{ transform:scale(0); opacity:0; }
+  50%{ transform:scale(1.2); }
+  100%{ transform:scale(1); opacity:1; }
+}
+
+/* Hover suave para integrarse con tu UI */
+.pw-eye:hover{
+  filter: drop-shadow(0 0 0.15rem #9db7ff55);
+  fill:#c5cff5;
+}
+
+
+/* Oculta el botón nativo de revelar password (Edge/IE) */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
+/* Oculta posibles iconos de autocompletado (Safari/Chromium WebKit) */
+input::-webkit-credentials-auto-fill-button {
+  visibility: hidden;
+  display: none;
+  pointer-events: none;
+}
+
+
+/* === Close button: circular gradient + cruz (inspirado en Uiverse) === */
+.modal__close.close-x{
+  /* posición ya la da .modal__close; aquí redefinimos aspecto */
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  padding: 0;
+  border: 4px solid #0b1222;              /* border-4 neutral-950 */
+  background:
+    linear-gradient(135deg, var(--close-from), var(--close-to));
+  box-shadow:
+    inset 0 2px 8px rgba(0,0,0,.45),       /* shadow-inner */
+    0 6px 22px rgba(0,0,0,.40);            /* outer shadow */
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+  /* borramos estilos previos de .modal__close */
+  color: transparent;
+}
+
+.modal__close.close-x:hover{
+  transform: scale(1.06);                  /* hover:scale-110 suavizado */
+  box-shadow:
+    inset 0 3px 10px rgba(0,0,0,.48),
+    0 10px 28px rgba(0,0,0,.48);
+  filter: drop-shadow(0 0 0.25rem rgba(158, 173, 255, .35));
+}
+
+.modal__close.close-x:active{ transform: scale(0.98); }
+/* Botón: SIN CAMBIOS DE TAMAÑO */
+.modal__close.close-x{
+  /* mantienes tus valores actuales (width/height, borde, fondo, etc.) */
+  /* Ej.: width:36px; height:36px; ... */
+  --x-size: 14px;    /* tamaño del “cuadro” de la X → más pequeño */
+  --x-stroke: 2px;   /* grosor de las barras de la X */
+}
+
+/* La X interna: solo reducimos esto, el botón no cambia */
+.modal__close.close-x > span{
+  width: var(--x-size);
+  height: var(--x-size);
+  display: block;
+  position: relative;
+  margin: 0 auto;              /* centrada dentro del botón */
+}
+
+.modal__close.close-x > span::before,
+.modal__close.close-x > span::after{
+  content:"";
+  position:absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--x-stroke);               /* grosor de las barras */
+  height: calc(var(--x-size) + 4px);    /* largo de las barras (ligeramente mayor) */
+  background:#0f172a;                   /* color de la X */
+  border-radius:999px;
+  transform-origin: center;
+}
+
+.modal__close.close-x > span::before{ transform: translate(-50%,-50%) rotate(45deg); }
+.modal__close.close-x > span::after { transform: translate(-50%,-50%) rotate(-45deg); }
+
+
+/* Tamaños compactos opcionales para pantallas pequeñas */
+@media (max-width: 480px){
+  .modal__close.close-x{ width: 32px; height: 32px; }
+  .modal__close.close-x > span{ width: 18px; height: 18px; }
+  .modal__close.close-x > span::before,
+  .modal__close.close-x > span::after{ height: 20px; }
+}
+
