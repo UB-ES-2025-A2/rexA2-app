@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
+import MapView from "../components/MapView";
 
 export default function Home() {
   const [open, setOpen] = useState(false);
@@ -11,15 +12,35 @@ export default function Home() {
       
       <header className="home__header">
         <div className="brand">REX</div>
-        <button className="icon-btn" onClick={() => { setMode("login"); setOpen(true); }} aria-label="Profile">
+        <button
+          className="icon-btn"
+          onClick={() => { setMode("login"); setOpen(true); }}
+          aria-label="Profile"
+        >
           <span>👤</span>
         </button>
       </header>
 
       <main className="home__content">
         <div className="home__left-skeleton" />
-        <div className="home__map-skeleton" />
-        <button className="fab" onClick={() => { setMode("login"); setOpen(true); }} title="Create route">＋</button>
+        <div className="home__map-skeleton">
+          <MapView
+            className="home__map-skeleton"
+            center={[2.1734, 41.3851]} // Barcelona
+            zoom={11}
+
+          />
+        </div>
+        <button
+          className="fab"
+          onClick={() => {
+
+            // Modal rutas 
+          }}
+          title="Create route"
+        >
+          ＋
+        </button>
       </main>
 
       <Modal open={open} onClose={() => setOpen(false)}>

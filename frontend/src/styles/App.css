@@ -40,3 +40,5 @@
 .read-the-docs {
   color: #888;
 }
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo { display: none !important; }
