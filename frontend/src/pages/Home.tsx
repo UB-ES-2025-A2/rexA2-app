@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <div className="home">
-      {/* Simulación de tu landing con mapa/listas detrás */}
+      
       <header className="home__header">
         <div className="brand">REX</div>
         <button className="icon-btn" onClick={() => { setMode("login"); setOpen(true); }} aria-label="Profile">
@@ -27,7 +27,7 @@ export default function Home() {
           mode={mode}
           onSwitchMode={setMode}
           onSubmit={(values) => {
-            // Aquí conectarás con tu API (login/signup). Por ahora solo diseño.
+          
             console.log("Submit", mode, values);
           }}
         />
