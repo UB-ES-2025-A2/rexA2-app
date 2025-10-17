@@ -51,7 +51,7 @@ export async function register(payload: { email: string; username: string; passw
 
 export async function login(payload: { email: string; password: string }): Promise<AuthResponse> {
   // 1) Intento JSON típico
-  let res = await fetch(`${API}/auth/login`, {
+  const  res = await fetch(`${API}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: payload.email, password: payload.password }),
