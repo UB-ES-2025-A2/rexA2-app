@@ -1,12 +1,23 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import TextField from "./TextField";
 import PasswordField from "./PasswordField";
-
+import {
+  validateEmail,
+  validateUsername,
+  validatePassword,
+  validateConfirmPassword,
+  type FieldErrors,
+} from "../utils/validation";
+import { checkEmailAvailable, register, login, saveAuth } from "../services/auth";
+import { useAuth } from "../context/AuthContext";
 type Props = {
   mode?: "login" | "signup";
   onSwitchMode?: (mode: "login" | "signup") => void;
   onSubmit?: (values: Record<string, string>) => void; // hookéalas cuando conectes backend
 };
+
+type Touched = { email?: boolean; username?: boolean; password?: boolean; confirm?: boolean; };
+
 
 export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Props) {
   const [state, setState] = useState<Record<string, string>>({});
@@ -14,10 +25,46 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
   const handle = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setState((s) => ({ ...s, [k]: e.target.value }));
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const auth = useAuth();
+
+const submit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    if (mode === "signup") {
+      // 1) Registro
+      await register({
+        email: state.email,
+        username: state.username,
+        password: state.password,
+      });
+
+      // 2) Login automático
+      const authResp = await login({ email: state.email, password: state.password });
+      saveAuth(authResp);
+      auth.login({ user: authResp.user, token: authResp.access_token || "" }); // estado global
+
+
+      // 3) Feedback mínimo sin cambiar tu UI
+      alert("¡Usuario registrado y sesión iniciada!");
+      onSubmit?.({ ...state, _autologin: true }); // <-- el padre cierra el modal
+      return;
+      
+    }
+
+    // ---- LOGIN normal ----
+    const authResp = await login({ email: state.email, password: state.password });
+    saveAuth(authResp);
+    auth.login({ user: authResp.user, token: authResp.access_token || "" });
+
+    alert("¡Sesión iniciada!");
     onSubmit?.(state);
-  };
+  } catch (err: any) {
+    alert(err?.message || "Error en autenticación");
+  }
+};
+
+
 
   return (
     <div className="auth">
