@@ -32,7 +32,9 @@ export default function MapView({
     if (!containerRef.current || mapRef.current) return;
     mapRef.current = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      style: "mapbox://styles/vlopezmo31/cmgs7vdjs00fs01sc63wz2vsa",
+      //style: "mapbox://styles/vlopezmo31/cmgs7seb0004201r16ivm44q6",
+      
       center,
       zoom,
     });
@@ -70,9 +72,29 @@ export default function MapView({
   
     mapRef.current = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
+      style: "mapbox://styles/vlopezmo31/cmgs7vdjs00fs01sc63wz2vsa",
+      //style: "mapbox://styles/vlopezmo31/cmgs7seb0004201r16ivm44q6",
+
       center,
       zoom,
+    });
+
+    mapRef.current.on("load", () => {
+      const trafficLayers = [
+        "traffic-lines-incidents-day",
+        "traffic-lines-incidents-night",
+        "traffic-incidents",
+        "traffic-line-casing",
+        "traffic-line-fill",
+      ];
+
+      trafficLayers.forEach((layerId) => {
+        if (mapRef.current!.getLayer(layerId)) {
+          mapRef.current!.setLayoutProperty(layerId, "visibility", "none");
+        }
+      });
+
+      mapRef.current!.resize();
     });
   
     mapRef.current.on("load", () => {
