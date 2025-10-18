@@ -10,6 +10,8 @@ type Props = {
   onClose?: () => void;
 };
 
+type Category = "entretenimiento" | "trabajo";
+
 const RouteCard: React.FC<Props> = ({
   modeDefault = "search",
   drawPoints = [],
@@ -17,23 +19,23 @@ const RouteCard: React.FC<Props> = ({
   onClose,
 }) => {
   const [mode, setMode] = useState<"search" | "draw">(modeDefault);
-
+  
   const geocoderRef = useRef<HTMLDivElement | null>(null);
   const geocoderInstanceRef = useRef<MapboxGeocoder | null>(null);
   const [selectedSearchCoord, setSelectedSearchCoord] = useState<[number, number] | null>(null);
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
 
+  const [isPrivate, setIsPrivate] = useState<boolean>(true);
+  const [category, setCategory] = useState<Category | "">("");
+  const [name, setName] = useState<string>("");
+
   useEffect(() => {
     if (mode !== "search") {
-      if (geocoderInstanceRef.current) {
-        geocoderInstanceRef.current.off("result", () => {});
-        geocoderInstanceRef.current.off("clear", () => {});
-        geocoderInstanceRef.current.clear();
-        geocoderInstanceRef.current = null;
-      }
-      if (geocoderRef.current) {
-        geocoderRef.current.innerHTML = "";
-      }
+      try {
+        geocoderInstanceRef.current?.clear();
+      } catch {}
+      geocoderInstanceRef.current = null;
+      if (geocoderRef.current) geocoderRef.current.innerHTML = "";
       setSelectedSearchCoord(null);
       return;
     }
@@ -62,8 +64,6 @@ const RouteCard: React.FC<Props> = ({
 
     return () => {
       try {
-        geocoder.off("result", () => {});
-        geocoder.off("clear", () => {});
         geocoder.clear();
       } catch {}
       geocoderInstanceRef.current = null;
@@ -112,8 +112,23 @@ const RouteCard: React.FC<Props> = ({
       alert("Añade al menos un punto antes de guardar.");
       return;
     }
+    if (!category) {
+      alert("Selecciona una categoría antes de guardar.");
+      return;
+    }
+    if (!name.trim()) {
+      alert("Pon un nombre a la ruta.");
+      return;
+    }
 
-    const payload = { points } as { points: Array<[number, number]> };
+    const categoryStrict = category as Category;
+
+    const payload = {
+      name: name.trim(),
+      points,
+      private: isPrivate,
+      category: categoryStrict,
+    };
 
     try {
       const res = await fetch("/api/routes", {
@@ -140,6 +155,17 @@ const RouteCard: React.FC<Props> = ({
     <div className="route-card-panel">
       <h2 className="route__title">Crear Ruta</h2>
 
+      <div className="input-group">
+        <label htmlFor="route-name">Nombre</label>
+        <input
+          id="route-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Ej: Ruta al trabajo"
+        />
+      </div>
+
       <div className="route__tabs">
         <button
           className={`route__tab-btn ${mode === "search" ? "active" : ""}`}
@@ -164,33 +190,20 @@ const RouteCard: React.FC<Props> = ({
 
           <div className="input-group">
             <div className="search-actions" style={{ display: "flex", gap: 8 }}>
-              <button
-                className="btn"
-                disabled={!selectedSearchCoord}
-                onClick={handleAddSearchPoint}
-                title="Añadir el resultado actual como punto"
-              >
-                Añadir punto
-              </button>
-              <button className="btn" onClick={handleClearSearchPoints} title="Vaciar lista de puntos">
-                Limpiar puntos
-              </button>
+              <button className="btn" disabled={!selectedSearchCoord} onClick={handleAddSearchPoint}>Añadir punto</button>
+              <button className="btn" onClick={handleClearSearchPoints}>Limpiar puntos</button>
             </div>
           </div>
 
           <ul className="route__points-list">
             {searchPoints.map(([lng, lat], idx) => (
-              <li key={idx} className="route__point-row" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <li key={idx} style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span>{idx + 1}:</span>
-                <code style={{ userSelect: "text" }}>{lng.toFixed(5)}, {lat.toFixed(5)}</code>
-                <button className="icon-btn" onClick={() => handleRemoveSearchPoint(idx)} title="Eliminar">
-                  ✕
-                </button>
+                <code>{lng.toFixed(5)}, {lat.toFixed(5)}</code>
+                <button className="icon-btn" onClick={() => handleRemoveSearchPoint(idx)}>✕</button>
               </li>
             ))}
-            {searchPoints.length === 0 && (
-              <li className="muted">No hay puntos añadidos todavía.</li>
-            )}
+            {searchPoints.length === 0 && <li className="muted">No hay puntos añadidos todavía.</li>}
           </ul>
         </>
       )}
@@ -200,24 +213,41 @@ const RouteCard: React.FC<Props> = ({
           <p className="draw-instruction">Haz clic en el mapa para agregar puntos a la ruta.</p>
           <ul className="route__points-list">
             {drawPoints.map(([lng, lat], idx) => (
-              <li key={idx} className="route__point-row">
-                {idx + 1}: {lng.toFixed(5)}, {lat.toFixed(5)}
-              </li>
+              <li key={idx}>{idx + 1}: {lng.toFixed(5)}, {lat.toFixed(5)}</li>
             ))}
             {drawPoints.length === 0 && <li className="muted">No has añadido puntos todavía.</li>}
           </ul>
-
           <div className="input-group">
-            <button className="btn" onClick={onResetPoints} title="Borrar puntos dibujados">
-              Reiniciar puntos
-            </button>
+            <button className="btn" onClick={onResetPoints}>Reiniciar puntos</button>
           </div>
         </>
       )}
 
-      <button className="btn primary" onClick={handleSave}>
-        Guardar Ruta
-      </button>
+      <div className="input-group">
+        <label>
+          <input
+            type="checkbox"
+            checked={isPrivate}
+            onChange={(e) => setIsPrivate(e.target.checked)}
+          />
+          Privada
+        </label>
+      </div>
+
+      <div className="input-group">
+        <label htmlFor="category">Categoría</label>
+        <select
+          id="category"
+          value={category}
+          onChange={(e) => setCategory(e.target.value as Category | "")}
+        >
+          <option value="" disabled>Selecciona una categoría…</option>
+          <option value="entretenimiento">Entretenimiento</option>
+          <option value="trabajo">Trabajo</option>
+        </select>
+      </div>
+
+      <button className="btn primary" onClick={handleSave}>Guardar Ruta</button>
     </div>
   );
 };
