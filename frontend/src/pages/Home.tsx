@@ -38,11 +38,16 @@ export default function Home() {
         </div>
 
         <div className="home__map-skeleton">
-          <MapView
-            className="home__map-skeleton"
-            center={[2.1734, 41.3851]}
-            zoom={13}
-          />
+        <MapView
+          className="home__map-skeleton"
+          center={[2.1734, 41.3851]}
+          zoom={13}
+          allowPickPoint={routeCardOpen && mode === "draw"}
+          onPickPoint={(lng, lat) => {
+            console.log("Punto añadido", lng, lat);
+            // Aquí puedes pasar ese punto a RouteCard por props, un contexto, o manejarlo desde Home
+          }}
+        />
         </div>
 
         <button

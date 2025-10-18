@@ -27,34 +27,63 @@ export default function MapView({
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
 
-
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    mapRef.current = new mapboxgl.Map({
+    if (!containerRef.current) return;
+
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/vlopezmo31/cmgs7vdjs00fs01sc63wz2vsa",
-      //style: "mapbox://styles/vlopezmo31/cmgs7seb0004201r16ivm44q6",
-      
       center,
       zoom,
     });
 
+    mapRef.current = map;
+
+    map.on("load", () => {
+      map.resize();
+
+      const trafficLayers = [
+        "traffic-lines-incidents-day",
+        "traffic-lines-incidents-night",
+        "traffic-incidents",
+        "traffic-line-casing",
+        "traffic-line-fill",
+      ];
+
+      trafficLayers.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", "none");
+        }
+      });
+    });
+
     if (allowPickPoint && onPickPoint) {
-      mapRef.current.on("click", (e) => {
+      map.on("click", (e) => {
         onPickPoint(e.lngLat.lng, e.lngLat.lat);
       });
     }
 
-    return () => {
+    const ro = new ResizeObserver(() => {
+      map.resize();
+    });
+    ro.observe(containerRef.current);
 
+    return () => {
+      ro.disconnect();
       markerRefs.current.forEach((m) => m.remove());
-      mapRef.current?.remove();
+      map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [center, zoom, allowPickPoint, onPickPoint]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+
     markerRefs.current.forEach((m) => m.remove());
     markerRefs.current = [];
 
@@ -67,52 +96,6 @@ export default function MapView({
       markerRefs.current.push(marker);
     });
   }, [markers]);
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-  
-    mapRef.current = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/vlopezmo31/cmgs7vdjs00fs01sc63wz2vsa",
-      //style: "mapbox://styles/vlopezmo31/cmgs7seb0004201r16ivm44q6",
-
-      center,
-      zoom,
-    });
-
-    mapRef.current.on("load", () => {
-      const trafficLayers = [
-        "traffic-lines-incidents-day",
-        "traffic-lines-incidents-night",
-        "traffic-incidents",
-        "traffic-line-casing",
-        "traffic-line-fill",
-      ];
-
-      trafficLayers.forEach((layerId) => {
-        if (mapRef.current!.getLayer(layerId)) {
-          mapRef.current!.setLayoutProperty(layerId, "visibility", "none");
-        }
-      });
-
-      mapRef.current!.resize();
-    });
-  
-    mapRef.current.on("load", () => {
-      mapRef.current!.resize();
-    });
-  
-    const ro = new ResizeObserver(() => {
-      mapRef.current?.resize();
-    });
-    ro.observe(containerRef.current);
-  
-    return () => {
-      ro.disconnect();
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, []);
-  
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 }

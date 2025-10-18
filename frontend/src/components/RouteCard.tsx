@@ -1,66 +1,106 @@
 import { useState } from "react";
 
-export default function RouteCard({ onSubmit }: { onSubmit: (data: any) => void }) {
-  const [mode, setMode] = useState<"draw" | "search">("draw");
+type Props = {
+  mode: "search" | "draw";
+  setMode: (m: "search" | "draw") => void;
+  locationName: string;
+  locationCoords: [number, number] | null;
+  points: [number, number][];
+  setPoints: React.Dispatch<React.SetStateAction<[number, number][]>>;
+  onSubmit: (data: any) => void;
+};
+
+export default function RouteCard({
+  mode,
+  setMode,
+  locationName,
+  locationCoords,
+  points,
+  setPoints,
+  onSubmit,
+}: Props) {
   const [title, setTitle] = useState("");
-  const [location, setLocation] = useState("");
 
-  const handleSubmit = () => {
-    const payload = { mode, title, location };
+  const handleSave = async () => {
+    const routeData: any = { title };
+    if (mode === "search") {
+      routeData.location = {
+        name: locationName,
+        coordinates: locationCoords,
+      };
+    } else {
+      routeData.points = points;
+    }
 
-    fetch("/api/routes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    onSubmit(payload);
+    try {
+      const res = await fetch("/api/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(routeData),
+      });
+      const json = await res.json();
+      onSubmit(json);
+    } catch (err) {
+      console.error("Error al guardar la ruta", err);
+    }
   };
 
   return (
-    <div className="route-card-panel">
-      <h2 className="route__title">Crear Ruta</h2>
+    <div className="home__left-skeleton auth-card">
+      <h2 className="title">Crear nueva ruta</h2>
 
-      <div className="route__tabs">
-        <button
-          className={`route__tab-btn ${mode === "draw" ? "active" : ""}`}
-          onClick={() => setMode("draw")}
-        >Dibujar</button>
-        <button
-          className={`route__tab-btn ${mode === "search" ? "active" : ""}`}
-          onClick={() => setMode("search")}
-        >Buscar</button>
+      <div className="input-group">
+        <label htmlFor="route-title">Título</label>
+        <input
+          id="route-title"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Título de la ruta"
+        />
       </div>
 
-      <div className="route__form">
-        <div className="field">
-          <input
-            type="text"
-            className="field__input"
-            placeholder=" "
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
-          <label className="field__label">Título</label>
-        </div>
-
-        {mode === "search" && (
-          <div className="field">
-            <input
-              type="text"
-              className="field__input"
-              placeholder=" "
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-            />
-            <label className="field__label">Ubicación</label>
-          </div>
-        )}
-
-
-        <button className="btn btn--primary" onClick={handleSubmit}>
-          Guardar Ruta
+      <div className="mode-switch">
+        <button
+          className={mode === "search" ? "active" : ""}
+          onClick={() => {
+            setMode("search");
+            setPoints([]);
+          }}
+        >
+          Buscar
+        </button>
+        <button
+          className={mode === "draw" ? "active" : ""}
+          onClick={() => {
+            setMode("draw");
+          }}
+        >
+          Dibujar
         </button>
       </div>
+
+      {mode === "search" && (
+        <div className="input-group">
+          <label>Ubicación</label>
+          {locationName ? (
+            <p className="selected-location">📍 {locationName}</p>
+          ) : (
+            <p>Selecciona un lugar en el buscador</p>
+          )}
+        </div>
+      )}
+
+      {mode === "draw" && (
+        <div className="draw-instruction">
+          Haz clic en el mapa para añadir puntos a la ruta. ({points.length} punto
+          {points.length === 1 ? "" : "s"})
+        </div>
+      )}
+
+      <button className="btn primary" onClick={handleSave}>
+        Guardar Ruta
+      </button>
     </div>
   );
 }
