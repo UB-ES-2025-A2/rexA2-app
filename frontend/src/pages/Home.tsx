@@ -2,7 +2,7 @@ import { useState } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
-import RouteCard from "../components/RouteCard";
+import RouteCard from "../components/RouteCard/RouteCard";
 
 export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
