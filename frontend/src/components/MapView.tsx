@@ -1,4 +1,3 @@
-// src/components/MapView.tsx
 import { useEffect, useRef } from "react";
 import mapboxgl, { Map, Marker } from "mapbox-gl";
 
@@ -17,7 +16,7 @@ type Props = {
 
 export default function MapView({
   className,
-  center = [2.1734, 41.3851], // Barcelona
+  center = [2.1734, 41.3851],
   zoom = 11,
   markers = [],
   allowPickPoint = false,
@@ -28,24 +27,20 @@ export default function MapView({
   const markerRefs = useRef<Marker[]>([]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
-
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
+    if (!containerRef.current || mapRef.current) return;
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/vlopezmo31/cmgs7vdjs00fs01sc63wz2vsa",
+      style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom,
     });
 
     mapRef.current = map;
 
+    // Forzar el resize después de que el mapa esté montado
     map.on("load", () => {
-      map.resize();
+      setTimeout(() => map.resize(), 200);
 
       const trafficLayers = [
         "traffic-lines-incidents-day",
@@ -54,14 +49,12 @@ export default function MapView({
         "traffic-line-casing",
         "traffic-line-fill",
       ];
-
       trafficLayers.forEach((layerId) => {
         if (map.getLayer(layerId)) {
           map.setLayoutProperty(layerId, "visibility", "none");
         }
       });
     });
-
     if (allowPickPoint && onPickPoint) {
       map.on("click", (e) => {
         onPickPoint(e.lngLat.lng, e.lngLat.lat);
@@ -79,7 +72,7 @@ export default function MapView({
       map.remove();
       mapRef.current = null;
     };
-  }, [center, zoom, allowPickPoint, onPickPoint]);
+  }, [allowPickPoint, onPickPoint]);
 
   useEffect(() => {
     if (!mapRef.current) return;

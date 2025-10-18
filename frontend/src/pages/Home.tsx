@@ -2,12 +2,22 @@ import { useState } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
-import RouteCard from "../components/RouteCard.tsx";
+import RouteCard from "../components/RouteCard";
 
 export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [routeCardOpen, setRouteCardOpen] = useState(false);
+  const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
+
+  const handleMapClick = (lng: number, lat: number) => {
+    setDrawPoints((prev) => [...prev, [lng, lat]]);
+  };
+
+  const handleCloseRouteCard = () => {
+    setRouteCardOpen(false);
+    setDrawPoints([]);
+  };
 
   return (
     <div className="home">
@@ -29,30 +39,30 @@ export default function Home() {
         <div className="home__left-skeleton">
           {routeCardOpen && (
             <RouteCard
-              onSubmit={(data) => {
-                console.log("Ruta creada:", data);
-                setRouteCardOpen(false);
-              }}
+              modeDefault="draw"
+              drawPoints={drawPoints}
+              onResetPoints={() => setDrawPoints([])}
+              onClose={handleCloseRouteCard}
             />
           )}
         </div>
 
         <div className="home__map-skeleton">
-        <MapView
-          className="home__map-skeleton"
-          center={[2.1734, 41.3851]}
-          zoom={13}
-          allowPickPoint={routeCardOpen && mode === "draw"}
-          onPickPoint={(lng, lat) => {
-            console.log("Punto añadido", lng, lat);
-            // Aquí puedes pasar ese punto a RouteCard por props, un contexto, o manejarlo desde Home
-          }}
-        />
+          <MapView
+            className="home__map-skeleton"
+            center={[2.1734, 41.3851]}
+            zoom={13}
+            allowPickPoint={routeCardOpen}
+            onPickPoint={handleMapClick}
+          />
         </div>
 
         <button
           className="fab"
-          onClick={() => setRouteCardOpen(true)}
+          onClick={() => {
+            setDrawPoints([]);
+            setRouteCardOpen(true);
+          }}
           title="Crear ruta"
         >
           ＋
@@ -64,7 +74,6 @@ export default function Home() {
           mode={mode}
           onSwitchMode={setMode}
           onSubmit={(values) => {
-          
             console.log("Submit", mode, values);
           }}
         />
