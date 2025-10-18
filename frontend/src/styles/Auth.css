@@ -40,7 +40,7 @@
   .home__content{display:grid;grid-template-columns:340px 1fr;gap:18px;padding:18px;position:relative}
   .home__left-skeleton,
   .home__map-skeleton{
-    height:70vh;border:1px solid #e5e7eb;border-radius:14px;background:var(--card);
+    height:70vh;border:1px solid #e5e7eb;border-radius:14px;background:var(--card);min-height: 500px;
   }
   .home__map-skeleton{
     background:

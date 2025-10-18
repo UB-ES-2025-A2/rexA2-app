@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-//
 function Explore() {
   const [routes, setRoutes] = useState<RouteType[]>([]);
   useEffect(() => {

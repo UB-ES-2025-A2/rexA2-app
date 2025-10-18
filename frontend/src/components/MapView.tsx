@@ -1,4 +1,3 @@
-// src/components/MapView.tsx
 import { useEffect, useRef } from "react";
 import mapboxgl, { Map, Marker } from "mapbox-gl";
 
@@ -17,7 +16,7 @@ type Props = {
 
 export default function MapView({
   className,
-  center = [2.1734, 41.3851], // Barcelona
+  center = [2.1734, 41.3851],
   zoom = 11,
   markers = [],
   allowPickPoint = false,
@@ -27,32 +26,56 @@ export default function MapView({
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
 
-
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
-    mapRef.current = new mapboxgl.Map({
+
+    const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom,
     });
 
+    mapRef.current = map;
+
+    map.on("load", () => {
+      setTimeout(() => map.resize(), 200);
+
+      const trafficLayers = [
+        "traffic-lines-incidents-day",
+        "traffic-lines-incidents-night",
+        "traffic-incidents",
+        "traffic-line-casing",
+        "traffic-line-fill",
+      ];
+      trafficLayers.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", "none");
+        }
+      });
+    });
     if (allowPickPoint && onPickPoint) {
-      mapRef.current.on("click", (e) => {
+      map.on("click", (e) => {
         onPickPoint(e.lngLat.lng, e.lngLat.lat);
       });
     }
 
-    return () => {
+    const ro = new ResizeObserver(() => {
+      map.resize();
+    });
+    ro.observe(containerRef.current);
 
+    return () => {
+      ro.disconnect();
       markerRefs.current.forEach((m) => m.remove());
-      mapRef.current?.remove();
+      map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [allowPickPoint, onPickPoint]);
 
   useEffect(() => {
     if (!mapRef.current) return;
+
     markerRefs.current.forEach((m) => m.remove());
     markerRefs.current = [];
 
@@ -65,32 +88,6 @@ export default function MapView({
       markerRefs.current.push(marker);
     });
   }, [markers]);
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-  
-    mapRef.current = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center,
-      zoom,
-    });
-  
-    mapRef.current.on("load", () => {
-      mapRef.current!.resize();
-    });
-  
-    const ro = new ResizeObserver(() => {
-      mapRef.current?.resize();
-    });
-    ro.observe(containerRef.current);
-  
-    return () => {
-      ro.disconnect();
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, []);
-  
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 }
