@@ -38,7 +38,6 @@ export default function MapView({
 
     mapRef.current = map;
 
-    // Forzar el resize después de que el mapa esté montado
     map.on("load", () => {
       setTimeout(() => map.resize(), 200);
 
