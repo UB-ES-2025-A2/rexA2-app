@@ -30,6 +30,6 @@ async def get_user_by_id(user_id: str) -> dict | None:
 
 async def get_user_by_email(email: str) -> dict | None:
     '''
-    Devuelve un usuario pro email o None si no Existe
+    Devuelve un usuario por email o None si no Existe
     '''
     return await client.db["users"].find_one({"email": email})

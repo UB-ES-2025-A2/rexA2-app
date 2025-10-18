@@ -1,9 +1,10 @@
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from core.config import settings
 from db.client import init_db
-from routers import users, auth
+from routers import users, auth, routes
 
 # Documentation at http://127.0.0.1:8000/docs
 app = FastAPI(title=settings.PROJECT_NAME)              # Instancia principal.
@@ -21,13 +22,14 @@ app.add_middleware(
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Inicializar la conexión a Mongo al iniciar la app
-@app.on_event("startup")
-async def on_startup():
-    await init_db()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()            
 
 # Incluir routers
 app.include_router(users.router)
 app.include_router(auth.router)
+app.include_router(routes.router)
 
 @app.get("/health")
 async def health():
