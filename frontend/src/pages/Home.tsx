@@ -5,14 +5,15 @@ import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import type { Category } from "../components/types";
+import "../styles/Home.css";
 
 export default function Home() {
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [routeCardOpen, setRouteCardOpen] = useState(false);
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
-
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
 
   const [routes, setRoutes] = useState<Array<{
     id: number;
@@ -21,16 +22,15 @@ export default function Home() {
     points: Array<[number, number]>;
   }>>([]);
 
-  /*
-  useEffect(() => { 
-    fetch("/api/routes") .then((res) => res.json()) 
-    .then((data) => setRoutes(data)) 
-    .catch((error) => console.error("Error al cargar rutas:", error)); 
-  }, []);
-  */
+  const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
 
   useEffect(() => {
-    setRoutes([
+    const fetchedRoutes: {
+      id: number;
+      name: string;
+      category: string;
+      points: [number, number][];
+    }[] = [
       {
         id: 1,
         name: "Ruta al parque",
@@ -42,10 +42,26 @@ export default function Home() {
           [2.16312, 41.39224],
           [2.16553, 41.39984],
           [2.18545, 41.39861],
-          [2.20090, 41.40628],
+          [2.2009, 41.40628],
         ],
       },
-    ]);
+      {
+        id: 2,
+        name: "Ruta histórica",
+        category: "historia",
+        points: [
+          [2.1744, 41.3825],
+          [2.173, 41.384],
+          [2.171, 41.385],
+        ],
+      },
+    ];
+
+    setRoutes(fetchedRoutes);
+
+
+    const uniqueCategories = Array.from(new Set(fetchedRoutes.map(r => r.category)));
+    setAvailableCategories(uniqueCategories);
   }, []);
 
   const handleMapClick = (lng: number, lat: number) => {
@@ -83,23 +99,43 @@ export default function Home() {
             />
           ) : (
             <div>
-              <h2>Rutas existentes</h2>
+              <div className="category-filter">
+                <div>
+                  <label className="category-label">Filtrar por categoría</label>
+                  <select
+                    className="category-select"
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
+                  >
+                    <option value="todos">Todas</option>
+                    {availableCategories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+
               {routes.length === 0 ? (
                 <p>No hay rutas disponibles.</p>
               ) : (
                 <div className="route-list">
-                  {routes.map((r) => (
-                    <RoutePreviewCard
-                      key={r.id}
-                      id={r.id}
-                      name={r.name}
-                      category={r.category as Category}
-                      points={r.points}
-                      onClick={() => {
-                        setSelectedRoutePoints(r.points);
-                      }}
-                    />
-                  ))}
+                  {routes
+                    .filter((r) => selectedCategory === "todos" || r.category === selectedCategory)
+                    .map((r) => (
+                      <RoutePreviewCard
+                        key={r.id}
+                        id={r.id}
+                        name={r.name}
+                        category={r.category as Category}
+                        points={r.points}
+                        onClick={() => {
+                          setSelectedRoutePoints(r.points);
+                        }}
+                      />
+                    ))}
                 </div>
               )}
             </div>
@@ -115,7 +151,7 @@ export default function Home() {
             allowPickPoint={routeCardOpen}
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
-          /> 
+          />
         </div>
 
         <button
@@ -123,7 +159,7 @@ export default function Home() {
           onClick={() => {
             setRouteCardOpen((prev) => {
               setDrawPoints([]);
-              setSelectedRoutePoints([]); 
+              setSelectedRoutePoints([]);
               return !prev;
             });
           }}
