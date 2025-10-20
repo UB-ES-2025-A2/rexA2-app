@@ -1,6 +1,6 @@
 // src/components/RouteCard/RouteCardView.tsx
 import React from "react";
-import type { Category, Mode } from "./types";
+import type { Category, Mode } from "../types";
 
 type Props = {
   // estado/control
