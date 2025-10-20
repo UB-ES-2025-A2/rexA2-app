@@ -29,6 +29,7 @@
     display:flex;align-items:center;justify-content:space-between;
     padding:12px 18px;border-bottom:1px solid #e5e7eb;
     background:#ffffffcc;backdrop-filter: blur(8px); position:sticky;top:0;
+    z-index: 2000;
   }
   .brand{font-weight:700; letter-spacing:.2px;color:#111827}
   .icon-btn{
@@ -40,7 +41,7 @@
   .home__content{display:grid;grid-template-columns:340px 1fr;gap:18px;padding:18px;position:relative}
   .home__left-skeleton,
   .home__map-skeleton{
-    height:70vh;border:1px solid #e5e7eb;border-radius:14px;background:var(--card);
+    height:70vh;border:1px solid #e5e7eb;border-radius:14px;background:var(--card); position: relative;
   }
   .home__map-skeleton{
     background:
@@ -57,7 +58,7 @@
   /* Modal */
   .modal__backdrop{
     position:fixed;inset:0;background:rgba(15,23,42,.25);
-    backdrop-filter: blur(8px); display:grid; place-items:center; padding:20px; z-index:50;
+    backdrop-filter: blur(8px); display:grid; place-items:center; padding:20px; z-index:5000;
     animation:fadeIn .15s ease-out;
   }
   @keyframes fadeIn{from{opacity:0} to{opacity:1}}
@@ -206,7 +207,7 @@
   .modal__close.close-x > span::before,
   .modal__close.close-x > span::after{
     content:"";position:absolute;left:50%;top:50%;
-    width:var(--x-stroke);height:calc(var(--x-size)+4px);
+    width:var(--x-stroke);height:calc(var(--x-size) + 4px);
     background:#111827;border-radius:999px;transform-origin:center;
   }
   .modal__close.close-x > span::before{transform:translate(-50%,-50%) rotate(45deg);}

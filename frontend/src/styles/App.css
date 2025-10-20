@@ -42,3 +42,66 @@
 }
 .mapboxgl-ctrl-attrib,
 .mapboxgl-ctrl-logo { display: none !important; }
+
+/* Estilos del botón de perfil y el menú desplegable */
+/* Estilo para asegurarnos de que el menú flotante se muestra encima del mapa */
+.profile-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  min-width: 200px;
+  display: none;
+  flex-direction: column;
+  padding: 10px 0;
+  z-index: 1050; /* Asegura que se muestre por encima de otros elementos */
+}
+
+.profile-menu.open {
+  display: flex;
+}
+
+.profile-menu-container {
+  position: relative;
+}
+
+.profile-menu-btn {
+  width: 40px;
+  height: 40px;
+  background-color: #fff;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.profile-menu-btn:hover {
+  background-color: #f3f4f6;
+}
+
+.profile-menu-btn img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+
+.profile-menu button {
+  background: none;
+  border: none;
+  padding: 12px;
+  color: #111827;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.profile-menu button:hover {
+  background-color: #f3f4f6;
+}
