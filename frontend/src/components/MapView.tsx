@@ -113,26 +113,9 @@ export default function MapView({
       markerRefs.current.forEach((m) => m.remove());
       map.remove();
       mapRef.current = null;
+      setMapLoaded(false);
     };
   }, [allowPickPoint, onPickPoint]);
-
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    markerRefs.current.forEach((m) => m.remove());
-    markerRefs.current = [];
-
-    
-
-    markers.forEach((m) => {
-      const marker = new mapboxgl.Marker().setLngLat([m.lng, m.lat]).addTo(mapRef.current!);
-      if (m.title) {
-        const popup = new mapboxgl.Popup({ offset: 24 }).setText(m.title);
-        marker.setPopup(popup);
-      }
-      markerRefs.current.push(marker);
-    });
-  }, [markers]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -164,7 +147,7 @@ export default function MapView({
                 coordinates: coord,
               },
               properties: {},
-            }))
+            })),
           ]
         : [],
     };
@@ -178,6 +161,7 @@ export default function MapView({
     }
   }, [highlightPoints, mapLoaded]);
   
+
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 }
