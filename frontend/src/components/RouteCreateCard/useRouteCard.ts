@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
-import type { Category, Mode } from "./types";
+import type { Category, Mode } from "../types";
 
 export function useRouteCard({
   modeDefault,
