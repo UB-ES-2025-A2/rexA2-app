@@ -30,7 +30,7 @@ async def me(current_user: dict = Depends(get_current_user)):
         "id": str(current_user["_id"]),
         "email": current_user["email"],
         "username": current_user.get("username"),
-        "is_active": current_user["is_aciive"],
+        "is_active": current_user["is_active"],
     }
 
 @router.post("/refresh", response_model=TokenOut)
@@ -56,4 +56,3 @@ async def logout(response: Response):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return Response(status_code=204)
-    

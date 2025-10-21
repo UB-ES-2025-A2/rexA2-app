@@ -25,4 +25,3 @@ async def register_user(payload: UserCreate):
         "username": user.get("username"),
         "is_active": user["is_active"],
     }
-
