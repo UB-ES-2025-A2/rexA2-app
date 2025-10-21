@@ -22,9 +22,9 @@ app.add_middleware(
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Inicializar la conexión a Mongo al iniciar la app
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db()            
+@app.on_event("startup")
+async def startup_event():
+    await init_db()   
 
 # Incluir routers
 app.include_router(users.router)
