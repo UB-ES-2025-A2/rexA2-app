@@ -54,7 +54,7 @@ async def get_current_user(request: Request):
     '''
     token = request.cookies.get("access_token")
     if not token and (auth := request.headers.get("Authorization")):
-        token = auth.split('', 1)[1]
+        token = auth.split(" ", 1)[1]
 
     if not token:
         raise HTTPException(status_code=401, detail="No autenticado")
