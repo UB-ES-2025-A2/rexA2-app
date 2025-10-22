@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import type { Category, Mode } from "../types";
+import { useAuth } from "../../context/AuthContext";
+
+const API = import.meta.env.VITE_API_URL;
+
 
 export function useRouteCard({
   modeDefault,
@@ -9,11 +13,13 @@ export function useRouteCard({
   onResetPoints,
   onClose,
 }: {
+  
   modeDefault: Mode;
   drawPoints: Array<[number, number]>;
   onResetPoints?: () => void;
   onClose?: () => void;
 }) {
+  const { token } = useAuth();
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
   const [category, setCategory] = useState<Category | "">("");
@@ -68,9 +74,27 @@ export function useRouteCard({
     if (!name.trim()) return alert("Pon un nombre a la ruta.");
     if (!category) return alert("Selecciona una categoría.");
 
-    const payload = { name: name.trim(), points, private: isPrivate, category: category as Category };
+    const formattedPoints = points.map(([lng, lat]) => ({
+      latitude: lat,
+      longitude: lng,
+    }));
+    
+    const payload = {
+      name: name.trim(),
+      points: formattedPoints,
+      visibility: !isPrivate,
+      category: category as Category,
+    };
+    console.log(JSON.stringify(payload));
     try {
-      const res = await fetch("/api/routes", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const res = await fetch(`${API}/routes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
       try { console.log("Ruta enviada:", await res.json()); } catch { console.log("Ruta enviada (sin JSON)"); }
       onClose?.();
     } catch (e) { console.error(e); alert("No se pudo guardar la ruta."); }

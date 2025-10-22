@@ -7,6 +7,7 @@ import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import { useAuth } from "../context/AuthContext";
 import type { Category } from "../components/types";
 import "../styles/Home.css";
+const API = import.meta.env.VITE_API_URL;
 
 export default function Home() {
   const { user, token, logout } = useAuth();
@@ -28,43 +29,34 @@ export default function Home() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const fetchedRoutes: {
-      id: number;
-      name: string;
-      category: string;
-      points: [number, number][];
-    }[] = [
-      {
-        id: 1,
-        name: "Ruta al parque",
-        category: "entretenimiento",
-        points: [
-          [2.17617, 41.37691],
-          [2.16682, 41.38322],
-          [2.16012, 41.38741],
-          [2.16312, 41.39224],
-          [2.16553, 41.39984],
-          [2.18545, 41.39861],
-          [2.2009, 41.40628],
-        ],
-      },
-      {
-        id: 2,
-        name: "Ruta histórica",
-        category: "historia",
-        points: [
-          [2.1744, 41.3825],
-          [2.173, 41.384],
-          [2.171, 41.385],
-        ],
-      },
-    ];
-
-    setRoutes(fetchedRoutes);
-
-    const uniqueCategories = Array.from(new Set(fetchedRoutes.map(r => r.category)));
-    setAvailableCategories(uniqueCategories);
+    const fetchRoutes = async () => {
+      try {
+        const response = await fetch(`${API}/routes`);
+        if (!response.ok) throw new Error("Error al cargar las rutas");
+  
+        const data = await response.json();
+        console.log(data);
+  
+        // Mapea las rutas para adaptarlas al formato que tu frontend espera
+        const formatted = data.map((route: any) => ({
+          id: route._id,
+          name: route.name,
+          category: route.category || "sin categoría",
+          points: route.points.map((p: any) => [p.longitude, p.latitude]),
+        }));
+  
+        setRoutes(formatted);
+  
+        const uniqueCategories = Array.from(new Set(formatted.map(r => r.category)));
+        setAvailableCategories(uniqueCategories);
+      } catch (error) {
+        console.error("Error obteniendo rutas:", error);
+      }
+    };
+  
+    fetchRoutes();
   }, []);
+  
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
