@@ -22,10 +22,12 @@ export function useRouteCard({
   const { token } = useAuth();
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category | "">("");
   const [isPrivate, setIsPrivate] = useState(true);
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
+  const [nameTooLong, setNameTooLong] = useState(false);
   const geocoderRef = useRef<HTMLDivElement | null>(null);
   const geocoderInstance = useRef<MapboxGeocoder | null>(null);
 
@@ -54,6 +56,16 @@ export function useRouteCard({
     return () => { try { geocoder.clear(); } catch {}; geocoderInstance.current = null; if (geocoderRef.current) geocoderRef.current.innerHTML = ""; };
   }, [mode]);
 
+  const onChangeName = (v: string) => {
+    if ((v ?? "").length > 30) {
+      setName((v ?? "").slice(0, 30));
+      setNameTooLong(true);
+    } else {
+      setName(v ?? "");
+      setNameTooLong(false);
+    }
+  };
+
   const addSearchPoint = () => {
     if (!selectedCoord) return;
     setSearchPoints((prev) => [...prev, selectedCoord]);
@@ -68,30 +80,59 @@ export function useRouteCard({
     if (m === "search") onResetPoints?.(); else clearSearchPoints();
   };
 
+  const checkRouteNameExists = async (routeName: string) => {
+    try {
+      const res = await fetch(`${API}/routes/check-name?name=${encodeURIComponent(routeName.trim())}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      return !!data?.exists;
+    } catch {
+      return false;
+    }
+  };
+
   const handleSave = async () => {
     const points = mode === "draw" ? drawPoints : searchPoints;
-    if (!points.length) return alert("Añade al menos un punto.");
-    if (!name.trim()) return alert("Pon un nombre a la ruta.");
-    if (!category) return alert("Selecciona una categoría.");
-
-    const formattedPoints = points.map(([lng, lat]) => ({
-      latitude: lat,
-      longitude: lng,
-    }));
-    
+    if (points.length < 3) {
+      alert("Mínimo se han de seleccionar 3 puntos de interés");
+      return;
+    }
+    if (!name.trim()) {
+      alert("Falta añadir nombre a la ruta");
+      return;
+    }
+    if (name.trim().length > 30) {
+      alert("El nombre supera los 30 caracteres");
+      return;
+    }
+    const exists = await checkRouteNameExists(name);
+    if (exists) {
+      alert("Este nombre de ruta ya existe");
+      return;
+    }
+    if (!description.trim()) {
+      alert("Falta añadir una descripción a la ruta");
+      return;
+    }
+    if (!category) {
+      alert("No se ha seleccionado ninguna categoría");
+      return;
+    }
+    const formattedPoints = points.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
     const payload = {
       name: name.trim(),
+      description: description.trim(),
       points: formattedPoints,
       visibility: !isPrivate,
       category: category as Category,
     };
-    console.log(JSON.stringify(payload));
     try {
       const res = await fetch(`${API}/routes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -104,6 +145,7 @@ export function useRouteCard({
     viewProps: {
       mode,
       name,
+      description,
       isPrivate,
       category,
 
@@ -111,16 +153,17 @@ export function useRouteCard({
       searchPoints,
       drawPoints,
       selectedCoord,
-
-      onChangeName: setName,
+      onChangeName,
       onTogglePrivate: setIsPrivate,
       onChangeCategory: (v: Category | "") => setCategory(v),
+      onChangeDescription: setDescription,
       onChangeMode: changeMode,
       onAddSearchPoint: addSearchPoint,
       onClearSearchPoints: clearSearchPoints,
       onRemoveSearchPoint: removeSearchPoint,
       onResetDrawPoints: onResetPoints,
       onSave: handleSave,
+      nameTooLong,
     },
   } as const;
 }
