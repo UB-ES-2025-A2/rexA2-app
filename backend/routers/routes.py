@@ -1,9 +1,17 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
 from db.models import route as route_crud
 from db.schemas.route import RouteCreate, RoutePublic
 from core.security import get_current_user
 
 router = APIRouter(prefix="/routes", tags=["routes"])
+
+@router.get("/check-name")
+async def check_name(name: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve {"exists": true|false} si el nombre ya existe para el usuario autenticado.
+    """
+    exists = await route_crud.get_route_by_name(current_user["_id"], name) is not None
+    return {"exists": exists}
 
 @router.post('', response_model=RoutePublic, status_code=201)
 async def create_route(payload: RouteCreate, current_user: dict = Depends(get_current_user)):
@@ -47,6 +55,19 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
     if route["is_private"] and route["owner_id"] != current_user["_id"]:
         raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
     
+    route["_id"] = str(route["_id"])
+    return route
+
+@router.get("/by-name/{name}", response_model=RoutePublic)
+async def get_public_route_by_name(name: str, current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve una ruta PÚBLICA por nombre.
+    - 200 si existe (pública)
+    - 404 si no existe o es privada
+    """
+    route = await route_crud.get_public_route_by_name(name)
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
     route["_id"] = str(route["_id"])
     return route
 

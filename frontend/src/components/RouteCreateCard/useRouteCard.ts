@@ -82,13 +82,14 @@ export function useRouteCard({
 
   const checkRouteNameExists = async (routeName: string) => {
     try {
-      const res = await fetch(`${API}/routes/check-name?name=${encodeURIComponent(routeName.trim())}`, {
+      const res = await fetch(`${API}/routes/by-name/${encodeURIComponent(routeName.trim())}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
-      return !!data?.exists;
-    } catch {
-      return false;
+      if (res.status === 404) return false;
+      if (!res.ok) throw new Error(`Error HTTP ${res.status}`);
+      return true;
+    } catch (err) {
+      return false; 
     }
   };
 
