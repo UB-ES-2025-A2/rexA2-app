@@ -10,6 +10,7 @@ class RouteBase(BaseModel):
     name: str
     points: List[Point]
     visibility: bool = False
+    description: str | None = None
     category: str | None = None
 
 class RouteCreate(RouteBase):

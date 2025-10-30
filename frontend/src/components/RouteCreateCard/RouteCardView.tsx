@@ -1,21 +1,18 @@
-// src/components/RouteCard/RouteCardView.tsx
 import React from "react";
 import type { Category, Mode } from "../types";
 
 type Props = {
-  // estado/control
   mode: Mode;
   name: string;
+  description: string;
   isPrivate: boolean;
   category: Category | "";
-
-  // refs y datos
+  
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
   drawPoints: Array<[number, number]>;
   selectedCoord: [number, number] | null;
 
-  // handlers
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
@@ -25,6 +22,7 @@ type Props = {
   onRemoveSearchPoint: (idx: number) => void;
   onResetDrawPoints?: () => void;
   onSave: () => void | Promise<void>;
+  onChangeDescription: (v: string) => void;
 };
 
 const RouteCardView: React.FC<Props> = ({
@@ -36,6 +34,7 @@ const RouteCardView: React.FC<Props> = ({
   searchPoints,
   drawPoints,
   selectedCoord,
+  description,
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
@@ -45,6 +44,7 @@ const RouteCardView: React.FC<Props> = ({
   onRemoveSearchPoint,
   onResetDrawPoints,
   onSave,
+  onChangeDescription,
 }) => {
   return (
     <div className="route-card-panel">
@@ -179,6 +179,20 @@ const RouteCardView: React.FC<Props> = ({
           <option value="entretenimiento">Entretenimiento</option>
           <option value="trabajo">Trabajo</option>
         </select>
+      </div>
+      <div className="input-group">
+        <label htmlFor="route-desc">Descripción</label>
+        <textarea
+          id="route-desc"
+          value={description}
+          onChange={(e) => onChangeDescription(e.target.value)}
+          placeholder="Cuenta brevemente de qué va la ruta…"
+          rows={4}
+          maxLength={500}
+        />
+        <div className="muted" aria-live="polite">
+          {description.length}/500
+        </div>
       </div>
 
       <button className="btn primary" onClick={onSave}>

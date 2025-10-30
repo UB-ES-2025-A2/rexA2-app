@@ -12,8 +12,10 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "name": route_data["name"],
         "points": route_data["points"],
         "visibility": route_data.get("visibility", False),
+        "description": route_data.get("description"),
         "category": route_data.get("category"),
         "created_at": datetime.utcnow(),
+        
     }
 
     result = await db_client.db["routes"].insert_one(route)
