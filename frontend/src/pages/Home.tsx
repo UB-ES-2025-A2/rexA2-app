@@ -6,10 +6,8 @@ import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import { useAuth } from "../context/AuthContext";
 import type { Category } from "../components/types";
-// ❌ QUITA ErrorPortal
-// import ErrorPortal from "../components/ErrorPortal";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
-import ErrorAlert from "../components/ErrorAlert"; // ✅ usa ErrorAlert directamente
+
 import "../styles/Home.css";
 
 const API = import.meta.env.VITE_API_URL;
@@ -38,7 +36,6 @@ export default function Home() {
     setDrawPoints([]);
   }
 
-  // 👇 Controlador del RouteCard, para poder mostrar errores globales
   const routeCtrl = useRouteCard({
     modeDefault: "draw",
     drawPoints,
@@ -47,8 +44,6 @@ export default function Home() {
   });
 
   useEffect(() => {
-    // Prueba visual (puedes quitarlo luego)
-    routeCtrl.setErrorMsg("Hola 👋");
 
     const fetchRoutes = async () => {
       try {
@@ -150,7 +145,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 👇 El contenedor debe ser relative para anclar el toast */}
       <main className="home__content relative">
         <div className="home__left-skeleton">
           {routeCardOpen ? (
@@ -228,25 +222,12 @@ export default function Home() {
           {routeCardOpen ? "←" : "＋"}
         </button>
 
-        {routeCtrl.errorMsg && (
-          <ErrorAlert
-            detail={routeCtrl.errorMsg}
-            onClose={() => routeCtrl.setErrorMsg(null)}
-            autoHideMs={4000}
-          />
-        )}
+      
       </main>
 
-      <Modal open={authOpen} onClose={() => setAuthOpen(false)}>
-        <AuthCard
-          mode={mode}
-          onSwitchMode={setMode}
-          onSubmit={(values) => {
-            setAuthOpen(false);
-            console.log("Submit", mode, values);
-          }}
-        />
-      </Modal>
+
+      
     </div>
+    
   );
 }

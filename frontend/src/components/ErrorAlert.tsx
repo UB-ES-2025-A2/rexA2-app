@@ -19,7 +19,7 @@ function toMessage(detail: Detail): string {
 }
 
 export type ErrorAlertProps = {
-  detail: Detail;
+  detail?: Detail;
   onClose?: () => void;
   autoHideMs?: number;
 };

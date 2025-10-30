@@ -1,6 +1,5 @@
 import React from "react";
 import type { Category, Mode } from "../types";
-import ErrorPortal from "../ErrorPortal";
 
 type Props = {
   mode: Mode;
@@ -8,9 +7,7 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
-  errorMsg: string | null;
-  onDismissError: () => void;
-  
+
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
   drawPoints: Array<[number, number]>;
@@ -38,7 +35,7 @@ const RouteCardView: React.FC<Props> = ({
   drawPoints,
   selectedCoord,
   description,
-  
+
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
@@ -49,14 +46,12 @@ const RouteCardView: React.FC<Props> = ({
   onResetDrawPoints,
   onSave,
   onChangeDescription,
-
-  
-  
 }) => {
   return (
     <div className="route-card-panel">
       <h2 className="route__title">Crear Ruta</h2>
 
+      {/* Nombre */}
       <div className="input-group">
         <label htmlFor="route-name">Nombre</label>
         <input
@@ -68,6 +63,7 @@ const RouteCardView: React.FC<Props> = ({
         />
       </div>
 
+      {/* Tabs */}
       <div className="route__tabs">
         <button
           className={`route__tab-btn ${mode === "search" ? "active" : ""}`}
@@ -83,6 +79,7 @@ const RouteCardView: React.FC<Props> = ({
         </button>
       </div>
 
+      {/* Modo: buscar ubicación */}
       {mode === "search" && (
         <>
           <div className="input-group">
@@ -133,6 +130,7 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
+      {/* Modo: dibujar ruta */}
       {mode === "draw" && (
         <>
           <p className="draw-instruction">
@@ -162,6 +160,7 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
+      {/* Privacidad */}
       <div className="input-group">
         <label>
           <input
@@ -173,6 +172,7 @@ const RouteCardView: React.FC<Props> = ({
         </label>
       </div>
 
+      {/* Categoría */}
       <div className="input-group">
         <label htmlFor="category">Categoría</label>
         <select
@@ -187,6 +187,8 @@ const RouteCardView: React.FC<Props> = ({
           <option value="trabajo">Trabajo</option>
         </select>
       </div>
+
+      {/* Descripción */}
       <div className="input-group">
         <label htmlFor="route-desc">Descripción</label>
         <textarea
@@ -202,6 +204,7 @@ const RouteCardView: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* Guardar */}
       <button className="btn primary" onClick={onSave}>
         Guardar Ruta
       </button>
