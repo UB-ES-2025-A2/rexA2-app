@@ -12,6 +12,7 @@ export function useRouteCard({
   drawPoints,
   onResetPoints,
   onClose,
+  
 }: {
   
   modeDefault: Mode;
@@ -19,6 +20,7 @@ export function useRouteCard({
   onResetPoints?: () => void;
   onClose?: () => void;
 }) {
+  
   const { token } = useAuth();
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
@@ -31,7 +33,11 @@ export function useRouteCard({
   const geocoderRef = useRef<HTMLDivElement | null>(null);
   const geocoderInstance = useRef<MapboxGeocoder | null>(null);
 
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const showError = (msg: string) => setErrorMsg(msg);
+
   useEffect(() => {
+
     if (mode !== "search") {
       try { geocoderInstance.current?.clear(); } catch {}
       geocoderInstance.current = null;
@@ -52,6 +58,8 @@ export function useRouteCard({
     geocoder.on("result", (e: any) => setSelectedCoord((e?.result?.center as [number, number]) ?? null));
     geocoder.on("clear", () => setSelectedCoord(null));
     geocoderInstance.current = geocoder;
+
+
 
     return () => { try { geocoder.clear(); } catch {}; geocoderInstance.current = null; if (geocoderRef.current) geocoderRef.current.innerHTML = ""; };
   }, [mode]);
@@ -95,31 +103,15 @@ export function useRouteCard({
 
   const handleSave = async () => {
     const points = mode === "draw" ? drawPoints : searchPoints;
-    if (points.length < 3) {
-      alert("Mínimo se han de seleccionar 3 puntos de interés");
-      return;
-    }
-    if (!name.trim()) {
-      alert("Falta añadir nombre a la ruta");
-      return;
-    }
-    if (name.trim().length > 30) {
-      alert("El nombre supera los 30 caracteres");
-      return;
-    }
+    if (points.length < 3) { showError("Mínimo se han de seleccionar 3 puntos de interés"); return; }
+    if (!name.trim()) { showError("Falta añadir nombre a la ruta"); return; }
+    if (name.trim().length > 30) { showError("El nombre supera los 30 caracteres"); return; }
+
     const exists = await checkRouteNameExists(name);
-    if (exists) {
-      alert("Este nombre de ruta ya existe");
-      return;
-    }
-    if (!description.trim()) {
-      alert("Falta añadir una descripción a la ruta");
-      return;
-    }
-    if (!category) {
-      alert("No se ha seleccionado ninguna categoría");
-      return;
-    }
+    if (exists) { showError("Este nombre de ruta ya existe"); return; }
+
+    if (!description.trim()) { showError("Falta añadir una descripción a la ruta"); return; }
+    if (!category) { showError("No se ha seleccionado ninguna categoría"); return; }
     const formattedPoints = points.map(([lng, lat]) => ({ latitude: lat, longitude: lng }));
     const payload = {
       name: name.trim(),
@@ -139,7 +131,7 @@ export function useRouteCard({
       });
       try { console.log("Ruta enviada:", await res.json()); } catch { console.log("Ruta enviada (sin JSON)"); }
       onClose?.();
-    } catch (e) { console.error(e); alert("No se pudo guardar la ruta."); }
+    } catch (e) { console.error(e); showError("No se pudo guardar la ruta."); }
   };
 
   return {
@@ -149,7 +141,7 @@ export function useRouteCard({
       description,
       isPrivate,
       category,
-
+  
       geocoderRef,
       searchPoints,
       drawPoints,
@@ -165,6 +157,14 @@ export function useRouteCard({
       onResetDrawPoints: onResetPoints,
       onSave: handleSave,
       nameTooLong,
+  
+      errorMsg,
+      onDismissError: () => setErrorMsg(null),
     },
+  
+    errorMsg,
+    setErrorMsg,
+    showError,
   } as const;
+  
 }

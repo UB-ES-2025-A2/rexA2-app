@@ -6,7 +6,12 @@ import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import { useAuth } from "../context/AuthContext";
 import type { Category } from "../components/types";
+// ❌ QUITA ErrorPortal
+// import ErrorPortal from "../components/ErrorPortal";
+import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
+import ErrorAlert from "../components/ErrorAlert"; // ✅ usa ErrorAlert directamente
 import "../styles/Home.css";
+
 const API = import.meta.env.VITE_API_URL;
 
 export default function Home() {
@@ -28,58 +33,65 @@ export default function Home() {
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
+  function handleCloseRouteCard() {
+    setRouteCardOpen(false);
+    setDrawPoints([]);
+  }
+
+  // 👇 Controlador del RouteCard, para poder mostrar errores globales
+  const routeCtrl = useRouteCard({
+    modeDefault: "draw",
+    drawPoints,
+    onResetPoints: () => setDrawPoints([]),
+    onClose: handleCloseRouteCard,
+  });
+
   useEffect(() => {
+    // Prueba visual (puedes quitarlo luego)
+    routeCtrl.setErrorMsg("Hola 👋");
+
     const fetchRoutes = async () => {
       try {
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
-  
+
         const data = await response.json();
-        console.log(data);
-  
-        // Mapea las rutas para adaptarlas al formato que tu frontend espera
+
         const formatted = data.map((route: any) => ({
           id: route._id,
           name: route.name,
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
         }));
-  
+
         setRoutes(formatted);
-  
-        const uniqueCategories = Array.from(new Set(formatted.map(r => r.category)));
+        const uniqueCategories = Array.from(new Set(formatted.map((r) => r.category)));
         setAvailableCategories(uniqueCategories);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
     };
-  
+
     fetchRoutes();
   }, []);
-  
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
     setAuthOpen(true);
-    setProfileMenuOpen(false);  // Cerrar el perfil si abrimos el login
+    setProfileMenuOpen(false);
   };
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
   useEffect(() => {
     if (user || token) {
-      setProfileMenuOpen(false);  // Cierra el menú de perfil si ya está logeado
-      setAuthOpen(false);          // Cierra el modal de login/signup
+      setProfileMenuOpen(false);
+      setAuthOpen(false);
     }
   }, [user, token]);
 
   const handleMapClick = (lng: number, lat: number) => {
     setDrawPoints((prev) => [...prev, [lng, lat]]);
-  };
-
-  const handleCloseRouteCard = () => {
-    setRouteCardOpen(false);
-    setDrawPoints([]);
   };
 
   return (
@@ -91,9 +103,9 @@ export default function Home() {
             className="profile-menu-btn"
             onClick={() => {
               if (user || token) {
-                toggleProfileMenu();      // Si ya está logeado, muestra el menú
+                toggleProfileMenu();
               } else {
-                openAuth("login");        // Si no, abre el login
+                openAuth("login");
               }
             }}
             aria-label="Profile"
@@ -103,23 +115,23 @@ export default function Home() {
             <span>👤</span>
           </button>
 
-          {user || token ? (  // Si hay usuario o token, mostramos el menú
-            <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+          {user || token ? (
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
               <button
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Mi perfil
               </button>
               <button
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Ajustes
               </button>
@@ -127,8 +139,8 @@ export default function Home() {
                 className="profile-menu__item"
                 role="menuitem"
                 onClick={() => {
-                  logout();               // Limpiar sesión
-                  setProfileMenuOpen(false); // Cerrar menú
+                  logout();
+                  setProfileMenuOpen(false);
                 }}
               >
                 Cerrar sesión
@@ -138,10 +150,12 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="home__content">
+      {/* 👇 El contenedor debe ser relative para anclar el toast */}
+      <main className="home__content relative">
         <div className="home__left-skeleton">
           {routeCardOpen ? (
             <RouteCard
+              ctrl={routeCtrl}
               modeDefault="draw"
               drawPoints={drawPoints}
               onResetPoints={() => setDrawPoints([])}
@@ -180,9 +194,7 @@ export default function Home() {
                         name={r.name}
                         category={r.category as Category}
                         points={r.points}
-                        onClick={() => {
-                          setSelectedRoutePoints(r.points);
-                        }}
+                        onClick={() => setSelectedRoutePoints(r.points)}
                       />
                     ))}
                 </div>
@@ -215,6 +227,14 @@ export default function Home() {
         >
           {routeCardOpen ? "←" : "＋"}
         </button>
+
+        {routeCtrl.errorMsg && (
+          <ErrorAlert
+            detail={routeCtrl.errorMsg}
+            onClose={() => routeCtrl.setErrorMsg(null)}
+            autoHideMs={4000}
+          />
+        )}
       </main>
 
       <Modal open={authOpen} onClose={() => setAuthOpen(false)}>

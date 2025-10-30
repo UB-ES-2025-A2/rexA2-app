@@ -1,5 +1,6 @@
 import React from "react";
 import type { Category, Mode } from "../types";
+import ErrorPortal from "../ErrorPortal";
 
 type Props = {
   mode: Mode;
@@ -7,6 +8,8 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
+  errorMsg: string | null;
+  onDismissError: () => void;
   
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
@@ -35,6 +38,7 @@ const RouteCardView: React.FC<Props> = ({
   drawPoints,
   selectedCoord,
   description,
+  
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
@@ -45,6 +49,9 @@ const RouteCardView: React.FC<Props> = ({
   onResetDrawPoints,
   onSave,
   onChangeDescription,
+
+  
+  
 }) => {
   return (
     <div className="route-card-panel">
