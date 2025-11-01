@@ -1,21 +1,18 @@
-// src/components/RouteCard/RouteCardView.tsx
 import React from "react";
 import type { Category, Mode } from "../types";
 
 type Props = {
-  // estado/control
   mode: Mode;
   name: string;
+  description: string;
   isPrivate: boolean;
   category: Category | "";
 
-  // refs y datos
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
   drawPoints: Array<[number, number]>;
   selectedCoord: [number, number] | null;
 
-  // handlers
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
@@ -25,6 +22,7 @@ type Props = {
   onRemoveSearchPoint: (idx: number) => void;
   onResetDrawPoints?: () => void;
   onSave: () => void | Promise<void>;
+  onChangeDescription: (v: string) => void;
 };
 
 const RouteCardView: React.FC<Props> = ({
@@ -36,6 +34,8 @@ const RouteCardView: React.FC<Props> = ({
   searchPoints,
   drawPoints,
   selectedCoord,
+  description,
+
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
@@ -45,11 +45,13 @@ const RouteCardView: React.FC<Props> = ({
   onRemoveSearchPoint,
   onResetDrawPoints,
   onSave,
+  onChangeDescription,
 }) => {
   return (
     <div className="route-card-panel">
       <h2 className="route__title">Crear Ruta</h2>
 
+      {/* Nombre */}
       <div className="input-group">
         <label htmlFor="route-name">Nombre</label>
         <input
@@ -61,6 +63,7 @@ const RouteCardView: React.FC<Props> = ({
         />
       </div>
 
+      {/* Tabs */}
       <div className="route__tabs">
         <button
           className={`route__tab-btn ${mode === "search" ? "active" : ""}`}
@@ -76,6 +79,7 @@ const RouteCardView: React.FC<Props> = ({
         </button>
       </div>
 
+      {/* Modo: buscar ubicación */}
       {mode === "search" && (
         <>
           <div className="input-group">
@@ -126,6 +130,7 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
+      {/* Modo: dibujar ruta */}
       {mode === "draw" && (
         <>
           <p className="draw-instruction">
@@ -155,6 +160,7 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
+      {/* Privacidad */}
       <div className="input-group">
         <label>
           <input
@@ -166,6 +172,7 @@ const RouteCardView: React.FC<Props> = ({
         </label>
       </div>
 
+      {/* Categoría */}
       <div className="input-group">
         <label htmlFor="category">Categoría</label>
         <select
@@ -181,6 +188,23 @@ const RouteCardView: React.FC<Props> = ({
         </select>
       </div>
 
+      {/* Descripción */}
+      <div className="input-group">
+        <label htmlFor="route-desc">Descripción</label>
+        <textarea
+          id="route-desc"
+          value={description}
+          onChange={(e) => onChangeDescription(e.target.value)}
+          placeholder="Cuenta brevemente de qué va la ruta…"
+          rows={4}
+          maxLength={500}
+        />
+        <div className="muted" aria-live="polite">
+          {description.length}/500
+        </div>
+      </div>
+
+      {/* Guardar */}
       <button className="btn primary" onClick={onSave}>
         Guardar Ruta
       </button>
