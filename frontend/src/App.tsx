@@ -1,15 +1,12 @@
 import "./styles/App.css";
 import Home from "./pages/Home";
-import { ErrorProvider } from "./context/ErrorContext";
-import ErrorPortal from "./components/ErrorPortal";
+import { AlertProvider } from "./context/AlertContext";
 
 function App() {
   return (
-    <ErrorProvider>
+    <AlertProvider>
       <Home />
-
-      <ErrorPortal />
-    </ErrorProvider>
+    </AlertProvider>
   );
 }
 
