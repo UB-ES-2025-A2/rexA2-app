@@ -3,7 +3,7 @@ import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import type { Category, Mode } from "../types";
 import { useAuth } from "../../context/AuthContext";
-import { useError } from "../../context/ErrorContext"; // 👈 usamos el contexto global
+import { useAlert } from "../../context/AlertContext";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -19,7 +19,7 @@ export function useRouteCard({
   onClose?: () => void;
 }) {
   const { token } = useAuth();
-  const { showError } = useError(); // 👈 función global para mostrar errores
+  const { showAlert } = useAlert();
 
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
@@ -121,31 +121,31 @@ export function useRouteCard({
     const points = mode === "draw" ? drawPoints : searchPoints;
 
     if (points.length < 3) {
-      showError("Mínimo se han de seleccionar 3 puntos de interés");
+      showAlert("Mínimo se han de seleccionar 3 puntos de interés", "error");
       return;
     }
     if (!name.trim()) {
-      showError("Falta añadir nombre a la ruta");
+      showAlert("Falta añadir nombre a la ruta", "error");
       return;
     }
     if (name.trim().length > 30) {
-      showError("El nombre de la ruta debe tener menos de 30 caracteres");
+      showAlert("El nombre de la ruta debe tener menos de 30 caracteres", "error");
       return;
     }
 
     // Se comprueba unicidad de la ruta
     const exists = await checkRouteNameExists(name);
     if (exists) {
-      showError("Este nombre de ruta ya existe");
+      showAlert("Este nombre de ruta ya existe", "error");
       return;
     }
 
     if (!description.trim()) {
-      showError("Falta añadir una descripción a la ruta");
+      showAlert("Falta añadir una descripción a la ruta", "error");
       return;
     }
     if (!category) {
-      showError("No se ha seleccionado ninguna categoría");
+      showAlert("No se ha seleccionado ninguna categoría", "error");
       return;
     }
 
@@ -178,10 +178,12 @@ export function useRouteCard({
         console.log("Ruta enviada (sin JSON)");
       }
 
+      showAlert("Ruta creada correctamente", "success");
+
       onClose?.();
     } catch (e) {
       console.error(e);
-      showError("No se pudo guardar la ruta.");
+      showAlert("No se pudo guardar la ruta.", "error");
     }
   };
 
