@@ -206,9 +206,7 @@ export default function Home() {
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
           />
-        </div>
-
-        <button
+          <button
           className="fab"
           onClick={() => {
             setRouteCardOpen((prev) => {
@@ -221,6 +219,7 @@ export default function Home() {
         >
           {routeCardOpen ? "←" : "＋"}
         </button>
+        </div>
 
       
       </main>
