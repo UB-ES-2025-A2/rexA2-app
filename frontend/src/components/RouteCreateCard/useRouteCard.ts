@@ -129,7 +129,7 @@ export function useRouteCard({
       return;
     }
     if (name.trim().length > 30) {
-      showError("El nombre supera los 30 caracteres");
+      showError("El nombre de la ruta debe tener menos de 30 caracteres");
       return;
     }
 
