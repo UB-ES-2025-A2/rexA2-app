@@ -133,6 +133,7 @@ export function useRouteCard({
       return;
     }
 
+    // Se comprueba unicidad de la ruta
     const exists = await checkRouteNameExists(name);
     if (exists) {
       showError("Este nombre de ruta ya existe");
