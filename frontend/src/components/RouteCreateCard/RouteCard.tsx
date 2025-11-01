@@ -8,9 +8,18 @@ export type Props = {
   drawPoints?: Array<[number, number]>;
   onResetPoints?: () => void;
   onClose?: () => void;
+
+  ctrl?: ReturnType<typeof useRouteCard>;
 };
 
-export default function RouteCard({ modeDefault = "search", drawPoints = [], onResetPoints, onClose }: Props) {
-  const ctrl = useRouteCard({ modeDefault, drawPoints, onResetPoints, onClose });
-  return <RouteCardView {...ctrl.viewProps} />;
+export default function RouteCard({
+  modeDefault = "search",
+  drawPoints = [],
+  onResetPoints,
+  onClose,
+  ctrl,
+}: Props) {
+  const internal = useRouteCard({ modeDefault, drawPoints, onResetPoints, onClose });
+  const c = ctrl ?? internal;
+  return <RouteCardView {...c.viewProps} />;
 }
