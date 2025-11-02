@@ -3,7 +3,8 @@ import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
-import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
+import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
+import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard"; 
 import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
@@ -26,6 +27,7 @@ export default function Home() {
   >([]);
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<any | null>(null); // ✅ NUEVO
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -57,8 +59,10 @@ export default function Home() {
         const formatted = data.map((route: any) => ({
           id: route._id,
           name: route.name,
+          description: route.description || "Sin descripción", // ✅ añadimos esto
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
+          visibility: route.visibility ?? false,
         }));
 
         setRoutes(formatted);
@@ -152,6 +156,15 @@ export default function Home() {
               onResetPoints={() => setDrawPoints([])}
               onClose={handleCloseRouteCard}
             />
+          ) : selectedRoute ? (
+            <RouteDetailsCard
+              name={selectedRoute.name}
+              description={selectedRoute.description}
+              category={selectedRoute.category as Category}
+              points={selectedRoute.points}
+              isPrivate={!selectedRoute.visibility}
+              onClose={() => setSelectedRoute(null)}
+            />
           ) : (
             <div>
               <div className="category-filter">
@@ -183,8 +196,12 @@ export default function Home() {
                         name={r.name}
                         category={r.category as Category}
                         points={r.points}
-                        // Protegemos el click con requireAuth
-                        onClick={() => requireAuth(() => setSelectedRoutePoints(r.points))}
+                        onClick={() =>
+                          requireAuth(() => {
+                            setSelectedRoute(r);
+                            setSelectedRoutePoints(r.points);
+                          })
+                        }
                       />
                     ))}
                 </div>
@@ -196,18 +213,18 @@ export default function Home() {
         <div className="home__map-skeleton">
           <MapView
             className="home__map-skeleton"
-            center={[2.1734, 41.3851]} // Barcelona
+            center={[2.1734, 41.3851]}
             zoom={11}
             allowPickPoint={routeCardOpen}
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
           />
 
-          {/* Botón flotante protegido */}
           <button
             className="fab"
             onClick={() =>
               requireAuth(() => {
+                setSelectedRoute(null);
                 setRouteCardOpen((prev) => {
                   setDrawPoints([]);
                   setSelectedRoutePoints([]);
