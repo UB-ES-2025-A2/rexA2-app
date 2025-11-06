@@ -1,13 +1,9 @@
 # from db.client import db
-import db.client as db_client
+import backend.db.client as db_client
 from bson import ObjectId
-from datetime import datetime
+from datetime import datetime, timezone
+# from typing import Dict
 
-# Helper: para convertir ObjectId a str en los documentos devueltos
-def _stringfy_id(doc: Dict) -> Dict:
-    if doc and "_id" in doc:
-        doc["_id"] = str(doc["_id"])
-    return doc
 # ============ CREATE OPERATIONS ============
 async def create_route(owner_id: str, route_data:dict) -> dict:
     '''
@@ -20,7 +16,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "visibility": route_data.get("visibility", False),
         "description": route_data["description"],   # Ahora es obligatorio
         "category": route_data["category"],         # Ahora es obligatorio
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
     result = await db_client.db["routes"].insert_one(route)
