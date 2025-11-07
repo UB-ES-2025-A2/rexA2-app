@@ -1,6 +1,6 @@
 # Conexión con MongoDB
 from motor.motor_asyncio import AsyncIOMotorClient  # Cliente asíncorno oficial de MongoDB
-from core.config import settings                    # Importamos la configuración global
+from backend.core.config import settings                    # Importamos la configuración global
 
 client: AsyncIOMotorClient | None = None            # Variable global para el cliente
 db = None                                           # Referencia global a la base de datos

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from db.models import user as user_crud
-from db.schemas.user import UserCreate, UserPublic
+from backend.db.models import user as user_crud
+from backend.db.schemas.user import UserCreate, UserPublic
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -22,6 +22,6 @@ async def register_user(payload: UserCreate):
     return {
         "id": str(user["_id"]),
         "email": user["email"],
-        "username": user.get("username"),
+        "username": user["username"],
         "is_active": user["is_active"],
     }

@@ -2,8 +2,7 @@ from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError                      # Librería para firmar/verificar JWT
 from passlib.context import CryptContext            # Framework para hasing seguro (bcrypt)
 from fastapi import HTTPException, Request, status
-from core.config import settings
-from db.models import user as user_crud             # Acceso a funciones CURD del usuario
+from backend.core.config import settings
 
 # Configuración del hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -49,6 +48,8 @@ def decode_token(token: str) -> dict:
     
 # Dependencia para obtener usuario auteticado
 async def get_current_user(request: Request):
+    from backend.db.models import user as user_crud             # Acceso a funciones CURD del usuario
+
     '''
     Extrae el usuario actual desde cookie o header Bearer
     '''
@@ -61,7 +62,7 @@ async def get_current_user(request: Request):
     
     data = decode_token(token)
     if data.get("type") != "access":
-        raise HTTPException(status_Code=401, detail="Token inválido")
+        raise HTTPException(status_code=401, detail="Token inválido")
 
     user = await user_crud.get_user_by_email(data["sub"])
 
