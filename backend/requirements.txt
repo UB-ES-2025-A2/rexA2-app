@@ -20,12 +20,8 @@ python-dotenv==1.0.1
 
 # --- Tipos (ayuda a editores y análisis estático, opcional) ---
 types-python-jose
-<<<<<<< HEAD:backend/requirements.txt
 types-passlib
 
 # --- Test ---
-pytest 
+pytest
 pytest.asyncio
-=======
-types-passlib
->>>>>>> origin/develop:requirements.txt
