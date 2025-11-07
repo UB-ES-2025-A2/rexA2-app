@@ -5,8 +5,12 @@ import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import { useAuth } from "../context/AuthContext";
+import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
+import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
+
 import "../styles/Home.css";
+
 const API = import.meta.env.VITE_API_URL;
 
 export default function Home() {
@@ -17,59 +21,63 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-
-  const [routes, setRoutes] = useState<Array<{
-    id: number;
-    name: string;
-    category: string;
-    points: Array<[number, number]>;
-  }>>([]);
-
+  const [routes, setRoutes] = useState<
+    Array<{ id: number; name: string; category: string; points: Array<[number, number]> }>
+  >([]);
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+
+  const openAuth = (m: "login" | "signup" = "login") => {
+    setMode(m);
+    setAuthOpen(true);
+    setProfileMenuOpen(false);
+  };
+
+  const { requireAuth } = useRequireAuth(openAuth);
+
+  function handleCloseRouteCard() {
+    setRouteCardOpen(false);
+    setDrawPoints([]);
+  }
+
+  const routeCtrl = useRouteCard({
+    modeDefault: "draw",
+    drawPoints,
+    onResetPoints: () => setDrawPoints([]),
+    onClose: handleCloseRouteCard,
+  });
 
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
-  
+
         const data = await response.json();
-        console.log(data);
-  
-        // Mapea las rutas para adaptarlas al formato que tu frontend espera
         const formatted = data.map((route: any) => ({
           id: route._id,
           name: route.name,
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
         }));
-  
+
         setRoutes(formatted);
-  
-        const uniqueCategories = Array.from(new Set(formatted.map(r => r.category)));
+        const uniqueCategories = Array.from(new Set(formatted.map((r) => r.category)));
         setAvailableCategories(uniqueCategories);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
     };
-  
+
     fetchRoutes();
   }, []);
-  
-
-  const openAuth = (m: "login" | "signup" = "login") => {
-    setMode(m);
-    setAuthOpen(true);
-    setProfileMenuOpen(false);  // Cerrar el perfil si abrimos el login
-  };
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
   useEffect(() => {
     if (user || token) {
-      setProfileMenuOpen(false);  // Cierra el menú de perfil si ya está logeado
-      setAuthOpen(false);          // Cierra el modal de login/signup
+      setProfileMenuOpen(false);
+      setAuthOpen(false);
     }
   }, [user, token]);
 
@@ -77,23 +85,19 @@ export default function Home() {
     setDrawPoints((prev) => [...prev, [lng, lat]]);
   };
 
-  const handleCloseRouteCard = () => {
-    setRouteCardOpen(false);
-    setDrawPoints([]);
-  };
-
   return (
     <div className="home">
       <header className="home__header">
         <div className="brand">REX</div>
+
         <div className="profile-menu-container">
           <button
             className="profile-menu-btn"
             onClick={() => {
               if (user || token) {
-                toggleProfileMenu();      // Si ya está logeado, muestra el menú
+                toggleProfileMenu();
               } else {
-                openAuth("login");        // Si no, abre el login
+                openAuth("login");
               }
             }}
             aria-label="Profile"
@@ -103,23 +107,23 @@ export default function Home() {
             <span>👤</span>
           </button>
 
-          {user || token ? (  // Si hay usuario o token, mostramos el menú
-            <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+          {user || token ? (
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
               <button
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Mi perfil
               </button>
               <button
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Ajustes
               </button>
@@ -127,8 +131,8 @@ export default function Home() {
                 className="profile-menu__item"
                 role="menuitem"
                 onClick={() => {
-                  logout();               // Limpiar sesión
-                  setProfileMenuOpen(false); // Cerrar menú
+                  logout();
+                  setProfileMenuOpen(false);
                 }}
               >
                 Cerrar sesión
@@ -138,10 +142,11 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="home__content">
+      <main className="home__content relative">
         <div className="home__left-skeleton">
           {routeCardOpen ? (
             <RouteCard
+              ctrl={routeCtrl}
               modeDefault="draw"
               drawPoints={drawPoints}
               onResetPoints={() => setDrawPoints([])}
@@ -150,21 +155,19 @@ export default function Home() {
           ) : (
             <div>
               <div className="category-filter">
-                <div>
-                  <label className="category-label">Filtrar por categoría</label>
-                  <select
-                    className="category-select"
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
-                  >
-                    <option value="todos">Todas</option>
-                    {availableCategories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <label className="category-label">Filtrar por categoría</label>
+                <select
+                  className="category-select"
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
+                >
+                  <option value="todos">Todas</option>
+                  {availableCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {routes.length === 0 ? (
@@ -180,9 +183,8 @@ export default function Home() {
                         name={r.name}
                         category={r.category as Category}
                         points={r.points}
-                        onClick={() => {
-                          setSelectedRoutePoints(r.points);
-                        }}
+                        // Protegemos el click con requireAuth
+                        onClick={() => requireAuth(() => setSelectedRoutePoints(r.points))}
                       />
                     ))}
                 </div>
@@ -200,21 +202,24 @@ export default function Home() {
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
           />
-        </div>
 
-        <button
-          className="fab"
-          onClick={() => {
-            setRouteCardOpen((prev) => {
-              setDrawPoints([]);
-              setSelectedRoutePoints([]);
-              return !prev;
-            });
-          }}
-          title={routeCardOpen ? "Volver a la lista" : "Crear ruta"}
-        >
-          {routeCardOpen ? "←" : "＋"}
-        </button>
+          {/* Botón flotante protegido */}
+          <button
+            className="fab"
+            onClick={() =>
+              requireAuth(() => {
+                setRouteCardOpen((prev) => {
+                  setDrawPoints([]);
+                  setSelectedRoutePoints([]);
+                  return !prev;
+                });
+              })
+            }
+            title={routeCardOpen ? "Volver a la lista" : "Crear ruta"}
+          >
+            {routeCardOpen ? "←" : "＋"}
+          </button>
+        </div>
       </main>
 
       <Modal open={authOpen} onClose={() => setAuthOpen(false)}>

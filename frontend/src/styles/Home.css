@@ -34,3 +34,17 @@
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
   }
   
+  .home__content {
+    display: flex;
+    height: calc(100vh - 60px);
+    overflow: hidden;
+  }
+
+  .home__left-skeleton {
+    width: 350px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+

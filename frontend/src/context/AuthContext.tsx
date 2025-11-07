@@ -1,4 +1,3 @@
-// frontend/src/context/AuthContext.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type User = { id?: string; email?: string; username?: string } | null;
