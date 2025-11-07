@@ -29,39 +29,34 @@ async def ac(test_app):
     # Cliente HTTP asincrono contra la app ASGI en memoria.
     transport = ASGITransport(app=test_app)
     
-    # ASGITransport evita levantar un sercidor real (más rápido y determinista)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        # 'yield' permite usar el cliente en cada test y cerrarlo al final
         yield client
 
 
-# ---------- Tests ----------
+# ========== /routes/check-name ==========
 
 @pytest.mark.anyio
 async def test_check_name_exists_true(ac, monkeypatch):
     from backend.db.models import route as route_crud
-    # Stub: la consulta por nombre devuelve un documento => el nombre ya existe
-    async def fake_get_route_by_name(owner_id, name):
-        return {"_id": "1", "owner_id": owner_id, "name": name}
 
-    # Inyecta el stub en el punto de uso real
+    # Simulamos que la ruta SÍ existe para el usuario "user123"
+    async def fake_get_route_by_name(owner_id, name):
+        assert owner_id == "user123"
+        assert name == "Ruta X"
+        return {"_id": "abc", "name": name}
+
     monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
 
-    # Llamamos al endpoint de verificación
     res = await ac.get("/routes/check-name", params={"name": "Ruta X"})
-    
-    # Debe responder OK con exists = True (contrato del endpoint)
     assert res.status_code == 200
-    assert res.json() == {"exists": True}
-
+    assert res.json() == {"exists": True}  # contrato: exists True
 
 @pytest.mark.anyio
 async def test_check_name_exists_false(ac, monkeypatch):
     from backend.db.models import route as route_crud
-    
-    # Stub: no hay ruta con ese nombre => disponible
+
     async def fake_get_route_by_name(owner_id, name):
-        return None
+        return None  # No hay ruta con ese nombre para ese owner
 
     monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
 
@@ -125,8 +120,9 @@ async def test_create_route_ok_201(ac, monkeypatch):
         "visibility": True,
         "description": "d",
         "category": "c",
+        "duration_minutes": 60,
+        "rating": 4.5,
     }
-
     res = await ac.post("/routes", json=payload)
     
     # 201 Created: creación exitosa
@@ -137,6 +133,8 @@ async def test_create_route_ok_201(ac, monkeypatch):
     assert body["id"] == "abc123"
     assert body["name"] == "Nueva"
     assert body["visibility"] is True
+    assert body["duration_minutes"] == 60
+    assert body["rating"] == 4.5
 
 
 @pytest.mark.anyio
@@ -162,7 +160,37 @@ async def test_list_routes_public_only_default(ac, monkeypatch):
 
     res = await ac.get("/routes")
     assert res.status_code == 200
-    assert res.json()[0]["id"] == "1"
+    body = res.json()
+    assert isinstance(body, list)
+    assert body[0]["id"] == "1"
+
+
+@pytest.mark.anyio
+async def test_list_routes_public_only_false(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_all_routes(public_only: bool):
+        assert public_only is False
+        return [
+            {
+                "_id": "1",
+                "name": "R1",
+                "visibility": False,
+                "owner_id": "x",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "description": "d",
+                "category": "c",
+                "created_at": "2025-01-01T00:00:00Z",
+            },
+        ]
+
+    monkeypatch.setattr(route_crud, "get_all_routes", fake_get_all_routes, raising=True)
+
+    res = await ac.get("/routes", params={"public_only": "false"})
+    assert res.status_code == 200
+    body = res.json()
+    assert isinstance(body, list)
+    assert body[0]["id"] == "1"
 
 
 @pytest.mark.anyio
@@ -188,8 +216,23 @@ async def test_my_routes_ok(ac, monkeypatch):
 
     res = await ac.get("/routes/me")
     assert res.status_code == 200
-    data = res.json()
-    assert data[0]["id"] == "1" # Misma comprobación de mapeo de ID
+    body = res.json()
+    assert len(body) == 1
+    assert body[0]["name"] == "Mia"
+
+
+@pytest.mark.anyio
+async def test_get_route_not_found_404(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return None  # No existe esa ruta
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.get("/routes/NOEXISTE")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Ruta no encontrada"
 
 
 @pytest.mark.anyio
@@ -249,7 +292,7 @@ async def test_get_public_route_by_name_404(ac, monkeypatch):
 
     monkeypatch.setattr(route_crud, "get_public_route_by_name", fake_get_public_route_by_name, raising=True)
 
-    res = await ac.get("/routes/by-name/NoExiste")
+    res = await ac.get("/routes/by-name/Invisible")
     assert res.status_code == 404
     assert res.json()["detail"] == "Ruta no encontrada"
 
@@ -258,7 +301,6 @@ async def test_get_public_route_by_name_404(ac, monkeypatch):
 async def test_get_public_route_by_name_200(ac, monkeypatch):
     from backend.db.models import route as route_crud
 
-    # Existe una ruta pública con ese nombre => OK
     async def fake_get_public_route_by_name(name: str):
         return {
             "_id": "X",
@@ -303,3 +345,33 @@ async def test_delete_route_204(ac, monkeypatch):
 
     res = await ac.delete("/routes/X")
     assert res.status_code == 204
+
+
+@pytest.mark.anyio
+async def test_create_route_invalid_duration_returns_422(ac):
+    payload = {
+        "name": "Ruta duración inválida",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": True,
+        "description": "d",
+        "category": "c",
+        "duration_minutes": -10,
+    }
+
+    res = await ac.post("/routes", json=payload)
+    assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_create_route_invalid_rating_returns_422(ac):
+    payload = {
+        "name": "Ruta rating inválido",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": True,
+        "description": "d",
+        "category": "c",
+        "rating": 6.0,
+    }
+
+    res = await ac.post("/routes", json=payload)
+    assert res.status_code == 422

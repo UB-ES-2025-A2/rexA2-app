@@ -14,6 +14,17 @@ class RouteBase(BaseModel):
     visibility: bool = False        # Visibilidad de la ruta públicamente (por defecto, no)
     description: str # | None = None  # Descripción de la ruta (opcional)
     category: str # | None = None     # Categoría opcional de la ruta
+    duration_minutes: int | None = Field(   #Duración estimada en minutos, aun no implementado en el front
+        default=None,
+        ge=0,                           # >= 0
+        description="Duración estimada en minutos (>= 0)",
+    )
+    rating: float | None = Field(          #Nota media de la ruta, aun no implemnentado en el front
+        default=None,
+        ge=0,
+        le=5,                           # 0 <= rating <= 5
+        description="Valoración media entre 0 y 5",
+    )
 
     # Mensajes personalizacos (para que coincidan con la UI)
     @field_validator("points")

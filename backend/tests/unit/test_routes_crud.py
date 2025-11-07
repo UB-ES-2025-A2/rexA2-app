@@ -75,6 +75,8 @@ def _route(owner="u1", name="Ruta", vis=True):
         "visibility": vis,
         "description": "d",
         "category": "c",
+        "duration_minutes": 30,
+        "rating": 4.0,
         "created_at": datetime.now(timezone.utc),
     }
 
@@ -85,6 +87,8 @@ async def test_create_and_get_by_id(fake_db):
     got = await route_crud.get_route_by_id(str(r["_id"]))
     assert got is not None
     assert got["name"] == "A"
+    assert "duration_minutes" in got
+    assert "rating" in got
 
 @pytest.mark.anyio
 async def test_get_all_routes_public_only(fake_db):
@@ -118,3 +122,22 @@ async def test_delete_route(fake_db):
     assert ok_wrong_owner is False
     ok_right_owner = await route_crud.delete_route(str(r["_id"]), "u1")
     assert ok_right_owner is True
+
+@pytest.mark.anyio
+async def test_create_route_without_duration_and_rating_sets_none(fake_db):
+    # Si el diccionario no trae duration_minutes ni rating, el CRUD debe dejar esos campos en None o no romper
+    data = _route(name="SinExtra")
+    data.pop("duration_minutes")
+    data.pop("rating")
+    r = await route_crud.create_route("u1", data)
+    assert "duration_minutes" in r
+    assert "rating" in r
+    assert r["duration_minutes"] is None
+    assert r["rating"] is None
+
+@pytest.mark.anyio
+async def test_get_route_by_id_not_found_returns_none(fake_db):
+    # Si el ID no existe, la función debe devolver None
+    fake_id = str(ObjectId())
+    got = await route_crud.get_route_by_id(fake_id)
+    assert got is None

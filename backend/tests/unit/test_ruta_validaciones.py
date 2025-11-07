@@ -55,6 +55,23 @@ def test_route_public_alias_dump():
     assert dumped["id"] == "abc123"
     assert "_id" not in dumped
 
+def test_route_create_default_duration_and_rating_none():
+    # Si no se envían, duration_minutes y rating deben ser None
+    payload = _valid_payload()
+    route = RouteCreate(**payload)
+    assert getattr(route, "duration_minutes", None) is None
+    assert getattr(route, "rating", None) is None
+
+def test_route_create_accepts_duration_and_rating():
+    # Debe aceptar duración y valoración válidas
+    payload = _valid_payload(
+        duration_minutes=45,
+        rating=3.5,
+    )
+    route = RouteCreate(**payload)
+    assert route.duration_minutes == 45
+    assert route.rating == 3.5
+
 # ---------- Validaciones que deben fallar ----------
 
 # Helper: verifica que el mensaje de validación incluya cierto texto
@@ -96,3 +113,21 @@ def test_category_required():
     with pytest.raises(ValidationError) as exc:
         RouteCreate(**payload)
     _assert_err_contains(exc.value, "No se ha seleccionado ninguna categoría")
+
+def test_duration_minutes_negative_fails():
+    # Duración negativa debe fallar
+    payload = _valid_payload(duration_minutes=-1)
+    with pytest.raises(ValidationError):
+        RouteCreate(**payload)
+
+def test_rating_below_0_fails():
+    # Valoración menor que 0 debe fallar
+    payload = _valid_payload(rating=-0.5)
+    with pytest.raises(ValidationError):
+        RouteCreate(**payload)
+
+def test_rating_above_5_fails():
+    # Valoración mayor que 5 debe fallar
+    payload = _valid_payload(rating=5.5)
+    with pytest.raises(ValidationError):
+        RouteCreate(**payload)
