@@ -1,37 +1,37 @@
 from fastapi import FastAPI
-from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from core.config import settings
-from db.client import init_db
-from routers import users, auth, routes
 
-# Documentation at http://127.0.0.1:8000/docs
-app = FastAPI(title=settings.PROJECT_NAME)              # Instancia principal.
+from backend.core.config import settings
+from backend.db.client import init_db
+from backend.routers import users, auth, routes
 
-# Middleware CORS
+# === Instancia principal ===
+app = FastAPI(title=settings.PROJECT_NAME)
+
+# === Middleware CORS ===
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,                # Orígenes permitidos (frontend).
-    allow_credentials=True,                             # Permite enviar cookies en peticiones cross-site.
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Archivos estáticos (imágenes, recursos)
+# === Archivos estáticos ===
 # app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Inicializar la conexión a Mongo al iniciar la app
+# === Inicializar la conexión a MongoDB ===
 @app.on_event("startup")
 async def startup_event():
-    await init_db()   
+    await init_db()
 
-# Incluir routers
+# === Routers ===
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(routes.router)
 
+# === Endpoint de salud ===
 @app.get("/health")
 async def health():
-    """Endpoint de salud para monitorización."""
     return {"status": "ok"}
