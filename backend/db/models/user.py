@@ -1,55 +1,53 @@
-from backend.db import client                  # Obtenemos la referencia global a la db
-from backend.core.security import get_password_hash # Para hashear constraseñas antes de guardar
-from bson import ObjectId                   # Para manejar IDs nativos de MongoDB
-from bson.errors import InvalidId           # Manejo de ids mal formados 
+from typing import Optional, Dict, Any
+from bson import ObjectId
+from bson.errors import InvalidId
 
-# Alias de la colección reutilizable
-try:
-    USERS_COL = client.db["users"]
-except Exception:
-    USERS_COL = None
-async def create_user(email:str, password: str, username: str) -> dict:
-    '''
-    Crea un nuevo usuario en la collección
-    '''
-    if USERS_COL is None:
-        raise RuntimeError("DB no inicializada (USERS_COL es None). Revisa 'client' o parchea en tests.")
+from backend.db.client import get_db
+from backend.core.security import get_password_hash
 
-    # Hash de la contraseña (NUNCA guardar la contraseña sin hashear)
-    hashed = get_password_hash(password)   
+USERS_COL = None
 
-    doc = {
+def _users_col():
+    """
+    Obtiene la colección 'users'.
+    Si `USERS_COL` ha sido parcheado por tests, úsalo.
+    Si no, usa la DB inicializada con get_db().
+    """
+    if USERS_COL is not None:
+        return USERS_COL
+    db = get_db()
+    return db["users"]
+
+async def create_user(email: str, password: str, username: str) -> Dict[str, Any]:
+    """
+    Crea un nuevo usuario en la colección 'users'.
+    """
+    col = _users_col()
+    hashed = get_password_hash(password)
+    doc: Dict[str, Any] = {
         "email": email,
         "hashed_password": hashed,
         "username": username,
         "is_active": True,
     }
-    # Inserta en MongoDB (devuelve un InsertOneResult).
-    result = await USERS_COL.insert_one(doc)
-    # Añadimos el id al dict para devolverlo
+    result = await col.insert_one(doc)
     doc["_id"] = result.inserted_id
-
     return doc
 
-async def get_user_by_id(user_id: str) -> dict | None:
-    '''
-    Busca un usuario por su _id o devuelve none None si no existe
-    '''
-    if USERS_COL is None:
-        raise RuntimeError("DB no inicializada (USERS_COL es None). Revisa 'client' o parchea en tests.")
-
+async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Busca un usuario por su _id (string) o devuelve None si no existe/mal formado.
+    """
+    col = _users_col()
     try:
         oid = ObjectId(user_id)
-    except:
+    except (InvalidId, Exception):
         return None
+    return await col.find_one({"_id": oid})
 
-    return await USERS_COL.find_one({"_id": oid})
-
-async def get_user_by_email(email: str) -> dict | None:
-    '''
-    Devuelve un usuario por email o None si no Existe
-    '''
-    if USERS_COL is None:
-        raise RuntimeError("DB no inicializada (USERS_COL es None). Revisa 'client' o parchea en tests.")
-
-    return await USERS_COL.find_one({"email": email})
+async def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """
+    Devuelve un usuario por email o None si no existe.
+    """
+    col = _users_col()
+    return await col.find_one({"email": email})
