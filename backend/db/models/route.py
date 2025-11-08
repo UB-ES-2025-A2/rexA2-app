@@ -14,11 +14,11 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "name": route_data["name"],
         "points": route_data["points"],
         "visibility": route_data.get("visibility", False),
-        "description": route_data["description"],   # Ahora es obligatorio
-        "category": route_data["category"],         # Ahora es obligatorio
+        "description": route_data["description"],
+        "category": route_data["category"],
         "created_at": datetime.now(timezone.utc),
-        "duration_minutes": route_data.get("duration_minutes"),   #Por implementar en front
-        "rating": route_data.get("rating"),                       #Por implementar en front
+        "duration_minutes": route_data.get("duration_minutes"),
+        "rating": route_data.get("rating"),
     }
 
     result = await db_client.db["routes"].insert_one(route)
