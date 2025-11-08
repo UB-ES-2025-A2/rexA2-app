@@ -1,98 +1,97 @@
 .route-details-card {
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    height: 100%;
-    animation: fadeIn 0.3s ease-in-out;
-    overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  height: 100%;
+  animation: fadeIn 0.3s ease-in-out;
+  overflow-y: auto;
+}
+
+.route-details-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.route-details-card__title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #222;
+}
+
+.route-details-card__close {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: #555;
+  transition: color 0.2s ease;
+}
+
+.route-details-card__close:hover {
+  color: #000;
+}
+
+.route-details-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.route-details-card__description {
+  color: #333;
+  line-height: 1.4;
+}
+
+.route-details-card__info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  color: #444;
+}
+
+.route-details-card__category strong {
+  color: #2563eb;
+}
+
+.route-details-card__privacy {
+  color: #555;
+}
+
+.route-details-card__points-list {
+  margin-top: 1rem;
+}
+
+.route-details-card__points-list h4 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+  color: #111;
+}
+
+.route-details-card__points-list ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+.route-details-card__points-list li {
+  padding: 0.25rem 0;
+  font-family: monospace;
+  color: #333;
+  border-bottom: 1px solid #eee;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  
-  .route-details-card__header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .route-details-card__title {
-    font-size: 1.4rem;
-    font-weight: 600;
-    color: #222;
-  }
-  
-  .route-details-card__close {
-    background: none;
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: #555;
-    transition: color 0.2s ease;
-  }
-  
-  .route-details-card__close:hover {
-    color: #000;
-  }
-  
-  .route-details-card__body {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .route-details-card__description {
-    color: #333;
-    line-height: 1.4;
-  }
-  
-  .route-details-card__info {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.6rem;
-    font-size: 0.95rem;
-    color: #444;
-  }
-  
-  .route-details-card__category strong {
-    color: #2563eb;
-  }
-  
-  .route-details-card__privacy {
-    color: #555;
-  }
-  
-  .route-details-card__points-list {
-    margin-top: 1rem;
-  }
-  
-  .route-details-card__points-list h4 {
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
-    color: #111;
-  }
-  
-  .route-details-card__points-list ul {
-    list-style: none;
-    padding-left: 0;
-  }
-  
-  .route-details-card__points-list li {
-    padding: 0.25rem 0;
-    font-family: monospace;
-    color: #333;
-    border-bottom: 1px solid #eee;
-  }
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
+}

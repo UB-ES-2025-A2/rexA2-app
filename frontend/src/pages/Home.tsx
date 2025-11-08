@@ -49,26 +49,6 @@ export default function Home() {
     onClose: handleCloseRouteCard,
   });
 
-  const openAuth = (m: "login" | "signup" = "login") => {
-    setMode(m);
-    setAuthOpen(true);
-    setProfileMenuOpen(false);
-  };
-
-  const { requireAuth } = useRequireAuth(openAuth);
-
-  function handleCloseRouteCard() {
-    setRouteCardOpen(false);
-    setDrawPoints([]);
-  }
-
-  const routeCtrl = useRouteCard({
-    modeDefault: "draw",
-    drawPoints,
-    onResetPoints: () => setDrawPoints([]),
-    onClose: handleCloseRouteCard,
-  });
-
   useEffect(() => {
     const fetchRoutes = async () => {
       try {
