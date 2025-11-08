@@ -7,6 +7,8 @@ import RoutePreviewCard from "../components/RouteViewCard/RoutePreviewCard";
 import { useAuth } from "../context/AuthContext";
 import type { Category } from "../components/types";
 import "../styles/Home.css";
+import { useNavigate } from "react-router-dom"; // <-- añade esto
+
 const API = import.meta.env.VITE_API_URL;
 
 export default function Home() {
@@ -17,6 +19,8 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
+  const navigate = useNavigate(); // <-- añade esto
+
 
   const [routes, setRoutes] = useState<Array<{
     id: number;
@@ -110,10 +114,12 @@ export default function Home() {
                 role="menuitem"
                 onClick={() => {
                   setProfileMenuOpen(false);
+                  navigate("/perfil");
                 }}
               >
                 Mi perfil
               </button>
+              {/*
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -123,6 +129,7 @@ export default function Home() {
               >
                 Ajustes
               </button>
+              */}
               <button
                 className="profile-menu__item"
                 role="menuitem"

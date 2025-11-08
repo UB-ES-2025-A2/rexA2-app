@@ -218,3 +218,9 @@
     .modal__close.close-x > span::before,
     .modal__close.close-x > span::after{height:20px;}
   }
+
+.auth__form-error {
+  color: #b91c1c;
+  font-size: 0.95rem;
+  margin-top: 10px;
+}

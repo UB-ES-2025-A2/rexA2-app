@@ -12,6 +12,7 @@ export type FieldErrors = {
 
 export function validateEmail(raw: string): string | undefined {
   const v = raw ?? "";
+  if (!v.trim()) return "El correo es obligatorio.";
   if (v.trim() !== v) return "El correo no puede tener espacios al inicio ni al final.";
   if (!EMAIL_ALLOWED.test(v)) return "Solo se permiten letras, dígitos y _ @ .";
   if (!v.includes("@")) return "El correo debe contener '@'.";
@@ -21,6 +22,7 @@ export function validateEmail(raw: string): string | undefined {
 
 export function validateUsername(raw: string): string | undefined {
   const v = raw ?? "";
+  if (!v.trim()) return "El usuario es obligatorio.";
   if (v.trim() !== v) return "El usuario no puede tener espacios al inicio ni al final.";
   if (v.length < 3 || v.length > 20) return "El usuario debe tener entre 3 y 20 caracteres.";
   if (!USERNAME_ALLOWED.test(v)) return "Solo letras, dígitos y guion bajo (_).";
