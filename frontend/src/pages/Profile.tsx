@@ -93,6 +93,7 @@ export default function Profile() {
     fetchIdentity();
     return () => controller.abort();
   }, [accessToken]);
+  /*
 
   const handleDraftChange = (patch: Partial<ExtraFields>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -109,16 +110,17 @@ export default function Profile() {
   const saveEdit = () => {
     setExtras(draftExtras);
     setIsEditing(false);
-  };
+  };*/
 
   return (
     <div className="profile-root">
       <header className="header">
         <div className="header__inner">
           <div className="header-left">
+            {/*}
             <button aria-label="Ir al inicio" onClick={() => navigate("/")} className="btn-home">
               🏠
-            </button>
+            </button> */}
             <div className="header-title">
               <span className="eyebrow">Panel</span>
               <h1>Perfil</h1>
@@ -169,7 +171,7 @@ export default function Profile() {
             </div>
         </div>
       </header>
-
+    {/*  
       <main className="profile-layout">
         <aside className="sidebar">
           <ul className="menu">
@@ -217,6 +219,7 @@ export default function Profile() {
           {active === "favorites" && <FavoritesPanel />}
         </section>
       </main>
+      */}
     </div>
   );
 }
