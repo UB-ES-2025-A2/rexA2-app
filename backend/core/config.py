@@ -1,5 +1,5 @@
 # Calse base que mapea variables de entorno a atributos tipados
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 # Tipado para listas (CORS_ORIGINS)
 from typing import List
 
@@ -18,8 +18,14 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: List[str]
 
+    model_config = SettingsConfigDict(
+        env_file="../.env",                  # Ajusta si tu .env vive en otra ruta
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # Config inerna de Pydantic Settings
-    class Config:
-        env_file = '../.env'           # Carga variables del archivo .env en la raíz del proyecto
+    #class Config:
+    #   env_file = '../.env'           # Carga variables del archivo .env en la raíz del proyecto
 
 settings = Settings()               # Instancia que se evalúa al importar: lee .ven y valida tipos

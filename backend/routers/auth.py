@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Response, Request, Depends
-from db.models import user as user_crud
-from db.schemas.user import LogIn, TokenOut, UserPublic
-from core.security import verify_password, create_access_token, create_refresh_token, decode_token, get_current_user
+from backend.db.models import user as user_crud
+from backend.db.schemas.user import LogIn, TokenOut, UserPublic
+from backend.core.security import verify_password, create_access_token, create_refresh_token, decode_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

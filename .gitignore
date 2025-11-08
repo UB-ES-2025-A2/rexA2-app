@@ -1,1 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+dist/
+build/
+.pytest_cache/
+.coverage
 .env
+*.db
+
+# IDE
+.vscode/
+.idea/

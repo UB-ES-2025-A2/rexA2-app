@@ -21,3 +21,7 @@ python-dotenv==1.0.1
 # --- Tipos (ayuda a editores y análisis estático, opcional) ---
 types-python-jose
 types-passlib
+
+# --- Test ---
+pytest
+pytest.asyncio
