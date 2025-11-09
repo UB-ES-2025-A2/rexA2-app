@@ -93,7 +93,7 @@ export default function Profile() {
     fetchIdentity();
     return () => controller.abort();
   }, [accessToken]);
-  /*
+  
 
   const handleDraftChange = (patch: Partial<ExtraFields>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -110,7 +110,7 @@ export default function Profile() {
   const saveEdit = () => {
     setExtras(draftExtras);
     setIsEditing(false);
-  };*/
+  };
 
   return (
     <div className="profile-root">
@@ -152,7 +152,6 @@ export default function Profile() {
                     Mi perfil
                 </button>
 
-                {/* Ajustes eliminado en Profile por ahora */}
 
                 <button
                     className="profile-menu__item"
@@ -198,7 +197,7 @@ export default function Profile() {
             </li>
           </ul>
         </aside>
-        {/* 
+        
         <section className="content">
           {active === "profile" && (
             <PersonalData
@@ -217,7 +216,7 @@ export default function Profile() {
           )}
           {active === "favorites" && <FavoritesPanel />}
         </section>
-        */}
+        
       </main>
     </div>
   );
