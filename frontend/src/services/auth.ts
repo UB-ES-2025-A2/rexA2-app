@@ -1,11 +1,17 @@
 // frontend/src/services/auth.ts
 const API = import.meta.env.VITE_API_URL || "";
+
+export type User = {
+  id?: string;
+  email?: string;
+  username?: string;
+};
 // ---------- Helpers de almacenamiento ----------
 export type AuthResponse = {
   access_token?: string;
   refresh_token?: string;
   token_type?: string;
-  user?: string;
+  user?: User;
 };
 
 export function saveAuth(auth: AuthResponse) {
@@ -23,6 +29,7 @@ export function clearAuth() {
   localStorage.removeItem("user");
 }
 
+/*
 export async function checkEmailAvailable(email: string): Promise<boolean> {
   try {
     //const res = await fetch(`${API}/users/check-email?email=${encodeURIComponent(email)}`);
@@ -33,9 +40,9 @@ export async function checkEmailAvailable(email: string): Promise<boolean> {
   } catch {
     return true;
   }
-}
+}*/
 
-export async function register(payload: { email: string; username: string; password: string }) {
+export async function register(payload: { email: string; username: string; password: string }) : Promise<AuthResponse> {
   const res = await fetch(`${API}/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -45,7 +52,7 @@ export async function register(payload: { email: string; username: string; passw
     const msg = await res.text();
     throw new Error(msg || `Error ${res.status}`);
   }
-  return res.json();
+  return (await res.json()) as AuthResponse;
 }
 
 
