@@ -1,16 +1,11 @@
-import { Routes, Route } from 'react-router-dom';
-import Register from './pages/Register.tsx';
-import Login from './pages/Login';
-import Explore from './pages/Explore';
 
-function App() {
-  return (
-    <Routes>
-      <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/explore" element={<Explore />} />
-      {}
-    </Routes>
-  );
-}
-export default App;
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: "http://rex-htcsanc0b9fqhnb6.spaincentral-01.azurewebsites.net", // tu backend en Azure
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export default api;
