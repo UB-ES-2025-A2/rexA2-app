@@ -171,7 +171,7 @@ export default function Profile() {
             </div>
         </div>
       </header>
-    {/*  
+      
       <main className="profile-layout">
         <aside className="sidebar">
           <ul className="menu">
@@ -199,7 +199,7 @@ export default function Profile() {
             </li>
           </ul>
         </aside>
-
+        {/* 
         <section className="content">
           {active === "profile" && (
             <PersonalData
@@ -218,8 +218,8 @@ export default function Profile() {
           )}
           {active === "favorites" && <FavoritesPanel />}
         </section>
+        */}
       </main>
-      */}
     </div>
   );
 }
