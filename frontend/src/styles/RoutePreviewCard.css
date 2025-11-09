@@ -1,0 +1,35 @@
+.route-preview-card {
+    background: var(--card);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .route-preview-card:hover {
+    background: var(--card-hover, #f8f8f8);
+  }
+  
+  .route-preview-title {
+    font-weight: 600;
+    font-size: 16px;
+    margin: 0;
+  }
+  
+  .route-preview-category {
+    font-size: 14px;
+    color: var(--text-muted, #555);
+  }
+  
+  .route-preview-points {
+    font-size: 13px;
+    color: #888;
+  }
+  
