@@ -1,0 +1,132 @@
+/* Global layout adjustments */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  background-color: #ffffff;
+  color: #213547;
+}
+
+/* Default link and hover */
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+/* Button styling */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+/* Remove default margins for headings */
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  margin: 0;
+}
+
+/* Remove Mapbox branding */
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
+
+/* Optional: Make MapView fill its parent properly if needed */
+.home__map-skeleton {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+/* --- Map & layout sanity --- */
+*, *::before, *::after { box-sizing: border-box; }
+.home,
+.home__content { min-width: 0; }
+
+.home {              /* que toda la pantalla pueda usarse */
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+.home__content {     /* contenido crece debajo del header */
+  flex: 1;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  min-height: 0;     /* importante para que el mapa no se colapse */
+}
+.home__map-skeleton {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* --- Geocoder fixes --- */
+.geocoder-container {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%;
+  max-width: none;
+  box-shadow: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+  z-index: 10; /* por si el dropdown queda detrás de otros panes */
+}
+
+.geocoder-container .mapboxgl-ctrl-geocoder--input {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 12px 0 36px; /* hueco para la lupa */
+  font-size: 14px;
+  text-align: left;
+}
+
+.geocoder-container .suggestions {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  background: #fff;
+}
+
+/* Revertir resets globales que afecten al geocoder */
+.geocoder-container input,
+.geocoder-container button {
+  all: revert;
+  font: inherit;
+}
+
+/* Alinear texto de la tarjeta (tu CSS global no lo centrará) */
+.route-card-panel,
+.route-card-panel .input-group,
+.route-card-panel .search-actions {
+  text-align: left;
+  min-width: 0;
+}

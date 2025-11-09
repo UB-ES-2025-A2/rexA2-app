@@ -32,3 +32,8 @@ La aplicación combina **descubrimiento, interacción y comunidad**, ofreciendo 
 
 - Despliegue en **Microsoft Azure**
 - API REST segura con autenticación JWT
+
+### Prerequisits
+
+En el dir rexa2-app:
+pip install -r requirements 
