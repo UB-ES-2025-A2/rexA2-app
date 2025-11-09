@@ -117,10 +117,9 @@ export default function Profile() {
       <header className="header">
         <div className="header__inner">
           <div className="header-left">
-            {/*}
             <button aria-label="Ir al inicio" onClick={() => navigate("/")} className="btn-home">
               🏠
-            </button> */}
+            </button>
             <div className="header-title">
               <span className="eyebrow">Panel</span>
               <h1>Perfil</h1>
