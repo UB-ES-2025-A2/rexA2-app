@@ -10,6 +10,16 @@ import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 
+type RouteItem = {
+  id: number | string;
+  name: string;
+  description: string;
+  category: string;
+  points: Array<[number, number]>;
+  visibility: boolean;
+};
+
+
 import "../styles/Home.css";
 
 const API = import.meta.env.VITE_API_URL;
@@ -22,9 +32,8 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-  const [routes, setRoutes] = useState<
-    Array<{ id: number; name: string; category: string; points: Array<[number, number]> }>
-  >([]);
+  const [routes, setRoutes] = useState<RouteItem[]>([]);
+
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<any | null>(null); // ✅ NUEVO
@@ -56,10 +65,10 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
 
         const data = await response.json();
-        const formatted = data.map((route: any) => ({
+        const formatted: RouteItem[] = data.map((route: any) => ({
           id: route._id,
           name: route.name,
-          description: route.description || "Sin descripción", // ✅ añadimos esto
+          description: route.description || "Sin descripción", 
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,

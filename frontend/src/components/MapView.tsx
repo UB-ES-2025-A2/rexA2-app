@@ -20,7 +20,6 @@ export default function MapView({
   className,
   center = [2.1734, 41.3851],
   zoom = 11,
-  markers = [],
   allowPickPoint = false,
   onPickPoint,
   highlightPoints = [],

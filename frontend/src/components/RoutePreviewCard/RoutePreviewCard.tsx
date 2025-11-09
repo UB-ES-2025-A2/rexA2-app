@@ -1,9 +1,9 @@
-import React from "react";
+import type React from "react";
 import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 
 type Props = {
-  id: number;
+  id: number | string;
   name: string;
   category: Category;
   points: Array<[number, number]>;
