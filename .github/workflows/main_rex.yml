@@ -13,11 +13,9 @@ jobs:
       contents: read
 
     steps:
-      # 1️⃣ Descargar código
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Preparar Python para validar dependencias del backend
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
@@ -29,13 +27,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 3️⃣ Desplegar TODO el repo (incluyendo la carpeta backend)
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'rex'
           publish-profile: ${{ secrets.AZUREAPPSERVICEPUBLISHPROFILE_REX }}
           package: .
+
 
 
 
