@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -17,38 +17,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Backend: Python 3.11
+      # 2️⃣ Preparar Python para validar dependencias del backend
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install backend dependencies
+      - name: Install backend dependencies (sanity check)
         working-directory: ./backend
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 3️⃣ (Opcional) Build del frontend, solo por si lo necesitas luego
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build frontend
-        working-directory: ./frontend
-        run: |
-          npm install
-          npm run build
-
-      # 4️⃣ Desplegar SOLO el backend a Azure
-      # Esto empaqueta el CONTENIDO de ./backend
-      # y en Azure termina como /site/wwwroot/main.py, /core, /routers, etc.
+      # 3️⃣ Desplegar TODO el repo (incluyendo la carpeta backend)
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'rex'
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_REX }}
-          package: ./backend
+          publish-profile: ${{ secrets.AZUREAPPSERVICEPUBLISHPROFILE_REX }}
+          package: .
+
 
 
