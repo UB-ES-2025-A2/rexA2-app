@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 
 const API = import.meta.env.VITE_API_URL as string;
 
@@ -12,8 +13,8 @@ type Props = {
   points: Array<[number, number]>;
   onClick?: () => void;
   initialSaved?: boolean;
-  favoriteUrl?: string;     // override opcional
-  unfavoriteUrl?: string;   // override opcional (misma URL)
+  favoriteUrl?: string;
+  unfavoriteUrl?: string;
   onSavedChange?: (saved: boolean) => void;
 };
 
@@ -31,32 +32,28 @@ const RoutePreviewCard: React.FC<Props> = ({
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const { showAlert } = useAlert();
+  const { token } = useAuth();
 
   const favUrl = favoriteUrl ?? `${API}/favorites/${id}`;
   const unfavUrl = unfavoriteUrl ?? favUrl;
 
-  // Helper: usa Bearer si hay token; si no, cookies httpOnly
-  const authFetch = (url: string, init: RequestInit) => {
-    const token = localStorage.getItem("token");
-    const base: RequestInit = { ...init };
-    if (token) {
-      base.headers = { ...(init.headers || {}), Authorization: `Bearer ${token}` };
-    } else {
-      base.credentials = "include";
-    }
-    return fetch(url, base);
-  };
-
   const handleSaveToggle = async () => {
     if (loading) return;
+
+
+    if (!token) {
+      showAlert("Inicia sesión para guardar rutas.", "error");
+      return;
+    }
 
     const next = !saved;
     setSaved(next);
     setLoading(true);
 
     try {
-      const res = await authFetch(next ? favUrl : unfavUrl, {
+      const res = await fetch(next ? favUrl : unfavUrl, {
         method: next ? "POST" : "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
@@ -83,7 +80,7 @@ const RoutePreviewCard: React.FC<Props> = ({
       className="route-preview-card"
       onClick={(e) => {
         const t = e.target as HTMLElement;
-        if (t.closest(".preview-save")) return; // evitar abrir detalles al pulsar el botón
+        if (t.closest(".preview-save")) return;
         onClick?.();
       }}
     >
