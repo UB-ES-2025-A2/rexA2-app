@@ -12,8 +12,8 @@ type Props = {
   points: Array<[number, number]>;
   onClick?: () => void;
   initialSaved?: boolean;
-  favoriteUrl?: string;
-  unfavoriteUrl?: string;
+  favoriteUrl?: string;     // override opcional
+  unfavoriteUrl?: string;   // override opcional (misma URL)
   onSavedChange?: (saved: boolean) => void;
 };
 
@@ -32,8 +32,20 @@ const RoutePreviewCard: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const { showAlert } = useAlert();
 
-  const favUrl = favoriteUrl ?? `${API}/routes/${id}/favorite`;
-  const unfavUrl = unfavoriteUrl ?? `${API}/routes/${id}/favorite`;
+  const favUrl = favoriteUrl ?? `${API}/favorites/${id}`;
+  const unfavUrl = unfavoriteUrl ?? favUrl;
+
+  // Helper: usa Bearer si hay token; si no, cookies httpOnly
+  const authFetch = (url: string, init: RequestInit) => {
+    const token = localStorage.getItem("token");
+    const base: RequestInit = { ...init };
+    if (token) {
+      base.headers = { ...(init.headers || {}), Authorization: `Bearer ${token}` };
+    } else {
+      base.credentials = "include";
+    }
+    return fetch(url, base);
+  };
 
   const handleSaveToggle = async () => {
     if (loading) return;
@@ -43,13 +55,18 @@ const RoutePreviewCard: React.FC<Props> = ({
     setLoading(true);
 
     try {
-      const res = await fetch(next ? favUrl : unfavUrl, {
+      const res = await authFetch(next ? favUrl : unfavUrl, {
         method: next ? "POST" : "DELETE",
       });
 
       if (!res.ok) {
-        setSaved(!next);
-        showAlert(`No se pudo ${next ? "guardar" : "quitar"} la ruta.`, "error");
+        setSaved(!next); // rollback
+        const txt = await res.text().catch(() => "");
+        console.error("Fav toggle failed:", res.status, txt);
+        if (res.status === 401) showAlert("No autorizado. Inicia sesión.", "error");
+        else if (res.status === 404) showAlert("Ruta no encontrada.", "error");
+        else if (res.status === 403) showAlert("No tienes permiso para esta ruta.", "error");
+        else showAlert(`No se pudo ${next ? "guardar" : "quitar"} la ruta.`, "error");
       } else {
         onSavedChange?.(next);
       }
@@ -66,7 +83,7 @@ const RoutePreviewCard: React.FC<Props> = ({
       className="route-preview-card"
       onClick={(e) => {
         const t = e.target as HTMLElement;
-        if (t.closest(".preview-save")) return;
+        if (t.closest(".preview-save")) return; // evitar abrir detalles al pulsar el botón
         onClick?.();
       }}
     >
@@ -111,7 +128,6 @@ const RoutePreviewCard: React.FC<Props> = ({
             <path d="M7,12H3c-0.553,0-1,0.448-1,1v14c0,0.552,0.447,1,1,1h4c0.553,0,1-0.448,1-1V13C8,12.448,7.553,12,7,12z   
               M5,25.5c-0.828,0-1.5-0.672-1.5-1.5c0-0.828,0.672-1.5,1.5-1.5c0.828,0,1.5,0.672,1.5,1.5C6.5,24.828,5.828,25.5,5,25.5z" />
           </svg>
-
         </label>
       </div>
     </div>
