@@ -48,10 +48,7 @@ jobs:
         with:
           name: python-backend
           path: |
-            backend/**
-            !backend/antenv/
             backend
-            !frontend/
   deploy:
     runs-on: ubuntu-latest
     needs: build
@@ -64,8 +61,12 @@ jobs:
           name: python-backend
           path: .
   
-      # Ahora el contenido de "backend" está desplegado en el directorio actual (.)
-      # Queremos que esos archivos sean la raíz de wwwroot.
+      # Mover el contenido de backend/ a la raíz del repo del job
+      - name: Move backend files to root
+        run: |
+          shopt -s dotglob
+          mv backend/* .
+          rmdir backend || true
   
       # 6️⃣ Desplegar a Azure Web App
       - name: Deploy to Azure Web App
@@ -74,3 +75,4 @@ jobs:
           app-name: 'rex'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_REX }}
           package: .
+
