@@ -12,14 +12,8 @@ interface RouteDetailsCardProps {
   points: Array<[number, number]>;
   isPrivate?: boolean;
   onClose: () => void;
-
-  // NUEVO: datos para la llamada
   routeId: string;
   initialSaved?: boolean;
-
-  // Opcional: si tu backend usa rutas distintas, puedes pasar las URL
-  favoriteUrl?: string;    // por defecto: `${API}/routes/:id/favorite`
-  unfavoriteUrl?: string;  // por defecto: `${API}/routes/:id/favorite`
   onSavedChange?: (saved: boolean) => void;
 }
 
@@ -32,42 +26,42 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   onClose,
   routeId,
   initialSaved = false,
-  favoriteUrl,
-  unfavoriteUrl,
   onSavedChange,
 }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const { showAlert } = useAlert();
 
-  const favUrl = favoriteUrl ?? `${API}/routes/${routeId}/favorite`;
-  const unfavUrl = unfavoriteUrl ?? `${API}/routes/${routeId}/favorite`;
+  const favUrl = `${API}/favorites/${routeId}`;
 
   const handleSaveToggle = async () => {
     if (loading) return;
-    const next = !saved;
 
-    // Optimistic UI
+    const next = !saved;
     setSaved(next);
     setLoading(true);
 
     try {
-      const res = await fetch(next ? favUrl : unfavUrl, {
+      const token = localStorage.getItem("token");
+      const res = await fetch(favUrl, {
         method: next ? "POST" : "DELETE",
-        // en tu app no añadís headers ni credentials en Home.tsx,
-        // si usas cookies httpOnly, el navegador las enviará solo.
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: token ? undefined : "include",
       });
 
       if (!res.ok) {
-        setSaved(!next); // rollback
+        setSaved(!next);
         const msg = await res.text().catch(() => "");
         console.error("Fav toggle failed:", res.status, msg);
-        showAlert(`No se pudo ${next ? "guardar" : "quitar"} la ruta.`, "error");
+        if (res.status === 401) showAlert("No autorizado. Inicia sesión.", "error");
+        else if (res.status === 404) showAlert("Ruta no encontrada.", "error");
+        else if (res.status === 403) showAlert("No tienes permiso para esta ruta.", "error");
+        else showAlert(`No se pudo ${next ? "guardar" : "quitar"} la ruta.`, "error");
       } else {
         onSavedChange?.(next);
       }
     } catch (err) {
-      setSaved(!next); // rollback
+      setSaved(!next);
       console.error(err);
       showAlert("Error de red al cambiar favorito.", "error");
     } finally {
@@ -79,9 +73,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     <div className="route-details-card">
       <header className="route-details-card__header">
         <h2 className="route-details-card__title">{name}</h2>
-        <button className="route-details-card__close" onClick={onClose}>
-          ✕
-        </button>
+        <button className="route-details-card__close" onClick={onClose}>✕</button>
       </header>
 
       <section className="route-details-card__body">
@@ -110,9 +102,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           </ul>
         </div>
 
-        {/* Botón Save a la derecha */}
         <div className="route-details-card__footer" style={{ justifyContent: "flex-end" }}>
-          <label className="save-container" title={saved ? "Quitar de guardadas" : "Guardar ruta"}>
+          <label
+            className="save-container"
+            title={saved ? "Quitar de guardadas" : "Guardar ruta"}
+          >
             <input
               type="checkbox"
               checked={saved}
@@ -124,6 +118,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               viewBox="0 0 32 32"
               xmlns="http://www.w3.org/2000/svg"
               className={`save-icon ${loading ? "is-loading" : ""}`}
+              role="img"
+              aria-label={saved ? "Quitar de guardadas" : "Guardar ruta"}
             >
               <path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13  
                 c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002  

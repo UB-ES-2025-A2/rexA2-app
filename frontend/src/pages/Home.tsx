@@ -4,15 +4,23 @@ import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
-import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard"; 
+import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
-
 import "../styles/Home.css";
 
 const API = import.meta.env.VITE_API_URL;
+
+type RouteItem = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  points: Array<[number, number]>;
+  visibility: boolean;
+};
 
 export default function Home() {
   const { user, token, logout } = useAuth();
@@ -22,13 +30,11 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-  const [routes, setRoutes] = useState<
-    Array<{ id: number; name: string; category: string; points: Array<[number, number]> }>
-  >([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<any | null>(null); // ✅ NUEVO
 
+  const [routes, setRoutes] = useState<RouteItem[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
     setAuthOpen(true);
@@ -56,18 +62,18 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
 
         const data = await response.json();
-        const formatted = data.map((route: any) => ({
-          id: route._id,
+        console.log(data);
+        const formatted: RouteItem[] = data.map((route: any) => ({
+          id: String(route.id),
           name: route.name,
-          description: route.description || "Sin descripción", // ✅ añadimos esto
+          description: route.description || "Sin descripción",
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,
         }));
 
         setRoutes(formatted);
-        const uniqueCategories = Array.from(new Set(formatted.map((r) => r.category)));
-        setAvailableCategories(uniqueCategories);
+        setAvailableCategories(Array.from(new Set(formatted.map(r => r.category))));
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
@@ -76,7 +82,7 @@ export default function Home() {
     fetchRoutes();
   }, []);
 
-  const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
+  const toggleProfileMenu = () => setProfileMenuOpen(v => !v);
 
   useEffect(() => {
     if (user || token) {
@@ -86,7 +92,7 @@ export default function Home() {
   }, [user, token]);
 
   const handleMapClick = (lng: number, lat: number) => {
-    setDrawPoints((prev) => [...prev, [lng, lat]]);
+    setDrawPoints(prev => [...prev, [lng, lat]]);
   };
 
   return (
@@ -98,11 +104,8 @@ export default function Home() {
           <button
             className="profile-menu-btn"
             onClick={() => {
-              if (user || token) {
-                toggleProfileMenu();
-              } else {
-                openAuth("login");
-              }
+              if (user || token) toggleProfileMenu();
+              else openAuth("login");
             }}
             aria-label="Profile"
             aria-haspopup={user || token ? "menu" : undefined}
@@ -112,23 +115,11 @@ export default function Home() {
           </button>
 
           {user || token ? (
-            <div
-              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
-              role="menu"
-              aria-label="Profile menu"
-            >
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => setProfileMenuOpen(false)}
-              >
+            <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+              <button className="profile-menu__item" role="menuitem" onClick={() => setProfileMenuOpen(false)}>
                 Mi perfil
               </button>
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => setProfileMenuOpen(false)}
-              >
+              <button className="profile-menu__item" role="menuitem" onClick={() => setProfileMenuOpen(false)}>
                 Ajustes
               </button>
               <button
@@ -158,6 +149,7 @@ export default function Home() {
             />
           ) : selectedRoute ? (
             <RouteDetailsCard
+              routeId={selectedRoute.id}
               name={selectedRoute.name}
               description={selectedRoute.description}
               category={selectedRoute.category as Category}
