@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
 
 const API = import.meta.env.VITE_API_URL as string;
 
@@ -31,22 +32,30 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const { showAlert } = useAlert();
+  const { token } = useAuth();
 
   const favUrl = `${API}/favorites/${routeId}`;
 
   const handleSaveToggle = async () => {
     if (loading) return;
 
+    if (!routeId) {
+      showAlert("No se puede guardar: id de ruta desconocido.", "error");
+      return;
+    }
+    if (!token) {
+      showAlert("Inicia sesión para guardar rutas.", "error");
+      return;
+    }
+
     const next = !saved;
     setSaved(next);
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch(favUrl, {
         method: next ? "POST" : "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        credentials: token ? undefined : "include",
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
@@ -103,10 +112,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         </div>
 
         <div className="route-details-card__footer" style={{ justifyContent: "flex-end" }}>
-          <label
-            className="save-container"
-            title={saved ? "Quitar de guardadas" : "Guardar ruta"}
-          >
+          <label className="save-container" title={saved ? "Quitar de guardadas" : "Guardar ruta"}>
             <input
               type="checkbox"
               checked={saved}
