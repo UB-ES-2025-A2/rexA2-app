@@ -1,5 +1,6 @@
 name: Build and deploy backend to Azure Web App - rex
 
+
 on:
   push:
     branches:
@@ -33,6 +34,7 @@ jobs:
           app-name: 'rex'
           publish-profile: ${{ secrets.AZUREAPPSERVICEPUBLISHPROFILE_REX }}
           package: .
+
 
 
 
