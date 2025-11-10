@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 
 from backend.core.config import settings
@@ -43,13 +42,8 @@ BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIST = BASE_DIR / "static"   # aquí copiamos el build en el workflow
 
 if FRONTEND_DIST.exists():
-    @app.get("/", include_in_schema=False)
-    async def serve_frontend_root():
-        """
-        Devuelve el index.html del build de React en la raíz (/).
-        Si por alguna razón no existe, responde algo explícito.
-        """
-        index_file = FRONTEND_DIST / "index.html"
-        if index_file.exists():
-            return FileResponse(index_file)
-        return {"detail": "Frontend build not found"}
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIST), html=True),
+        name="frontend",
+    )
