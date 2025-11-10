@@ -1,6 +1,7 @@
 # --- Core Framework (Full installation) ---
 fastapi[all]==0.115.2
 uvicorn[standard]==0.30.6
+gunicorn
 
 # --- MongoDB Drivers ---
 motor==3.5.1
