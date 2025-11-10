@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, ConfigDict    # Base para podelos, validador EmailStr
-
+from typing import Literal, Optional
 # Separación de modelos de entrada (UserCreate) y salida (UserPublic)
 
 
@@ -7,7 +7,10 @@ from pydantic import BaseModel, EmailStr, ConfigDict    # Base para podelos, val
 class UserDB(BaseModel):
     email: EmailStr                     # Email
     username: str
-    name: str | None = None             # Nombre opcional
+    name: Optional[str] = None            # Nombre opcional
+    phone: Optional[str] = None            # NEW
+    preferred_units: Literal["km", "mi"] = "km"
+    avatar_url: Optional[str] = None
 
 # Datos requeridos para crear un usario
 class UserCreate(UserDB):
@@ -29,3 +32,26 @@ class TokenOut(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+# --- Perfil (el output que se verá en el frontend) ---
+class ProfileStats(BaseModel):
+    routes_created: int = 0
+    routes_completed: int = 0
+    routes_favorites: int = 0
+
+class UserProfile(BaseModel):
+    id: str
+    username: str
+    email: EmailStr
+    phone: Optional[str] = None
+    preferred_units: Literal["km", "mi"] = "km"
+    avatar_url: Optional[str] = None
+    stats: ProfileStats
+    model_config = ConfigDict(from_attributes=True)
+
+# --- Perfil público (que todo el mundo verá) sin datos sensibles ---
+class UserProfilePublic(BaseModel):
+    username: str
+    avatar_url: Optional[str] = None
+    stats: ProfileStats
+    model_config = ConfigDict(from_attributes=True)
