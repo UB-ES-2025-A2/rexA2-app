@@ -108,7 +108,7 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
         saveAuth(authResp);
         auth.login({ user: authResp.user, token: authResp.access_token || "" });
         // 3) Aviso opcional y callback
-        onSubmit?.({ ...state, _autologin: true });
+        onSubmit?.({ ...state, _autologin: "true" });
         return;
       }
 

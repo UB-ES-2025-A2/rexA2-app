@@ -11,7 +11,7 @@ import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 
 type RouteItem = {
-  id: number | string;
+  id: string;
   name: string;
   description: string;
   category: string;
