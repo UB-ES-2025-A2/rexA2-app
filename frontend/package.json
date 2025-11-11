@@ -13,6 +13,8 @@
     "@hookform/resolvers": "^5.2.2",
     "@mapbox/mapbox-gl-geocoder": "^5.1.2",
     "axios": "^1.12.2",
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.552.0",
     "mapbox-gl": "^3.15.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

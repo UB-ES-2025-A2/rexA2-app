@@ -21,6 +21,7 @@ type RouteItem = {
 
 
 import "../styles/Home.css";
+import { useNavigate } from "react-router-dom"; // <-- añade esto
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -32,6 +33,8 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
+  const navigate = useNavigate(); // <-- añade esto
+
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
 
@@ -120,12 +123,27 @@ export default function Home() {
 
           {user || token ? (
             <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
-              <button className="profile-menu__item" role="menuitem" onClick={() => setProfileMenuOpen(false)}>
+              <button
+                className="profile-menu__item"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                  navigate("/perfil");
+                }}
+              >
                 Mi perfil
               </button>
-              <button className="profile-menu__item" role="menuitem" onClick={() => setProfileMenuOpen(false)}>
+              {/*
+              <button
+                className="profile-menu__item"
+                role="menuitem"
+                onClick={() => {
+                  setProfileMenuOpen(false);
+                }}
+              >
                 Ajustes
               </button>
+              */}
               <button
                 className="profile-menu__item"
                 role="menuitem"
