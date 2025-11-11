@@ -37,7 +37,7 @@ export default function Home() {
 
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<any | null>(null); // ✅ NUEVO
+  const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null); 
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
