@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from core.config import settings
 from db.client import init_db
-from routers import users, auth, routes
+from routers import users, users_profile, auth, routes
 
 # Documentation at http://127.0.0.1:8000/docs
 app = FastAPI(title=settings.PROJECT_NAME)              # Instancia principal.
@@ -28,6 +28,7 @@ async def startup_event():
 
 # Incluir routers
 app.include_router(users.router)
+app.include_router(users_profile.router)
 app.include_router(auth.router)
 app.include_router(routes.router)
 
