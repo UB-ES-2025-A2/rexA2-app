@@ -1,7 +1,15 @@
-.env
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+env/
+dist/
+build/
 .pytest_cache/
-tests/__pycache__/
-backend/__pycache__
-backend/core/__pycache__
-backend/db/__pycache__
-backend/routers/__pycache__
+.coverage
+.env
+*.db
+
+# IDE
+.vscode/
+.idea/

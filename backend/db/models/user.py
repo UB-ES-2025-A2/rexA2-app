@@ -31,18 +31,20 @@ async def create_user(
         "avatar_url": avatar_url,
         "is_active": True,
     }
-    # Inserta en MongoDB (devuelve un InserOneResult).
-    result = await client.db["users"].insert_one(doc)
-    # Añadimos el id al dict para devolverlo
+    result = await col.insert_one(doc)
     doc["_id"] = result.inserted_id
-
     return doc
 
-async def get_user_by_id(user_id: str) -> dict | None:
-    '''
-    Busca un usuario por su _id o devuelve none None si no existe
-    '''
-    return await client.db["users"].find_one({"_id": ObjectId(user_id)})
+async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Busca un usuario por su _id (string) o devuelve None si no existe/mal formado.
+    """
+    col = _users_col()
+    try:
+        oid = ObjectId(user_id)
+    except (InvalidId, Exception):
+        return None
+    return await col.find_one({"_id": oid})
 
 async def get_user_by_email(email: str) -> dict | None:
     '''

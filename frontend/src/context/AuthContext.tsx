@@ -1,10 +1,11 @@
-// frontend/src/context/AuthContext.tsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import type { User } from "../services/auth";
 
-type User = { id?: string; email?: string; username?: string } | null;
+//type User = { id?: string; email?: string; username?: string } | null;
 
 type AuthState = {
-  user: User;
+  user: User | null;
   token: string;
   login: (payload: { user?: User; token: string }) => void;
   logout: () => void;
@@ -12,8 +13,8 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User>(null);
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string>("");
 
   useEffect(() => {

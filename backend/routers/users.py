@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
-from db.models import user as user_crud
-from db.schemas.user import UserCreate, UserPublic
+from backend.db.models import user as user_crud
+from backend.db.schemas.user import UserCreate, UserPublic
 
 router = APIRouter(prefix="/users", tags=["users"])
 

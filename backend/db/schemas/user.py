@@ -18,9 +18,9 @@ class UserCreate(UserDB):
 
 # Datos que se devuelven en respuesta pública
 class UserPublic(UserDB):
-    id: str                                         # id de Mongo serializado (ObjectId -> str)
-    is_active: bool                                 # Estado de la cuenta
-    model_config = ConfigDict(from_attributes=True)  # Permite crear desde dicts u objectos
+    id: str                             # id de Mongo serializado (ObjectId -> str)
+    is_active: bool                     # Estado de la cuenta
+    model_config = ConfigDict(from_atributes=True)  # Permite crear desde dicts u objectos
 
 # Payload para el login
 class LogIn(BaseModel):
