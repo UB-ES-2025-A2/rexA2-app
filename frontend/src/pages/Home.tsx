@@ -24,15 +24,6 @@ import "../styles/Home.css";
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
-type RouteItem = {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  points: Array<[number, number]>;
-  visibility: boolean;
-};
-
 export default function Home() {
   const { user, token, logout } = useAuth();
   const [authOpen, setAuthOpen] = useState(false);

@@ -5,7 +5,7 @@ import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 
-const API = import.meta.env.VITE_API_URL as string;
+const API = import.meta.env.VITE_API_URL as string || window.location.origin;
 
 type Props = {
   id: number | string;
