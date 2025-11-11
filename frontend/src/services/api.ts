@@ -1,16 +1,15 @@
-import { Routes, Route } from 'react-router-dom';
-import Register from './pages/Register.tsx';
-import Login from './pages/Login';
-import Explore from './pages/Explore';
+import axios from "axios";
 
-function App() {
-  return (
-    <Routes>
-      <Route path="/register" element={<Register />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/explore" element={<Explore />} />
-      {}
-    </Routes>
-  );
-}
-export default App;
+// Si hay VITE_API_URL la usa (por ejemplo en local),
+// si no, usa el mismo origen desde donde se sirve la app (Azure).
+const baseURL =
+  import.meta.env.VITE_API_URL || window.location.origin;
+
+const api = axios.create({
+  baseURL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+export default api;

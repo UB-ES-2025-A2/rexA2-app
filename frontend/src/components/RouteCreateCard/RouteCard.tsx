@@ -1,4 +1,3 @@
-import React from "react";
 import RouteCardView from "./RouteCardView";
 import { useRouteCard } from "./useRouteCard";
 import type { Mode } from "../types";

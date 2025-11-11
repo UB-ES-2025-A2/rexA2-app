@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import type React from "react";
+import {useState } from "react";
 import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
@@ -7,7 +8,7 @@ import { useAuth } from "../../context/AuthContext";
 const API = import.meta.env.VITE_API_URL as string;
 
 type Props = {
-  id: string;
+  id: number | string;
   name: string;
   category: Category;
   points: Array<[number, number]>;

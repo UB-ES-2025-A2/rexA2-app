@@ -9,9 +9,20 @@ import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
+
+type RouteItem = {
+  id: number | string;
+  name: string;
+  description: string;
+  category: string;
+  points: Array<[number, number]>;
+  visibility: boolean;
+};
+
+
 import "../styles/Home.css";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 type RouteItem = {
   id: string;
@@ -32,9 +43,11 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+
+  const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<any | null>(null); // ✅ NUEVO
+
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
     setAuthOpen(true);
@@ -64,9 +77,9 @@ export default function Home() {
         const data = await response.json();
         console.log(data);
         const formatted: RouteItem[] = data.map((route: any) => ({
-          id: String(route.id),
+          id: route._id,
           name: route.name,
-          description: route.description || "Sin descripción",
+          description: route.description || "Sin descripción", 
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,

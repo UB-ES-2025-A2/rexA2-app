@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-# from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 
 from backend.core.config import settings
 from backend.db.client import init_db
@@ -36,3 +37,14 @@ app.include_router(favorite.router)
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+# ---------- Frontend React ----------
+
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIST = BASE_DIR / "static"   # aquí copiamos el build en el workflow
+
+if FRONTEND_DIST.exists():
+    app.mount(
+        "/",
+        StaticFiles(directory=str(FRONTEND_DIST), html=True),
+        name="frontend",
+    )

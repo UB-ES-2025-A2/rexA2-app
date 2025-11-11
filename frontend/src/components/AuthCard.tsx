@@ -1,14 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import type React from "react";
+import { useState } from "react";
 import TextField from "./TextField";
 import PasswordField from "./PasswordField";
-import {
-  validateEmail,
-  validateUsername,
-  validatePassword,
-  validateConfirmPassword,
-  type FieldErrors,
-} from "../utils/validation";
-import { checkEmailAvailable, register, login, saveAuth } from "../services/auth";
+// import { validateEmail, validateUsername, validatePassword, validateConfirmPassword, type FieldErrors, } from "../utils/validation";
+import { register, login, saveAuth } from "../services/auth";
 import { useAuth } from "../context/AuthContext";
 type Props = {
   mode?: "login" | "signup";
@@ -16,7 +11,7 @@ type Props = {
   onSubmit?: (values: Record<string, string>) => void; // hookéalas cuando conectes backend
 };
 
-type Touched = { email?: boolean; username?: boolean; password?: boolean; confirm?: boolean; };
+// type Touched = { email?: boolean; username?: boolean; password?: boolean; confirm?: boolean; };
 
 
 export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Props) {
@@ -47,7 +42,7 @@ const submit = async (e: React.FormEvent) => {
 
       // 3) Feedback mínimo sin cambiar tu UI
       alert("¡Usuario registrado y sesión iniciada!");
-      onSubmit?.({ ...state, _autologin: true }); // <-- el padre cierra el modal
+      onSubmit?.({ ...state, _autologin: "true" }); // <-- el padre cierra el modal
       return;
       
     }

@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+
+
+type RouteType = {
+  id: string;
+  name: string;
+};
 function Explore() {
-  const [routes, setRoutes] = useState<RouteType[]>([]);
+  const [routes] = useState<RouteType[]>([]);
   useEffect(() => {
     
   }, []);
