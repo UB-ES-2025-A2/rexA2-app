@@ -5,14 +5,30 @@ import { useAuth } from "../context/AuthContext";
 
 type TabKey = "profile" | "favorites";
 type Units = "km" | "mi";
-type Identity = { username?: string; email?: string };
-type ExtraFields = { phone: string; avatarUrl: string; units: Units };
-type Stats = { created: number; completed: number };
+type ProfileStats = { routes_created: number; routes_completed: number; routes_favorites: number };
+type ProfileResponse = {
+  id: string;
+  username?: string;
+  email?: string;
+  phone?: string | null;
+  preferred_units?: Units | null;
+  avatar_url?: string | null;
+  stats?: Partial<ProfileStats> | null;
+};
+type ProfileData = {
+  id: string;
+  username: string;
+  email: string;
+  phone: string;
+  preferred_units: Units;
+  avatar_url: string;
+  stats: ProfileStats;
+};
+type ProfileDraft = { phone: string; avatarUrl: string; units: Units };
 
-const STORAGE_KEY = "profile_extras";
-const DEFAULT_EXTRAS: ExtraFields = { phone: "", avatarUrl: "", units: "km" };
-const SAMPLE_STATS: Stats = { created: 12, completed: 34 };
 const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
+const EMPTY_STATS: ProfileStats = { routes_created: 0, routes_completed: 0, routes_favorites: 0 };
 
 export default function Profile() {
   const [active, setActive] = useState<TabKey>("profile");
@@ -21,13 +37,14 @@ export default function Profile() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false); // <-- nuevo
 
 
-  const [identity, setIdentity] = useState<Identity>({});
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
-  const [error, setError] = useState("");
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [profileError, setProfileError] = useState("");
 
-  const [extras, setExtras] = useState<ExtraFields>(() => readExtrasFromStorage());
-  const [draftExtras, setDraftExtras] = useState<ExtraFields>(extras);
+  const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() => createDraftFromProfile());
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const accessToken =
     token || (typeof window !== "undefined" ? localStorage.getItem("access_token") || "" : "");
@@ -44,72 +61,134 @@ export default function Profile() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(extras));
-  }, [extras]);
-
-  useEffect(() => {
-    if (!isEditing) {
-      setDraftExtras(extras);
+    if (!profile) {
+      setDraftExtras(createDraftFromProfile());
+      setIsEditing(false);
+      return;
     }
-  }, [isEditing, extras]);
+    if (!isEditing) {
+      setDraftExtras(createDraftFromProfile(profile));
+    }
+  }, [profile, isEditing]);
 
   useEffect(() => {
     const controller = new AbortController();
 
-    async function fetchIdentity() {
+    async function fetchProfile() {
       if (!accessToken) {
-        setStatus("error");
-        setError("Inicia sesión para ver tu perfil.");
+        setProfile(null);
+        setProfileStatus("idle");
+        setProfileError("Inicia sesión para ver tu perfil.");
         return;
       }
       if (!API_BASE) {
-        setStatus("error");
-        setError("Configura VITE_API_URL para cargar los datos.");
+        setProfileStatus("error");
+        setProfileError("Configura VITE_API_URL para cargar los datos.");
         return;
       }
 
-      setStatus("loading");
-      setError("");
+      setProfileStatus("loading");
+      setProfileError("");
       try {
-        const res = await fetch(`${API_BASE}/auth/me`, {
+        const res = await fetch(`${API_BASE}/users/me/profile`, {
           headers: { Authorization: `Bearer ${accessToken}` },
           signal: controller.signal,
         });
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
-          throw new Error(detail || "No se pudo obtener la información.");
+          throw new Error(detail || "No se pudo obtener tu perfil.");
         }
-        const data = await res.json();
-        setIdentity({ username: data.username ?? "", email: data.email ?? "" });
-        setStatus("idle");
+        const data = (await res.json()) as ProfileResponse;
+        setProfile(normalizeProfile(data));
+        setProfileStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
-        setStatus("error");
-        setError(err instanceof Error ? err.message : "Error cargando los datos.");
+        setProfileStatus("error");
+        setProfileError(err instanceof Error ? err.message : "Error cargando el perfil.");
       }
     }
 
-    fetchIdentity();
+    fetchProfile();
     return () => controller.abort();
   }, [accessToken]);
   
 
-  const handleDraftChange = (patch: Partial<ExtraFields>) => {
+  const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
   };
 
+  const handleAvatarFile = (file: File | null) => {
+    if (!file) {
+      setAvatarError("");
+      setDraftExtras((prev) => ({ ...prev, avatarUrl: "" }));
+      return;
+    }
+    if (!file.type.startsWith("image/")) {
+      setAvatarError("Selecciona un archivo de imagen válido.");
+      return;
+    }
+    if (file.size > MAX_AVATAR_SIZE_BYTES) {
+      setAvatarError("La imagen debe pesar menos de 2 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setDraftExtras((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+        setAvatarError("");
+      }
+    };
+    reader.onerror = () => {
+      setAvatarError("No se pudo leer la imagen. Inténtalo otra vez.");
+    };
+    reader.readAsDataURL(file);
+  };
+
   const startEdit = () => {
-    setDraftExtras(extras);
+    if (!profile) return;
+    setDraftExtras(createDraftFromProfile(profile));
+    setAvatarError("");
     setIsEditing(true);
   };
   const cancelEdit = () => {
-    setDraftExtras(extras);
+    setAvatarError("");
     setIsEditing(false);
+    setDraftExtras(createDraftFromProfile(profile));
   };
-  const saveEdit = () => {
-    setExtras(draftExtras);
-    setIsEditing(false);
+  const saveEdit = async () => {
+    if (!profile || !accessToken) return;
+    if (!API_BASE) {
+      setProfileError("Configura VITE_API_URL para guardar los cambios.");
+      return;
+    }
+    setIsSaving(true);
+    setProfileError("");
+    try {
+      const payload = {
+        phone: draftExtras.phone.trim() || null,
+        preferred_units: draftExtras.units,
+        avatar_url: draftExtras.avatarUrl || null,
+      };
+      const res = await fetch(`${API_BASE}/users/me`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || "No se pudo guardar el perfil.");
+      }
+      const updated = normalizeProfile((await res.json()) as ProfileResponse);
+      setProfile(updated);
+      setIsEditing(false);
+    } catch (err) {
+      setProfileError(err instanceof Error ? err.message : "Error al guardar el perfil.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -201,17 +280,19 @@ export default function Profile() {
         <section className="content">
           {active === "profile" && (
             <PersonalData
-              identity={identity}
-              loadingIdentity={status === "loading"}
-              error={error}
-              stats={SAMPLE_STATS}
+              profile={profile}
+              loadingProfile={profileStatus === "loading"}
+              error={profileError}
+              stats={profile?.stats ?? EMPTY_STATS}
               isEditing={isEditing}
-              extras={extras}
               draftExtras={draftExtras}
               onChangeDraft={handleDraftChange}
               onStartEdit={startEdit}
               onCancelEdit={cancelEdit}
               onSaveEdit={saveEdit}
+              saving={isSaving}
+              onAvatarFile={handleAvatarFile}
+              avatarError={avatarError}
             />
           )}
           {active === "favorites" && <FavoritesPanel />}
@@ -222,50 +303,64 @@ export default function Profile() {
   );
 }
 
-function readExtrasFromStorage(): ExtraFields {
-  if (typeof window === "undefined") return DEFAULT_EXTRAS;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULT_EXTRAS;
-    const parsed = JSON.parse(raw);
-    return {
-      ...DEFAULT_EXTRAS,
-      ...parsed,
-      units: parsed.units === "mi" ? "mi" : "km",
-    };
-  } catch {
-    return DEFAULT_EXTRAS;
-  }
+function createDraftFromProfile(profile?: ProfileData | null): ProfileDraft {
+  return {
+    phone: profile?.phone ?? "",
+    avatarUrl: profile?.avatar_url ?? "",
+    units: profile?.preferred_units ?? "km",
+  };
+}
+
+function normalizeProfile(payload: ProfileResponse): ProfileData {
+  return {
+    id: payload.id,
+    username: payload.username ?? "",
+    email: payload.email ?? "",
+    phone: payload.phone ?? "",
+    preferred_units: payload.preferred_units === "mi" ? "mi" : "km",
+    avatar_url: payload.avatar_url ?? "",
+    stats: {
+      routes_created: payload.stats?.routes_created ?? 0,
+      routes_completed: payload.stats?.routes_completed ?? 0,
+      routes_favorites: payload.stats?.routes_favorites ?? 0,
+    },
+  };
 }
 
 type PersonalDataProps = {
-  identity: Identity;
-  loadingIdentity: boolean;
+  profile: ProfileData | null;
+  loadingProfile: boolean;
   error: string;
-  stats: Stats;
+  stats: ProfileStats;
   isEditing: boolean;
-  extras: ExtraFields;
-  draftExtras: ExtraFields;
-  onChangeDraft: (patch: Partial<ExtraFields>) => void;
+  draftExtras: ProfileDraft;
+  onChangeDraft: (patch: Partial<ProfileDraft>) => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
-  onSaveEdit: () => void;
+  onSaveEdit: () => void | Promise<void>;
+  saving: boolean;
+  onAvatarFile: (file: File | null) => void;
+  avatarError: string;
 };
 
 function PersonalData({
-  identity,
-  loadingIdentity,
+  profile,
+  loadingProfile,
   error,
   stats,
   isEditing,
-  extras,
   draftExtras,
   onChangeDraft,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
+  saving,
+  onAvatarFile,
+  avatarError,
 }: PersonalDataProps) {
-  const viewExtras = isEditing ? draftExtras : extras;
+  const viewExtras = isEditing ? draftExtras : createDraftFromProfile(profile);
+  const username = profile?.username ?? "";
+  const email = profile?.email ?? "";
 
   return (
     <div className="card fill profile-panel">
@@ -280,12 +375,17 @@ function PersonalData({
               <button className="btn-ghost sm" type="button" onClick={onCancelEdit}>
                 Cancelar
               </button>
-              <button className="btn-primary sm" type="button" onClick={onSaveEdit}>
-                Guardar
+              <button className="btn-primary sm" type="button" onClick={onSaveEdit} disabled={saving}>
+                {saving ? "Guardando..." : "Guardar"}
               </button>
             </>
           ) : (
-            <button className="btn-primary sm" type="button" onClick={onStartEdit}>
+            <button
+              className="btn-primary sm"
+              type="button"
+              onClick={onStartEdit}
+              disabled={!profile || loadingProfile}
+            >
               Editar
             </button>
           )}
@@ -297,10 +397,10 @@ function PersonalData({
       <div className="info-grid">
         <InfoRow
           label="Nombre de usuario"
-          value={identity.username || "Sin definir"}
-          loading={loadingIdentity}
+          value={username || "Sin definir"}
+          loading={loadingProfile}
         />
-        <InfoRow label="Email" value={identity.email || "Sin email"} loading={loadingIdentity} />
+        <InfoRow label="Email" value={email || "Sin email"} loading={loadingProfile} />
       </div>
 
       <div className="profile-widgets">
@@ -309,19 +409,38 @@ function PersonalData({
             {viewExtras.avatarUrl ? (
               <img src={viewExtras.avatarUrl} alt="Avatar del usuario" />
             ) : (
-              <span>{identity.username?.[0]?.toUpperCase() || "?"}</span>
+              <span>{username?.[0]?.toUpperCase() || "?"}</span>
             )}
           </div>
           {isEditing ? (
-            <input
-              className="input"
-              type="url"
-              placeholder="https://mis-fotos.com/avatar.png"
-              value={draftExtras.avatarUrl}
-              onChange={(event) => onChangeDraft({ avatarUrl: event.target.value })}
-            />
+            <div className="avatar-inputs">
+              <label className="btn-ghost sm" htmlFor="avatar-upload">
+                Seleccionar foto
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  onAvatarFile(file);
+                  event.target.value = "";
+                }}
+              />
+              {viewExtras.avatarUrl && (
+                <button className="btn-ghost sm" type="button" onClick={() => onAvatarFile(null)}>
+                  Quitar foto
+                </button>
+              )}
+              {avatarError && (
+                <p className="muted" style={{ color: "#d22", marginTop: 8 }}>
+                  {avatarError}
+                </p>
+              )}
+            </div>
           ) : (
-            <p className="muted">Personaliza tu foto cuando quieras.</p>
+            <p className="muted">{viewExtras.avatarUrl ? "Foto personalizada." : "Personaliza tu foto cuando quieras."}</p>
           )}
         </div>
 
@@ -364,8 +483,8 @@ function PersonalData({
       </div>
 
       <div className="stats-grid">
-        <StatCard label="Rutas creadas" value={stats.created} />
-        <StatCard label="Rutas realizadas" value={stats.completed} />
+        <StatCard label="Rutas creadas" value={stats.routes_created} />
+        <StatCard label="Rutas realizadas" value={stats.routes_completed} />
       </div>
     </div>
   );
