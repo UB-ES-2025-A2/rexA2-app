@@ -5,7 +5,7 @@ from pathlib import Path
 
 from backend.core.config import settings
 from backend.db.client import init_db
-from backend.routers import users, auth, routes
+from backend.routers import users, auth, routes, favorite
 
 # === Instancia principal ===
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -31,6 +31,7 @@ async def startup_event():
 app.include_router(users.router)
 app.include_router(auth.router)
 app.include_router(routes.router)
+app.include_router(favorite.router)
 
 # === Endpoint de salud ===
 @app.get("/health")

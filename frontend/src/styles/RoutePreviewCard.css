@@ -1,35 +1,102 @@
 .route-preview-card {
-    background: var(--card);
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    box-shadow: 0 4px 12px rgba(2, 6, 23, 0.05);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-  
-  .route-preview-card:hover {
-    background: var(--card-hover, #f8f8f8);
-  }
-  
-  .route-preview-title {
-    font-weight: 600;
-    font-size: 16px;
-    margin: 0;
-  }
-  
-  .route-preview-category {
-    font-size: 14px;
-    color: var(--text-muted, #555);
-  }
-  
-  .route-preview-points {
-    font-size: 13px;
-    color: #888;
-  }
-  
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card, #fff);
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.05);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.route-preview-card:hover {
+  background: var(--card-hover, #f8f8f8);
+  transform: translateY(-3px);
+}
+
+/* === Contenedor interno (textos a la izquierda) === */
+.route-preview-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+/* === Textos === */
+.route-preview-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.route-preview-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0;
+}
+
+.route-preview-category {
+  font-size: 14px;
+  color: var(--text-muted, #555);
+}
+
+.route-preview-points {
+  font-size: 13px;
+  color: #888;
+}
+
+/* === Botón favorito === */
+.preview-save {
+  margin-left: auto;
+  margin-right: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.save-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+}
+
+.save-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.save-icon {
+  height: 28px !important;
+  width: 28px !important;
+  fill: #666;
+  transition: all 0.3s ease;
+}
+
+.save-icon:hover {
+  transform: scale(1.1) rotate(-10deg);
+}
+
+.save-container input:checked ~ .save-icon {
+  fill: #2196f3;
+}
+
+.save-icon.is-loading {
+  animation: spin 1s linear infinite;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
