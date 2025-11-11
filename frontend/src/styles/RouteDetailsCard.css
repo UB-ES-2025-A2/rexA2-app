@@ -95,3 +95,44 @@
     transform: translateY(0);
   }
 }
+/* === Footer alineado a la derecha === */
+.route-details-card__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+/* === Botón Save (aislado, versión react-friendly) === */
+.save-container {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+}
+
+.save-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.save-icon {
+  position: relative;
+  top: 0;
+  left: 0;
+  height: 48px;
+  width: 48px;
+  transition: all 0.3s ease;
+  fill: #666;
+}
+
+.save-icon:hover {
+  transform: scale(1.1) rotate(-10deg);
+}
+
+.save-container input:checked ~ .save-icon {
+  fill: #2196f3;
+}
+

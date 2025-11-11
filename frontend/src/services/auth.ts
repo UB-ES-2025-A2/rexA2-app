@@ -40,19 +40,23 @@ export async function checkEmailAvailable(email: string): Promise<boolean> {
   } catch {
     return true;
   }
-}*/
-
-export async function register(payload: { email: string; username: string; password: string }) : Promise<AuthResponse> {
+} */
+async function parseError(res: Response) {
+  const payload = await res.json().catch(async () => await res.text());
+  const detail = typeof payload === "string" ? payload : payload?.detail;
+  const error = new Error(detail || `Error ${res.status}`);
+  (error as any).status = res.status;
+  return error;
+}
+export async function register(payload: { email: string; username: string; password: string }) {
   const res = await fetch(`${API}/users`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const msg = await res.text();
-    throw new Error(msg || `Error ${res.status}`);
-  }
-  return (await res.json()) as AuthResponse;
+  if (!res.ok) throw await parseError(res);
+
+  return res.json();
 }
 
 

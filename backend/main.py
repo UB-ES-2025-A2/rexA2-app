@@ -1,11 +1,11 @@
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-
-from backend.core.config import settings
-from backend.db.client import init_db
-from backend.routers import users, auth, routes
+from .core.config import settings
+from .db.client import init_db
+from .routers import users, auth, routes, users_profile, favorite
 
 # === Instancia principal ===
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -29,8 +29,10 @@ async def startup_event():
 
 # === Routers ===
 app.include_router(users.router)
+app.include_router(users_profile.router)
 app.include_router(auth.router)
 app.include_router(routes.router)
+app.include_router(favorite.router)
 
 # === Endpoint de salud ===
 @app.get("/health")
