@@ -46,7 +46,6 @@ export default function Home() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
 
-  // ⬇️ NUEVO: favoritos del usuario
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const openAuth = (m: "login" | "signup" = "login") => {
@@ -278,7 +277,9 @@ export default function Home() {
             allowPickPoint={routeCardOpen}
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
+            backgroundRoutes={routes.map(r => r.points)}
           />
+
 
           <button
             className="fab"

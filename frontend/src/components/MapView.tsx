@@ -14,6 +14,8 @@ type Props = {
   allowPickPoint?: boolean;
   onPickPoint?: (lng: number, lat: number) => void;
   highlightPoints?: Array<[number, number]>;
+  // ⬇️ NUEVO: todas las rutas para pintar de fondo
+  backgroundRoutes?: Array<Array<[number, number]>>;
 };
 
 export default function MapView({
@@ -23,6 +25,7 @@ export default function MapView({
   allowPickPoint = false,
   onPickPoint,
   highlightPoints = [],
+  backgroundRoutes = [], // ⬅️ NUEVO default
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -44,7 +47,6 @@ export default function MapView({
     map.on("load", () => {
       setTimeout(() => map.resize(), 200);
 
-
       const trafficLayers = [
         "traffic-lines-incidents-day",
         "traffic-lines-incidents-night",
@@ -58,6 +60,32 @@ export default function MapView({
         }
       });
 
+      // ⬇️ NUEVO: source para TODAS las rutas (fondo)
+      map.addSource("all-routes", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [],
+        } as FeatureCollection,
+      });
+
+      // ⬇️ NUEVO: capa gris MUY sutil (debajo de la destacada)
+      map.addLayer({
+        id: "all-routes-line",
+        type: "line",
+        source: "all-routes",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#6b7280",      // gris
+          "line-opacity": 0.2,          // muy sutil
+          "line-width": 2,
+        },
+      });
+
+      // Source y capas existentes para la ruta destacada
       map.addSource("highlight-route", {
         type: "geojson",
         data: {
@@ -114,53 +142,72 @@ export default function MapView({
       mapRef.current = null;
       setMapLoaded(false);
     };
-  }, [allowPickPoint, onPickPoint]);
+  }, [allowPickPoint, onPickPoint, center, zoom]);
 
+  // ⬇️ NUEVO: actualizar TODAS las rutas (fondo)
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
-  
+
+    const source = map.getSource("all-routes");
+    if (!source || !("setData" in source)) return;
+
+    const features: Feature<LineString>[] = backgroundRoutes
+      .filter((r) => Array.isArray(r) && r.length >= 2)
+      .map((coords) => ({
+        type: "Feature",
+        geometry: {
+          type: "LineString",
+          coordinates: coords,
+        },
+        properties: {},
+      }));
+
+    const fc: FeatureCollection = { type: "FeatureCollection", features };
+    (source as mapboxgl.GeoJSONSource).setData(fc);
+  }, [backgroundRoutes, mapLoaded]);
+
+  // Ruta destacada (tu código actual)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
     const source = map.getSource("highlight-route");
-  
     if (!source || !("setData" in source)) {
       console.warn("El source 'highlight-route' no está disponible o no es GeoJSONSource");
       return;
     }
-  
+
     const geojson: GeoJSON.FeatureCollection = {
       type: "FeatureCollection",
-      features: highlightPoints.length > 0
-        ? [
-            {
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: highlightPoints,
-              },
-              properties: {},
-            } as Feature<LineString>,
-            ...highlightPoints.map<Feature<Point>>((coord) => ({
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: coord,
-              },
-              properties: {},
-            })),
-          ]
-        : [],
+      features:
+        highlightPoints.length > 0
+          ? [
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: highlightPoints,
+                },
+                properties: {},
+              } as Feature<LineString>,
+              ...highlightPoints.map<Feature<Point>>((coord) => ({
+                type: "Feature",
+                geometry: { type: "Point", coordinates: coord },
+                properties: {},
+              })),
+            ]
+          : [],
     };
-  
+
     (source as mapboxgl.GeoJSONSource).setData(geojson);
-  
+
     if (highlightPoints.length > 0) {
       const bounds = new mapboxgl.LngLatBounds();
       highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
       map.fitBounds(bounds, { padding: 60 });
     }
   }, [highlightPoints, mapLoaded]);
-  
-
 
   return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
 }
