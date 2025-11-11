@@ -1,5 +1,5 @@
 import type React from "react";
-import {useState } from "react";
+import { useState, useEffect } from "react";
 import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
@@ -35,12 +35,15 @@ const RoutePreviewCard: React.FC<Props> = ({
   const { showAlert } = useAlert();
   const { token } = useAuth();
 
+  useEffect(() => {
+    setSaved(initialSaved);
+  }, [initialSaved]);
+
   const favUrl = favoriteUrl ?? `${API}/favorites/${id}`;
   const unfavUrl = unfavoriteUrl ?? favUrl;
 
   const handleSaveToggle = async () => {
     if (loading) return;
-
 
     if (!token) {
       showAlert("Inicia sesión para guardar rutas.", "error");
@@ -58,7 +61,7 @@ const RoutePreviewCard: React.FC<Props> = ({
       });
 
       if (!res.ok) {
-        setSaved(!next); // rollback
+        setSaved(!next);
         const txt = await res.text().catch(() => "");
         console.error("Fav toggle failed:", res.status, txt);
         if (res.status === 401) showAlert("No autorizado. Inicia sesión.", "error");
