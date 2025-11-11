@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, ConfigDict    # Base para podelos, validador EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict, field_validator    # Base para podelos, validador EmailStr
 from typing import Literal, Optional
 # Separación de modelos de entrada (UserCreate) y salida (UserPublic)
 
@@ -55,3 +55,18 @@ class UserProfilePublic(BaseModel):
     avatar_url: Optional[str] = None
     stats: ProfileStats
     model_config = ConfigDict(from_attributes=True)
+
+class UserUpdate(BaseModel):
+    # Definios todos como opcionales para hacer un PATCH
+    username: Optional[str] = None
+    phone: Optional[str] = None
+    preferred_units: Optional[Literal["km", "mi"]] = None
+    avatar_url: Optional[str] = None
+
+    @field_validator("phone")
+    @classmethod
+    def empty_to_none(cls, v):
+        # Permite borrar el número mandando "", " "...
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v

@@ -3,6 +3,7 @@ from core.security import get_password_hash # Para hashear constraseñas antes d
 from bson import ObjectId                   # Para manejar IDs nativos de MongoDB
 from typing import Literal, Optional
 from typing import Optional, Dict
+from pymongo.errors import DuplicateKeyError
 
 async def create_user(
         email:str, 
@@ -90,3 +91,57 @@ async def get_user_profile_dict(user: Dict) -> Dict:
             "routes_favorites": favorites,
         },
     }
+
+async def is_username_taken(username: str, *, exclude_user_id: Optional[str] = None) -> bool:
+    q = {"username": username}
+    if exclude_user_id:
+        q["_id"] = {"$ne": ObjectId(exclude_user_id)}
+    doc = await client.db["users"].find_one(q, {"_id": 1})
+    return doc is not None
+
+
+async def update_user_fields(user_id: str, *, username: Optional[str] = None,
+                            phone: Optional[str] = None,
+                            preferred_units: Optional[str] = None,
+                            avatar_url: Optional[str] = None) -> Dict:
+    
+    """
+    PATCH parcial del usuario. Aplica $set y $unset según corresponda y
+    devuelve el documento actualizado
+    """
+    _id = ObjectId(user_id)
+    to_set = {}
+    to_unset = {}
+
+    if username is not None:
+        to_set["username"] = username
+
+    if phone is None:
+        to_unset["phone"] = ""
+    else:
+        to_set["phone"] = phone
+
+    if preferred_units is not None:
+        to_set["preferred_units"] = preferred_units
+
+    if avatar_url is None:
+        to_unset["avatar_url"] = ""
+    elif avatar_url is not None:
+        to_set["avatar_url"] = avatar_url
+
+    update = {}
+    if to_set:
+        update["$set"] = to_set
+    if to_unset:
+        update["$unset"] = to_unset
+
+    if not update:
+        # Nada que actualizar --> devuelve el actual
+        return await client.db["users"].find_one({"_id":_id})
+    
+    try:
+        await client.db["users"].update_one({"_id": _id}, update)
+    except DuplicateKeyError:
+        raise
+
+    return await client.db["users"].find_one({"_id": _id})
