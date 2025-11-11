@@ -33,7 +33,7 @@ export default function Home() {
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-  const navigate = useNavigate(); // <-- añade esto
+  const navigate = useNavigate();
 
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
@@ -71,7 +71,7 @@ export default function Home() {
         const data = await response.json();
         console.log(data);
         const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route._id,
+          id: route.id,
           name: route.name,
           description: route.description || "Sin descripción", 
           category: route.category || "sin categoría",
