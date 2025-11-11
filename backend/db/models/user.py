@@ -145,3 +145,12 @@ async def update_user_fields(user_id: str, *, username: Optional[str] = None,
         raise
 
     return await client.db["users"].find_one({"_id": _id})
+
+async def count_routes_created(user_id: str) -> int:
+    return await _count_routes_created(user_id)
+
+async def count_routes_completed(user_id: str) -> int:
+    return await _count_routes_completed(user_id)
+
+async def count_favorites(user_id: str) -> int:
+    return await _count_favorites(user_id)
