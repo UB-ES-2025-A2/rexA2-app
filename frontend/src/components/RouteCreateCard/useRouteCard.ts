@@ -5,7 +5,7 @@ import type { Category, Mode } from "../types";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 export function useRouteCard({
   modeDefault,
