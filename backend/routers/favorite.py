@@ -7,8 +7,6 @@ from bson import ObjectId
 
 router = APIRouter(prefix="/favorites", tags=["favorites"])
 
-
-
 @router.post("/{route_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def add_favorite(route_id: str, current_user: dict = Depends(get_current_user)):
     if not ObjectId.is_valid(route_id):
