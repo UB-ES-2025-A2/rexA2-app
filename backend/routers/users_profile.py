@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from core.security import get_current_user
-from db.models import user as user_crud
-from db.schemas.user import UserProfile, UserUpdate, ProfileStats
+from ..core.security import get_current_user
+from ..db.models import user as user_crud
+from ..db.schemas.user import UserProfile, UserUpdate, ProfileStats
 from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/users", tags=["users"])

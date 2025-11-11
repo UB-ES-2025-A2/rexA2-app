@@ -1,7 +1,7 @@
-from db import client                  # Obtenemos la referencia global a la db
-from core.security import get_password_hash # Para hashear constraseñas antes de guardar
+from ..client import get_db                  # Obtenemos la referencia global a la db
+from ...core.security import get_password_hash # Para hashear constraseñas antes de guardar
 from bson import ObjectId                   # Para manejar IDs nativos de MongoDB
-from typing import Literal, Optional
+from typing import Literal, Optional, Any
 from typing import Optional, Dict
 from pymongo.errors import DuplicateKeyError
 
@@ -19,7 +19,7 @@ async def create_user(
     Crea un nuevo usuario en la collección
     '''
     # Hash de la contraseña (NUNCA guardar la contraseña sin hashear)
-    hashed = get_password_hash(password)   
+    hashed = get_password_hash(password)
 
     doc = {
         "email": email,
@@ -50,23 +50,23 @@ async def get_user_by_email(email: str) -> dict | None:
     '''
     Devuelve un usuario por email o None si no Existe
     '''
-    return await client.db["users"].find_one({"email": email})
+    return await get_db().db["users"].find_one({"email": email})
 
 
 # ---- Métricas de perfil ----
 async def _count_routes_created(user_id: str)-> int:
-    return await client.db["routes"].count_documents({"owner_id": user_id})
+    return await get_db().db["routes"].count_documents({"owner_id": user_id})
 
 async def _count_routes_completed(user_id: str) -> int:
-    if "user_routes_completed" not in await client.db.list_collection_names():
+    if "user_routes_completed" not in await get_db().db.list_collection_names():
         return 0
     
-    return await client.db["user_routes_completed"].count_documents({"user_id": user_id})
+    return await get_db().db["user_routes_completed"].count_documents({"user_id": user_id})
 
 async def _count_favorites(user_id: str) -> int:
-    if "favorites" not in await client.db.list_collection_names():
+    if "favorites" not in await get_db().db.list_collection_names():
         return 0
-    return await client.db["favorites"].count_documents({"user_id": user_id})
+    return await get_db().db["favorites"].count_documents({"user_id": user_id})
 
 async def get_user_profile_dict(user: Dict) -> Dict:
     """
@@ -98,7 +98,7 @@ async def is_username_taken(username: str, *, exclude_user_id: Optional[str] = N
     q = {"username": username}
     if exclude_user_id:
         q["_id"] = {"$ne": ObjectId(exclude_user_id)}
-    doc = await client.db["users"].find_one(q, {"_id": 1})
+    doc = await get_db().db["users"].find_one(q, {"_id": 1})
     return doc is not None
 
 
@@ -139,14 +139,14 @@ async def update_user_fields(user_id: str, *, username: Optional[str] = None,
 
     if not update:
         # Nada que actualizar --> devuelve el actual
-        return await client.db["users"].find_one({"_id":_id})
+        return await get_db().db["users"].find_one({"_id":_id})
     
     try:
-        await client.db["users"].update_one({"_id": _id}, update)
+        await get_db().db["users"].update_one({"_id": _id}, update)
     except DuplicateKeyError:
         raise
 
-    return await client.db["users"].find_one({"_id": _id})
+    return await get_db().db["users"].find_one({"_id": _id})
 
 async def count_routes_created(user_id: str) -> int:
     return await _count_routes_created(user_id)
