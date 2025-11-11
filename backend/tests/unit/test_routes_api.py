@@ -284,6 +284,37 @@ async def test_get_route_public_200(ac, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_get_route_private_owned_200(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+    #Ruta privada cuyo owner es el usuario autenticado -> debe devolver 200.
+    async def fake_get_route_by_id(route_id: str):
+        # owner_id coincide con el usuario del fake_current_user del fixture
+        return {
+            "_id": "R1",
+            "name": "Ruta privada mía",
+            "owner_id": "user123",
+            "visibility": False,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "Solo yo la veo",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.get("/routes/R1")
+    assert res.status_code == 200
+
+    body = res.json()
+    # Comprobamos que se ha aplicado correctamente RoutePublic
+    assert body["id"] == "R1"              # alias de _id
+    assert body["name"] == "Ruta privada mía"
+    assert body["owner_id"] == "user123"
+    assert body["visibility"] is False
+    assert len(body["points"]) == 3
+
+
+@pytest.mark.anyio
 async def test_get_public_route_by_name_404(ac, monkeypatch):
     from backend.db.models import route as route_crud
     # No hay ruta pública con ese nombre => 404
