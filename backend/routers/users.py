@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException, status
 from db.models import user as user_crud
 from db.schemas.user import UserCreate, UserPublic
-from core.auth import get_current_user
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -38,11 +37,3 @@ async def register_user(payload: UserCreate):
         "avatar_url": user.get("avatar_url"),
         "is_active": user["is_active"],
     }
-
-@router.get("/me/profile", response_model=UserProfile)
-async def get_my_profile(user = Depends(get_current_user)):
-    """
-    Devuelve el perfil del usuario autenticado (datos personales + métricas).
-    """
-    data = await user_crud.get_user_profile_dict(user)
-    return data
