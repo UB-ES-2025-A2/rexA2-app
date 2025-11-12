@@ -192,13 +192,16 @@ async def test_list_routes_public_only_false(ac, monkeypatch):
     assert isinstance(body, list)
     assert body[0]["id"] == "1"
 
-
 @pytest.mark.anyio
 async def test_my_routes_ok(ac, monkeypatch):
     from backend.db.models import route as route_crud
-    
-    # Debe devolver solo rutas del usuario autenticado (inyectado por override)
-    async def fake_get_routes_by_owner(owner_id: str):
+
+    async def fake_get_routes_by_owner(
+        owner_id: str, *, public_only=None, skip=0, limit=50
+    ):
+        # (opcionales) aserciones para asegurarte de lo que llega
+        assert public_only is None
+        assert skip == 0 and limit == 50
         return [
             {
                 "_id": "1",
@@ -217,7 +220,8 @@ async def test_my_routes_ok(ac, monkeypatch):
     res = await ac.get("/routes/me")
     assert res.status_code == 200
     body = res.json()
-    assert len(body) == 1
+    assert isinstance(body, list)
+    assert body[0]["id"] == "1"
     assert body[0]["name"] == "Mia"
 
 

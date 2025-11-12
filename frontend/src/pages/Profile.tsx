@@ -2,8 +2,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { useAuth } from "../context/AuthContext";
+import MapView from "../components/MapView";
+import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
+import type { Category } from "../components/types";
 
-type TabKey = "profile" | "favorites";
+type TabKey = "profile" | "favorites" | "created";
 type Units = "km" | "mi";
 type ProfileStats = { routes_created: number; routes_completed: number; routes_favorites: number };
 type ProfileResponse = {
@@ -25,8 +28,35 @@ type ProfileData = {
   stats: ProfileStats;
 };
 type ProfileDraft = { phone: string; avatarUrl: string; units: Units };
+type FavoriteRoutePoint = { latitude: number; longitude: number };
+type FavoriteRouteApi = {
+  id?: string;
+  _id?: string;
+  name: string;
+  description: string;
+  category: string;
+  owner_id: string;
+  created_at: string;
+  visibility: boolean;
+  points: FavoriteRoutePoint[];
+  owner_username?: string | null;
+};
+type FavoriteRoute = {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  ownerId: string;
+  ownerName: string;
+  createdAt: string;
+  visibility: boolean;
+  points: Array<[number, number]>;
+};
 
-const API_BASE = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const API_BASE =
+  (import.meta.env.VITE_API_URL?.trim() ||
+    (typeof window !== "undefined" ? window.location.origin : ""))
+    .replace(/\/$/, "");
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 const EMPTY_STATS: ProfileStats = { routes_created: 0, routes_completed: 0, routes_favorites: 0 };
 
@@ -45,6 +75,14 @@ export default function Profile() {
   const [isEditing, setIsEditing] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
+  const [favoritesStatus, setFavoritesStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [favoritesError, setFavoritesError] = useState("");
+  const [selectedFavorite, setSelectedFavorite] = useState<FavoriteRoute | null>(null);
+  const [createdRoutes, setCreatedRoutes] = useState<FavoriteRoute[]>([]);
+  const [createdStatus, setCreatedStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [createdError, setCreatedError] = useState("");
+  const [selectedCreatedRoute, setSelectedCreatedRoute] = useState<FavoriteRoute | null>(null);
 
   const accessToken =
     token || (typeof window !== "undefined" ? localStorage.getItem("access_token") || "" : "");
@@ -111,7 +149,102 @@ export default function Profile() {
     fetchProfile();
     return () => controller.abort();
   }, [accessToken]);
-  
+
+  useEffect(() => {
+    if (!accessToken) {
+      setCreatedRoutes([]);
+      setCreatedStatus("idle");
+      setCreatedError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setCreatedStatus("loading");
+    setCreatedError("");
+    const ownerFallback = profile?.username || profile?.email || "Yo";
+
+    async function fetchCreatedRoutes() {
+      try {
+        const res = await fetch(`${API_BASE}/routes/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || "No se pudieron cargar tus rutas creadas.");
+        }
+        const data = (await res.json()) as FavoriteRouteApi[];
+        setCreatedRoutes(data.map((route) => normalizeFavoriteRoute(route, ownerFallback)));
+        setCreatedStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setCreatedStatus("error");
+        setCreatedError(err instanceof Error ? err.message : "Error al cargar tus rutas.");
+      }
+    }
+
+    fetchCreatedRoutes();
+    return () => controller.abort();
+  }, [accessToken, profile?.username, profile?.email]);
+
+  useEffect(() => {
+    if (!accessToken) {
+      setFavorites([]);
+      setFavoritesStatus("idle");
+      setFavoritesError("");
+      return;
+    }
+
+    const controller = new AbortController();
+    setFavoritesStatus("loading");
+    setFavoritesError("");
+
+    async function fetchFavorites() {
+      try {
+        const res = await fetch(`${API_BASE}/users/me/routes/favorites`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || "No se pudieron cargar las rutas favoritas.");
+        }
+        const data = (await res.json()) as FavoriteRouteApi[];
+        setFavorites(data.map((route) => normalizeFavoriteRoute(route)));
+        setFavoritesStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setFavoritesStatus("error");
+        setFavoritesError(err instanceof Error ? err.message : "Error al cargar las favoritas.");
+      }
+    }
+
+    fetchFavorites();
+    return () => controller.abort();
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (active !== "favorites" && selectedFavorite) {
+      setSelectedFavorite(null);
+    }
+    if (active !== "created" && selectedCreatedRoute) {
+      setSelectedCreatedRoute(null);
+    }
+  }, [active, selectedFavorite, selectedCreatedRoute]);
+
+  useEffect(() => {
+    if (!selectedFavorite) return;
+    if (!favorites.some((route) => route.id === selectedFavorite.id)) {
+      setSelectedFavorite(null);
+    }
+  }, [favorites, selectedFavorite]);
+
+  useEffect(() => {
+    if (!selectedCreatedRoute) return;
+    if (!createdRoutes.some((route) => route.id === selectedCreatedRoute.id)) {
+      setSelectedCreatedRoute(null);
+    }
+  }, [createdRoutes, selectedCreatedRoute]);
 
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -191,6 +324,45 @@ export default function Profile() {
     }
   };
 
+  const showFavoriteRoute = active === "favorites" && Boolean(selectedFavorite);
+  const showCreatedRoute = active === "created" && Boolean(selectedCreatedRoute);
+
+  const handleSelectFavorite = (route: FavoriteRoute) => {
+    setSelectedFavorite(route);
+  };
+
+  const handleSelectCreatedRoute = (route: FavoriteRoute) => {
+    setSelectedCreatedRoute(route);
+  };
+
+  const closeFavoriteView = () => {
+    setSelectedFavorite(null);
+  };
+
+  const closeCreatedView = () => {
+    setSelectedCreatedRoute(null);
+  };
+
+  const handleFavoriteSavedChange = (saved: boolean) => {
+    if (saved || !selectedFavorite) return;
+    setFavorites((prev) => prev.filter((route) => route.id !== selectedFavorite.id));
+    closeFavoriteView();
+  };
+
+  const handleCreatedSavedChange = (saved: boolean) => {
+    if (!selectedCreatedRoute) return;
+    setFavorites((prev) => {
+      const exists = prev.some((route) => route.id === selectedCreatedRoute.id);
+      if (saved && !exists) {
+        return [...prev, selectedCreatedRoute];
+      }
+      if (!saved && exists) {
+        return prev.filter((route) => route.id !== selectedCreatedRoute.id);
+      }
+      return prev;
+    });
+  };
+
   return (
     <div className="profile-root">
       <header className="header">
@@ -250,31 +422,68 @@ export default function Profile() {
       </header>
       
       <main className="profile-layout">
-        <aside className="sidebar">
-          <ul className="menu">
-            <li>
-              <button
-                className={`btn ${active === "profile" ? "active" : ""}`}
-                onClick={() => setActive("profile")}
-              >
-                <span className="icon" aria-hidden="true">
-                  👤
-                </span>
-                <span className="label">Datos personales</span>
-              </button>
-            </li>
-            <li>
-              <button
-                className={`btn ${active === "favorites" ? "active" : ""}`}
-                onClick={() => setActive("favorites")}
-              >
-                <span className="icon" aria-hidden="true">
-                  ⭐
-                </span>
-                <span className="label">Favoritas</span>
-              </button>
-            </li>
-          </ul>
+        <aside className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""}`}>
+          {showFavoriteRoute && selectedFavorite ? (
+            <RouteDetailsCard
+              routeId={selectedFavorite.id}
+              name={selectedFavorite.name}
+              description={selectedFavorite.description || "Sin descripción"}
+              category={(selectedFavorite.category as Category) || "entretenimiento"}
+              points={selectedFavorite.points}
+              isPrivate={!selectedFavorite.visibility}
+              onClose={closeFavoriteView}
+              initialSaved
+              onSavedChange={handleFavoriteSavedChange}
+            />
+          ) : showCreatedRoute && selectedCreatedRoute ? (
+            <RouteDetailsCard
+              routeId={selectedCreatedRoute.id}
+              name={selectedCreatedRoute.name}
+              description={selectedCreatedRoute.description || "Sin descripción"}
+              category={(selectedCreatedRoute.category as Category) || "entretenimiento"}
+              points={selectedCreatedRoute.points}
+              isPrivate={!selectedCreatedRoute.visibility}
+              onClose={closeCreatedView}
+              initialSaved={favorites.some((route) => route.id === selectedCreatedRoute.id)}
+              onSavedChange={handleCreatedSavedChange}
+            />
+          ) : (
+            <ul className="menu">
+              <li>
+                <button
+                  className={`btn ${active === "profile" ? "active" : ""}`}
+                  onClick={() => setActive("profile")}
+                >
+                  <span className="icon" aria-hidden="true">
+                    👤
+                  </span>
+                  <span className="label">Datos personales</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  className={`btn ${active === "favorites" ? "active" : ""}`}
+                  onClick={() => setActive("favorites")}
+                >
+                  <span className="icon" aria-hidden="true">
+                    ⭐
+                  </span>
+                  <span className="label">Favoritas</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  className={`btn ${active === "created" ? "active" : ""}`}
+                  onClick={() => setActive("created")}
+                >
+                  <span className="icon" aria-hidden="true">
+                    🛣️
+                  </span>
+                  <span className="label">Mis rutas</span>
+                </button>
+              </li>
+            </ul>
+          )}
         </aside>
         
         <section className="content">
@@ -295,7 +504,26 @@ export default function Profile() {
               avatarError={avatarError}
             />
           )}
-          {active === "favorites" && <FavoritesPanel />}
+          {active === "favorites" && (
+            <FavoritesPanel
+              favorites={favorites}
+              status={favoritesStatus}
+              error={favoritesError}
+              onViewRoute={handleSelectFavorite}
+              selectedRoute={selectedFavorite}
+              onCloseRoute={closeFavoriteView}
+            />
+          )}
+          {active === "created" && (
+            <CreatedRoutesPanel
+              routes={createdRoutes}
+              status={createdStatus}
+              error={createdError}
+              onViewRoute={handleSelectCreatedRoute}
+              selectedRoute={selectedCreatedRoute}
+              onCloseRoute={closeCreatedView}
+            />
+          )}
         </section>
         
       </main>
@@ -325,6 +553,38 @@ function normalizeProfile(payload: ProfileResponse): ProfileData {
       routes_favorites: payload.stats?.routes_favorites ?? 0,
     },
   };
+}
+
+function normalizeFavoriteRoute(route: FavoriteRouteApi, ownerFallback?: string): FavoriteRoute {
+  const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
+    ? route.points
+        .filter(
+          (point): point is FavoriteRoutePoint =>
+            typeof point?.longitude === "number" && typeof point?.latitude === "number",
+        )
+        .map((point) => [point.longitude, point.latitude])
+    : [];
+
+  const createdAt =
+    typeof route.created_at === "string" ? route.created_at : new Date(route.created_at).toISOString();
+
+  return {
+    id: route.id ?? route._id ?? "",
+    name: route.name,
+    description: route.description ?? "",
+    category: route.category ?? "Sin categoría",
+    ownerId: route.owner_id,
+    ownerName: route.owner_username ?? ownerFallback ?? route.owner_id,
+    createdAt,
+    visibility: Boolean(route.visibility),
+    points: normalizedPoints,
+  };
+}
+
+function formatDateLabel(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 type PersonalDataProps = {
@@ -508,11 +768,44 @@ function StatCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function FavoritesPanel() {
-  const favorites = [
-    { id: "f1", name: "Casa - Trabajo", distance: "14.2 km", duration: "23 min", updatedAt: "2025-10-18" },
-    { id: "f2", name: "Gimnasio", distance: "3.8 km", duration: "8 min", updatedAt: "2025-09-02" },
-  ];
+type FavoritesPanelProps = {
+  favorites: FavoriteRoute[];
+  status: "idle" | "loading" | "error";
+  error: string;
+  selectedRoute: FavoriteRoute | null;
+  onViewRoute: (route: FavoriteRoute) => void;
+  onCloseRoute: () => void;
+};
+
+function FavoritesPanel({
+  favorites,
+  status,
+  error,
+  selectedRoute,
+  onViewRoute,
+  onCloseRoute,
+}: FavoritesPanelProps) {
+  if (selectedRoute) {
+    const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
+    return (
+      <div className="card fill favorites-panel">
+        <div className="section-title favorites-panel__header">
+          <div>
+            <h2>{selectedRoute.name}</h2>
+            <p>
+              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+            </p>
+          </div>
+          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+            Cerrar
+          </button>
+        </div>
+        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
+          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="card fill">
@@ -520,32 +813,135 @@ function FavoritesPanel() {
         <h2>Rutas favoritas</h2>
         <p>Accede y gestiona tus rutas</p>
       </div>
+      {status === "error" && error && <div className="alert error">{error}</div>}
       <div className="table-scroll grow">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Ruta</th>
-              <th>Distancia</th>
-              <th>Duración</th>
-              <th>Actualizada</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {favorites.map((route) => (
-              <tr key={route.id}>
-                <td>{route.name}</td>
-                <td>{route.distance}</td>
-                <td>{route.duration}</td>
-                <td>{route.updatedAt}</td>
-                <td style={{ textAlign: "right" }}>
-                  <button className="btn-ghost">Ver</button>
-                </td>
+        {status === "loading" && favorites.length === 0 ? (
+          <p className="muted">Cargando tus rutas guardadas…</p>
+        ) : favorites.length === 0 ? (
+          <p className="muted">Aún no has guardado rutas favoritas.</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Ruta</th>
+                <th>Propietario</th>
+                <th>Categoría</th>
+                <th>Creada</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {favorites.map((route) => (
+                <tr key={route.id}>
+                  <td>{route.name}</td>
+                  <td>{route.ownerName || route.ownerId}</td>
+                  <td>{route.category}</td>
+                  <td>{formatDateLabel(route.createdAt)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
+                      Ver
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+      {status === "loading" && favorites.length > 0 && (
+        <p className="muted" style={{ marginTop: 12 }}>
+          Actualizando lista…
+        </p>
+      )}
+    </div>
+  );
+}
+
+type CreatedRoutesPanelProps = {
+  routes: FavoriteRoute[];
+  status: "idle" | "loading" | "error";
+  error: string;
+  selectedRoute: FavoriteRoute | null;
+  onViewRoute: (route: FavoriteRoute) => void;
+  onCloseRoute: () => void;
+};
+
+function CreatedRoutesPanel({
+  routes,
+  status,
+  error,
+  selectedRoute,
+  onViewRoute,
+  onCloseRoute,
+}: CreatedRoutesPanelProps) {
+  if (selectedRoute) {
+    const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
+    return (
+      <div className="card fill favorites-panel">
+        <div className="section-title favorites-panel__header">
+          <div>
+            <h2>{selectedRoute.name}</h2>
+            <p>
+              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+            </p>
+          </div>
+          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+            Cerrar
+          </button>
+        </div>
+        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
+          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Mis rutas</h2>
+        <p>Listado de rutas creadas por ti</p>
+      </div>
+      {status === "error" && error && <div className="alert error">{error}</div>}
+      <div className="table-scroll grow">
+        {status === "loading" && routes.length === 0 ? (
+          <p className="muted">Cargando tus rutas…</p>
+        ) : routes.length === 0 ? (
+          <p className="muted">Todavía no has creado rutas.</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Ruta</th>
+                <th>Propietario</th>
+                <th>Categoría</th>
+                <th>Creada</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {routes.map((route) => (
+                <tr key={route.id}>
+                  <td>{route.name}</td>
+                  <td>{route.ownerName || route.ownerId}</td>
+                  <td>{route.category}</td>
+                  <td>{formatDateLabel(route.createdAt)}</td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
+                      Ver
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {status === "loading" && routes.length > 0 && (
+        <p className="muted" style={{ marginTop: 12 }}>
+          Actualizando lista…
+        </p>
+      )}
     </div>
   );
 }
