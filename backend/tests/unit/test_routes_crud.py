@@ -11,10 +11,40 @@ class _InsertOneResult:
 
 class FakeCursor:
     def __init__(self, docs):
-        self._docs = docs
-    async def to_list(self, length=None):
-        return list(self._docs)         # Emula cursor.to_list()
+        self._docs = list(docs)
+        self._skip = 0
+        self._limit = None
 
+    def skip(self, n):
+        self._skip = int(n)
+        return self
+
+    def limit(self, n):
+        self._limit = int(n)
+        return self
+
+    async def to_list(self, length=None):
+        data = self._docs[self._skip:]
+        if self._limit is not None:
+            data = data[: self._limit]
+        # length (de Motor) es un máximo de elementos a devolver
+        if length is not None:
+            data = data[: length]
+        return list(data)
+
+    def _sliced(self):
+        data = self._docs[self._skip:]
+        if self._limit is not None:
+            data = data[: self._limit]
+        return data
+
+    # Soporte para: `async for d in cursor`
+    def __aiter__(self):
+        async def gen():
+            for d in self._sliced():
+                yield d
+        return gen()
+        
 class FakeRoutesCol:
     def __init__(self):
         self._docs = [] # Almacenamiento en memoria 
