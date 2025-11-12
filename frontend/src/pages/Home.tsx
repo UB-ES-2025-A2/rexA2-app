@@ -93,7 +93,7 @@ export default function Home() {
         const data = await response.json();
 
         const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route._id,
+          id: route.id,
           name: route.name,
           description: route.description || "Sin descripción",
           category: route.category || "sin categoría",
