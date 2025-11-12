@@ -36,7 +36,7 @@ async def ac_profile(profile_app):
         yield client
 
 
-# ========== GET /users/me ==========
+# ---------- GET /users/me ----------
 
 @pytest.mark.anyio
 async def test_get_me_returns_public_user(ac_profile):
@@ -52,7 +52,7 @@ async def test_get_me_returns_public_user(ac_profile):
     assert "hashed_password" not in data
 
 
-# ========== GET /users/me/profile ==========
+# ---------- GET /users/me/profile ----------
 
 @pytest.mark.anyio
 async def test_get_my_profile_uses_crud_and_returns_profile(ac_profile, monkeypatch):
@@ -99,7 +99,7 @@ async def test_get_my_profile_uses_crud_and_returns_profile(ac_profile, monkeypa
     assert called["user"]["_id"] == "64fa0c8dbb5d2f0f12345678"
 
 
-# ========== GET /users/check-username ==========
+# ---------- GET /users/check-username ----------
 
 @pytest.mark.anyio
 async def test_check_username_available_true(ac_profile, monkeypatch):
@@ -146,7 +146,7 @@ async def test_check_username_missing_param_422(ac_profile):
     assert res.status_code == 422
 
 
-# ========== PATCH /users/me ==========
+# ---------- PATCH /users/me ----------
 
 @pytest.mark.anyio
 async def test_update_my_profile_ok(ac_profile, monkeypatch):
@@ -340,7 +340,7 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
     assert data["preferred_units"] == "km"
 
 
-# ========== GET /users/me/stats ==========
+# ---------- GET /users/me/stats ----------
 
 @pytest.mark.anyio
 async def test_get_my_stats_aggregated(ac_profile, monkeypatch):

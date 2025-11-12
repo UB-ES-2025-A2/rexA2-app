@@ -5,10 +5,8 @@ from backend.db.models import user as user_crud
 
 
 class FakeUsersCollection:
-    """
-    Colección fake para testear funciones de perfil en user_crud
-    sin depender de Mongo real.
-    """
+    #Colección fake para testear funciones de perfil en user_crud sin depender de Mongo real.
+
     def __init__(self):
         self._docs = []
 
