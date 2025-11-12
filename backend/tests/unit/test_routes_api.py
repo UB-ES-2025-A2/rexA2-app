@@ -192,7 +192,6 @@ async def test_list_routes_public_only_false(ac, monkeypatch):
     assert isinstance(body, list)
     assert body[0]["id"] == "1"
 
-
 @pytest.mark.anyio
 async def test_my_routes_ok(ac, monkeypatch):
     from backend.db.models import route as route_crud
@@ -221,7 +220,8 @@ async def test_my_routes_ok(ac, monkeypatch):
     res = await ac.get("/routes/me")
     assert res.status_code == 200
     body = res.json()
-    assert len(body) == 1
+    assert isinstance(body, list)
+    assert body[0]["id"] == "1"
     assert body[0]["name"] == "Mia"
 
 

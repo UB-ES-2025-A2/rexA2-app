@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from ..core.security import get_current_user
 from ..db.models import user as user_crud
+from ..db.models import route as route_crud
 from ..db.schemas.user import UserProfile, UserUpdate, ProfileStats, UserPublic
+from ..db.schemas.route import RoutePublic
+from ..db.models import favorite as favorite_crud
 from pymongo.errors import DuplicateKeyError
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-# === NUEVO: datos básicos del usuario autenticado (como el response del registro) ===
+# === Datos básicos del usuario autenticado (como el response del registro) ===
 @router.get("/me", response_model=UserPublic, response_model_exclude_none=True)
 async def get_me(user = Depends(get_current_user)):
     return {
@@ -87,3 +90,46 @@ async def get_my_routes_completed_count(user = Depends(get_current_user)):
 async def get_my_favorites_count(user = Depends(get_current_user)):
     uid = str(user["_id"])
     return {"count": await user_crud.count_favorites(uid)}
+
+# --- Getter para ver las rutas favoritas ---
+@router.get("/me/routes/favorites", response_model=list[RoutePublic])
+async def list_my_favorite_routes(
+    user = Depends(get_current_user),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """
+    Devuelve el listado de rutas favoritas
+    """
+    # Obtener IDs de favoritos (crea doc vacío si no existía)
+    fav_ids = await favorite_crud.list_favorites(str(user["_id"]))
+    if not fav_ids:
+        return []
+
+    # Paginación sobre IDs
+    page_ids = fav_ids[skip : skip + limit]
+    docs = await route_crud.get_routes_by_ids(page_ids)  
+    # Mantener orden original de favoritos
+    order = {rid: i for i, rid in enumerate(page_ids)}
+    docs.sort(key=lambda d: order.get(d.get("_id") or d.get("id"), 10**9))
+
+    # Mapear owner_id a username para mostrar nombres en el front
+    owner_ids = {str(d.get("owner_id")) for d in docs if d.get("owner_id")}
+    owner_usernames: dict[str, str | None] = {}
+    for owner_id in owner_ids:
+        user_doc = await user_crud.get_user_by_id(owner_id)
+        if user_doc:
+            owner_usernames[owner_id] = user_doc.get("username") or user_doc.get("email")
+        else:
+            owner_usernames[owner_id] = None
+
+    # Mapear a RoutePublic
+    payload = [
+        RoutePublic(
+            **{k: v for k, v in d.items() if k != "_id"},
+            owner_username=owner_usernames.get(str(d.get("owner_id"))),
+            **{"_id": d.get("_id") or d.get("id")}
+        )
+        for d in docs
+    ]
+    return payload

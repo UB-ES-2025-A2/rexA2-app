@@ -24,10 +24,7 @@ class FakeCursor:
         return self
 
     async def to_list(self, length=None):
-        data = self._docs[self._skip:]
-        if self._limit is not None:
-            data = data[: self._limit]
-        # length (de Motor) es un máximo de elementos a devolver
+        data = self._sliced()
         if length is not None:
             data = data[: length]
         return list(data)
