@@ -108,7 +108,7 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
         saveAuth(authResp);
         auth.login({ user: authResp.user, token: authResp.access_token || "" });
         // 3) Aviso opcional y callback
-        onSubmit?.({ ...state, _autologin: true });
+        onSubmit?.({ ...state, _autologin: "true" });
         return;
       }
 
@@ -191,7 +191,7 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
             error={touched.confirm ? errors.confirm : undefined}
           />
         )}
-
+        {/* 
         {mode === "login" && (
           <div className="auth__utils">
             <label className="auth__checkbox">
@@ -200,6 +200,7 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
             <button type="button" className="auth__link">Forgot password?</button>
           </div>
         )}
+        */}
 
         <button
           className="btn btn--primary"
@@ -231,12 +232,12 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
           </>
         )}
       </div>
-
+      {/*  
       <div className="auth__divider"><span>or</span></div>
       <div className="auth__socials">
         <button className="btn btn--ghost">Continue with Google</button>
         <button className="btn btn--ghost">Continue with GitHub</button>
-      </div>
+      </div>*/} 
     </div>
   );
 }

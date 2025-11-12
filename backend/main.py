@@ -3,9 +3,9 @@ from fastapi.concurrency import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
-from core.config import settings
-from db.client import init_db
-from routers import users, auth, routes, users_profile, favorite
+from .core.config import settings
+from .db.client import init_db
+from .routers import users, auth, routes, users_profile, favorite
 
 # === Instancia principal ===
 app = FastAPI(title=settings.PROJECT_NAME)
