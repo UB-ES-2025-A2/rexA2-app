@@ -113,10 +113,21 @@ async def list_my_favorite_routes(
     order = {rid: i for i, rid in enumerate(page_ids)}
     docs.sort(key=lambda d: order.get(d.get("_id") or d.get("id"), 10**9))
 
+    # Mapear owner_id a username para mostrar nombres en el front
+    owner_ids = {str(d.get("owner_id")) for d in docs if d.get("owner_id")}
+    owner_usernames: dict[str, str | None] = {}
+    for owner_id in owner_ids:
+        user_doc = await user_crud.get_user_by_id(owner_id)
+        if user_doc:
+            owner_usernames[owner_id] = user_doc.get("username") or user_doc.get("email")
+        else:
+            owner_usernames[owner_id] = None
+
     # Mapear a RoutePublic
     payload = [
         RoutePublic(
             **{k: v for k, v in d.items() if k != "_id"},
+            owner_username=owner_usernames.get(str(d.get("owner_id"))),
             **{"_id": d.get("_id") or d.get("id")}
         )
         for d in docs

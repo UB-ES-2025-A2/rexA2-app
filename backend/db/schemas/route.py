@@ -70,3 +70,4 @@ class RoutePublic(RouteBase):
     )                               # Mapea el campo interno "_id" (de Mongo) a "id"
     owner_id: str                   # Identificador del propietario de la ruta    
     created_at: datetime            # Fecha y hora de la creación
+    owner_username: str | None = None
