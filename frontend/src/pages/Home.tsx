@@ -19,11 +19,14 @@ type RouteItem = {
   visibility: boolean;
 };
 
-
 import "../styles/Home.css";
-import { useNavigate } from "react-router-dom"; // <-- añade esto
+import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
+
+const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
+const DEFAULT_ZOOM = 11;
+const GEO_ZOOM = 13;
 
 export default function Home() {
   const { user, token, logout } = useAuth();
@@ -35,12 +38,16 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
   const navigate = useNavigate(); // <-- añade esto
 
-
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-
   const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null); 
+  const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+
+  const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
+  const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
+
+  // ⬇️ NUEVO: favoritos del usuario
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -63,17 +70,32 @@ export default function Home() {
   });
 
   useEffect(() => {
-    const fetchRoutes = async () => {
+    const fetchAll = async () => {
       try {
+        let favSet = new Set<string>();
+        if (token) {
+          try {
+            const favRes = await fetch(`${API}/favorites/me`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (favRes.ok) {
+              const favData: { route_ids: string[] } = await favRes.json();
+              favSet = new Set((favData?.route_ids ?? []).map(String));
+            }
+          } catch (e) {
+            console.warn("Error cargando favoritos:", e);
+          }
+        }
+        setFavoriteIds(favSet);
+
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
-
         const data = await response.json();
-        console.log(data);
+
         const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route._id,
+          id: route.id,
           name: route.name,
-          description: route.description || "Sin descripción", 
+          description: route.description || "Sin descripción",
           category: route.category || "sin categoría",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,
@@ -86,8 +108,8 @@ export default function Home() {
       }
     };
 
-    fetchRoutes();
-  }, []);
+    fetchAll();
+  }, [token]);
 
   const toggleProfileMenu = () => setProfileMenuOpen(v => !v);
 
@@ -101,6 +123,29 @@ export default function Home() {
   const handleMapClick = (lng: number, lat: number) => {
     setDrawPoints(prev => [...prev, [lng, lat]]);
   };
+
+  // Geolocalización: si falla/no hay permiso, se queda BCN
+  useEffect(() => {
+    let cancelled = false;
+    if (!("geolocation" in navigator)) return;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (cancelled) return;
+        const { latitude, longitude } = pos.coords;
+        setMapCenter([longitude, latitude]);
+        setMapZoom(GEO_ZOOM);
+      },
+      () => {
+        if (cancelled) return;
+        setMapCenter(DEFAULT_CENTER);
+        setMapZoom(DEFAULT_ZOOM);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <div className="home">
@@ -210,6 +255,7 @@ export default function Home() {
                         name={r.name}
                         category={r.category as Category}
                         points={r.points}
+                        initialSaved={favoriteIds.has(String(r.id))} // ⬅️ favorito pre-marcado
                         onClick={() =>
                           requireAuth(() => {
                             setSelectedRoute(r);
@@ -227,8 +273,8 @@ export default function Home() {
         <div className="home__map-skeleton">
           <MapView
             className="home__map-skeleton"
-            center={[2.1734, 41.3851]}
-            zoom={11}
+            center={mapCenter}
+            zoom={mapZoom}
             allowPickPoint={routeCardOpen}
             onPickPoint={handleMapClick}
             highlightPoints={selectedRoutePoints}
