@@ -40,6 +40,25 @@ async def get_route_by_id(route_id: str) -> dict | None:
     '''
     return await db_client.db["routes"].find_one({"_id": ObjectId(route_id)})
 
+
+async def get_routes_by_ids(route_ids: list[str]) -> list[dict]:
+    oids = []
+    for s in route_ids:
+        try:
+            oids.append(ObjectId(s))
+        except Exception:
+            continue
+    if not oids:
+        return []
+    
+    curr = db_client.db["routes"].find({"_id": {"$in": oids}})
+    out = []
+    async for d in curr:
+        d["_id"] = str(d["_id"])
+        out.append(d)
+
+    return out
+
 async def get_all_routes(public_only: bool = False) -> list[dict]:
     """Obtiene todas las rutas (públicas o todas si admin)."""
     query = {"visibility": True} if public_only else {}
