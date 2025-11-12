@@ -4,6 +4,14 @@ from bson import ObjectId
 from datetime import datetime, timezone
 # from typing import Dict
 
+# ============ HELPERS ======================
+
+def _normalize(doc: dict) -> dict:
+    d = dict(doc)
+    if "_id" in d:
+        d["_id"] = str(d["_id"])
+    return d
+
 # ============ CREATE OPERATIONS ============
 async def create_route(owner_id: str, route_data:dict) -> dict:
     '''
@@ -38,12 +46,19 @@ async def get_all_routes(public_only: bool = False) -> list[dict]:
     routes = db_client.db["routes"].find(query).to_list(length=None)
     return await routes
 
-async def get_routes_by_owner(owner_id: str) -> list[dict]:
+# ---- Aquí obtenemos la lista de rutas que crea un usuario ---
+async def get_routes_by_owner(owner_id: str, *, public_only: bool | None = None,
+                            skip: int = 0, limit: int = 50) -> list[dict]:
     '''
     Devuelve todas las rutas de un usuario
     '''
-    cursor = db_client.db["routes"].find({"owner_id": owner_id})
-    return await cursor.to_list(length=None)
+    q =  {"owner_id": str(owner_id)}
+    if public_only is True:
+        q["visibility"] = True
+
+    cur = db_client.db["routes"].find(q).skip(int(skip)).limit(int(limit))
+
+    return [_normalize(d) async for d in cur]
 
 async def get_route_by_name(owner_id: str, name: str) -> dict | None:
     return await db_client.db["routes"].find_one({

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from backend.db.models import route as route_crud
+from backend.db.models import user as user_crud
 from backend.db.schemas.route import RouteCreate, RoutePublic
 from backend.core.security import get_current_user
 from pymongo.errors import DuplicateKeyError
@@ -51,13 +52,32 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
     return routes
 
 @router.get("/me", response_model=list[RoutePublic])
-async def my_routes(current_user: dict = Depends(get_current_user)):
+async def my_routes(current_user: dict = Depends(get_current_user),
+                    skip: int = Query(0, ge=0),
+                    limit: int = Query(50, ge=1, le=200),
+):
     '''
     Lista todas las rutas del usuario autenticado
     '''
-    routes = await route_crud.get_routes_by_owner(current_user["_id"])
-    for route in routes:
-        route["_id"] = str(route["_id"])
+    routes = await route_crud.get_routes_by_owner(current_user["_id"], public_only=None, skip=skip, limit=limit)
+    return routes
+
+@router.get("/user/{username}", response_model=list[RoutePublic])
+async def list_user_public_routes(
+    username: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """
+    Lista rutas PÚBLICAS de un usuario por su username.
+    """
+    u = await user_crud.get_user_by_username(username)
+    if not u:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    routes = await route_crud.get_routes_by_owner(
+        u["_id"], public_only=True, skip=skip, limit=limit
+    )
     return routes
 
 @router.get("/{route_id}", response_model=RoutePublic)
