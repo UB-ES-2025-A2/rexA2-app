@@ -4,7 +4,7 @@ import type { Category } from "../types";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 
-const API = import.meta.env.VITE_API_URL as string;
+const API = import.meta.env.VITE_API_URL as string || window.location.origin;
 
 interface RouteDetailsCardProps {
   name: string;
