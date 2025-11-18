@@ -5,6 +5,7 @@ import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 
 const API = import.meta.env.VITE_API_URL as string;
+const COMMENT_MAX = 300; // 👈 añadido
 
 interface RouteDetailsCardProps {
   name: string;
@@ -31,22 +32,19 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
+
+  const [comment, setComment] = useState("");
+
   const { showAlert } = useAlert();
   const { token } = useAuth();
 
   const favUrl = `${API}/favorites/${routeId}`;
+  const commentsUrl = `${API}/routes/${routeId}/comments`;
 
   const handleSaveToggle = async () => {
     if (loading) return;
-
-    if (!routeId) {
-      showAlert("No se puede guardar: id de ruta desconocido.", "error");
-      return;
-    }
-    if (!token) {
-      showAlert("Inicia sesión para guardar rutas.", "error");
-      return;
-    }
+    if (!routeId) return showAlert("No se puede guardar: id de ruta desconocido.", "error");
+    if (!token) return showAlert("Inicia sesión para guardar rutas.", "error");
 
     const next = !saved;
     setSaved(next);
@@ -60,21 +58,45 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
       if (!res.ok) {
         setSaved(!next);
-        const msg = await res.text().catch(() => "");
-        console.error("Fav toggle failed:", res.status, msg);
-        if (res.status === 401) showAlert("No autorizado. Inicia sesión.", "error");
-        else if (res.status === 404) showAlert("Ruta no encontrada.", "error");
-        else if (res.status === 403) showAlert("No tienes permiso para esta ruta.", "error");
-        else showAlert(`No se pudo ${next ? "guardar" : "quitar"} la ruta.`, "error");
+        showAlert("No se pudo guardar la ruta.", "error");
       } else {
         onSavedChange?.(next);
       }
-    } catch (err) {
+    } catch {
       setSaved(!next);
-      console.error(err);
       showAlert("Error de red al cambiar favorito.", "error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendComment = async () => {
+    const text = comment.trim();
+    if (!text) return;
+
+    if (!token) {
+      showAlert("Inicia sesión para enviar comentarios.", "error");
+      return;
+    }
+
+    try {
+      const res = await fetch(commentsUrl, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) {
+        showAlert("No se pudo enviar el comentario.", "error");
+      } else {
+        showAlert("Comentario enviado.", "success");
+        setComment("");
+      }
+    } catch {
+      showAlert("Error de red al enviar comentario.", "error");
     }
   };
 
@@ -109,6 +131,25 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="route-details-card__comments">
+          <textarea
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Añade un comentario…"
+            maxLength={COMMENT_MAX}
+            rows={3}
+          />
+          <div className="route-details-card__comment-counter">
+            {comment.length}/{COMMENT_MAX}
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "8px" }}>
+            <button className="btn primary" onClick={handleSendComment}>
+              Enviar comentario
+            </button>
+          </div>
         </div>
 
         <div className="route-details-card__footer" style={{ justifyContent: "flex-end" }}>
