@@ -310,7 +310,7 @@ export default function Home() {
                 <>
                   
                 </>
-                // Implementar usuaris
+                // Implementar busqueda de usuarios
               )}
             </div>
           )}
