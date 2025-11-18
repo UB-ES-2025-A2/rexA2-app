@@ -34,20 +34,29 @@ export default function Home() {
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [routeCardOpen, setRouteCardOpen] = useState(false);
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
-  const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-  const navigate = useNavigate(); // <-- añade esto
+  const [selectedRoutePoints, setSelectedRoutePoints] = useState<
+    Array<[number, number]>
+  >([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">(
+    "todos"
+  );
+  const navigate = useNavigate();
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
+  const [availableCategories, setAvailableCategories] = useState<Array<string>>(
+    []
+  );
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
 
-  // ⬇️ NUEVO: favoritos del usuario
+  // favoritos del usuario
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  // ⬇️ NUEVO: modo del selector (Rutas / Usuarios)
+  const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -111,7 +120,7 @@ export default function Home() {
     fetchAll();
   }, [token]);
 
-  const toggleProfileMenu = () => setProfileMenuOpen(v => !v);
+  const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
   useEffect(() => {
     if (user || token) {
@@ -121,7 +130,7 @@ export default function Home() {
   }, [user, token]);
 
   const handleMapClick = (lng: number, lat: number) => {
-    setDrawPoints(prev => [...prev, [lng, lat]]);
+    setDrawPoints((prev) => [...prev, [lng, lat]]);
   };
 
   // Geolocalización: si falla/no hay permiso, se queda BCN
@@ -226,45 +235,82 @@ export default function Home() {
             />
           ) : (
             <div>
-              <div className="category-filter">
-                <label className="category-label">Filtrar por categoría</label>
-                <select
-                  className="category-select"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
-                >
-                  <option value="todos">Todas</option>
-                  {availableCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </option>
-                  ))}
-                </select>
+              <div className="container">
+                <div className="tabs">
+                  <input
+                    type="radio"
+                    id="radio-1"
+                    name="tabs"
+                    checked={searchMode === "routes"}
+                    onChange={() => setSearchMode("routes")}
+                  />
+                  <label className="tab" htmlFor="radio-1">
+                    Rutas
+                  </label>
+
+                  <input
+                    type="radio"
+                    id="radio-2"
+                    name="tabs"
+                    checked={searchMode === "users"}
+                    onChange={() => setSearchMode("users")}
+                  />
+                  <label className="tab" htmlFor="radio-2">
+                    Usuarios
+                  </label>
+
+                  <span className="glider"></span>
+                </div>
               </div>
 
-              {routes.length === 0 ? (
-                <p>No hay rutas disponibles.</p>
-              ) : (
-                <div className="route-list">
-                  {routes
+              {searchMode === "routes" ? (
+                <>
+                  <div className="category-filter">
+                <label className="category-label">Filtrar por categoría</label>
+                    <select
+                      className="category-select"
+                      value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
+                    >
+                      <option value="todos">Todas</option>
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {routes.length === 0 ? (
+                    <p>No hay rutas disponibles.</p>
+                  ) : (
+                    <div className="route-list">
+                      {routes
                     .filter((r) => selectedCategory === "todos" || r.category === selectedCategory)
-                    .map((r) => (
-                      <RoutePreviewCard
-                        key={r.id}
-                        id={r.id}
-                        name={r.name}
-                        category={r.category as Category}
-                        points={r.points}
-                        initialSaved={favoriteIds.has(String(r.id))} // ⬅️ favorito pre-marcado
-                        onClick={() =>
-                          requireAuth(() => {
-                            setSelectedRoute(r);
-                            setSelectedRoutePoints(r.points);
-                          })
-                        }
-                      />
-                    ))}
-                </div>
+                        .map((r) => (
+                          <RoutePreviewCard
+                            key={r.id}
+                            id={r.id}
+                            name={r.name}
+                            category={r.category as Category}
+                            points={r.points}
+                            initialSaved={favoriteIds.has(String(r.id))}
+                            onClick={() =>
+                              requireAuth(() => {
+                                setSelectedRoute(r);
+                                setSelectedRoutePoints(r.points);
+                              })
+                            }
+                          />
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  
+                </>
+                // Implementar usuaris
               )}
             </div>
           )}
