@@ -1,14 +1,11 @@
-# backend/db/models/user.py
-
-from typing import Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal
 from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
 
-from ..client import get_db                   # referencia a la DB (AsyncIOMotorDatabase)
+from ..client import get_db
 from ...core.security import get_password_hash
 
-# Permite “inyectar” la colección en tests si hiciera falta
 USERS_COL = None
 
 def _users_col():
@@ -205,3 +202,43 @@ async def count_routes_completed(user_id: str) -> int:
 
 async def count_favorites(user_id: str) -> int:
     return await _count_favorites(user_id)
+
+async def search_users(
+    query: str,
+    *,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    """
+    Busca usuarios por coincidencia parcial en name, username o email (case-insensitive).
+    Devuelve una lista de dicts con campos públicos básicos.
+    """
+    col = _users_col()
+    q = (query or "").strip()
+    if not q:
+        return []
+
+    regex = {"$regex": q, "$options": "i"}
+
+    cursor = col.find(
+        {
+            "$or": [
+                {"name": regex},
+                {"username": regex},
+                {"email": regex},
+            ]
+        },
+        {
+            "name": 1,
+            "username": 1,
+            "email": 1,
+            "avatar_url": 1,
+        },
+    ).limit(limit)
+
+    results: List[Dict[str, Any]] = []
+    async for doc in cursor:
+        doc["id"] = str(doc["_id"])
+        doc.pop("_id", None)
+        results.append(doc)
+
+    return results
