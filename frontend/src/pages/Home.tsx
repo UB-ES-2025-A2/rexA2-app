@@ -307,10 +307,9 @@ export default function Home() {
                   )}
                 </>
               ) : (
-                <>
-                  
-                  <p>Modo búsqueda de usuarios (por implementar).</p>
-                </>
+
+                  // Implementar busqueda usuarios
+
               )}
             </div>
           )}
