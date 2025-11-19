@@ -130,7 +130,7 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
-      {/* Modo: dibujar ruta */}
+
       {mode === "draw" && (
         <>
           <p className="draw-instruction">
@@ -160,7 +160,6 @@ const RouteCardView: React.FC<Props> = ({
         </>
       )}
 
-      {/* Privacidad */}
       <div className="input-group">
         <label>
           <input
@@ -172,7 +171,6 @@ const RouteCardView: React.FC<Props> = ({
         </label>
       </div>
 
-      {/* Categoría */}
       <div className="input-group">
         <label htmlFor="category">Categoría</label>
         <select
@@ -188,7 +186,6 @@ const RouteCardView: React.FC<Props> = ({
         </select>
       </div>
 
-      {/* Descripción */}
       <div className="input-group">
         <label htmlFor="route-desc">Descripción</label>
         <textarea
@@ -204,7 +201,6 @@ const RouteCardView: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* Guardar */}
       <button className="btn primary" onClick={onSave}>
         Guardar Ruta
       </button>
