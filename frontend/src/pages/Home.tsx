@@ -303,7 +303,7 @@ export default function Home() {
                   </div>
 
                   {routes.length === 0 ? (
-                    <p>No hay rutas disponibles.</p>
+                    <p>No hay rutas disponibles</p>
                   ) : (
                     <div className="route-list">
                       {routes
