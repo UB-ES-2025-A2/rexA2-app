@@ -113,3 +113,27 @@
     transform: scale(0.8);
   }
 }
+
+.input {
+  border: none;
+  outline: none;
+  border-radius: 15px;
+  padding: 1em;
+  width: 100%;
+  background-color: #ccc;
+  box-shadow: inset 2px 5px 10px rgba(0,0,0,0.3);
+  transition: 300ms ease-in-out;
+  font-size: 1rem;
+}
+
+.input:focus {
+  background-color: white;
+  transform: scale(1.03);
+  box-shadow: 13px 13px 80px #969696,
+             -13px -13px 80px #ffffff;
+}
+
+.user-search-container {
+  padding: 0 10px;
+  margin-bottom: 15px;
+}

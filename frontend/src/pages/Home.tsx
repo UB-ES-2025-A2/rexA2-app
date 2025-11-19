@@ -56,6 +56,7 @@ export default function Home() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
+  const [userQuery, setUserQuery] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
 
@@ -123,20 +124,22 @@ export default function Home() {
 
   useEffect(() => {
     if (searchMode !== "users") return;
-
-    const fetchUsers = async () => {
+  
+    const q = userQuery.trim() || "all";
+  
+    const timeout = setTimeout(async () => {
       try {
-        const res = await fetch(`${API}/users/search?q=all`);
+        const res = await fetch(`${API}/users/search?q=${encodeURIComponent(q)}`);
         if (!res.ok) throw new Error("Error cargando usuarios");
         const data = await res.json();
         setUsers(data);
       } catch (err) {
         console.error("Error obteniendo usuarios:", err);
       }
-    };
-
-    fetchUsers();
-  }, [searchMode]);
+    }, 300); // debounce 300ms
+  
+    return () => clearTimeout(timeout);
+  }, [searchMode, userQuery]);  
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
@@ -326,6 +329,16 @@ export default function Home() {
                 </>
               ) : (
                 <>
+                <div className="user-search-container">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      className="input"
+                      placeholder="Buscar usuario..."
+                      value={userQuery}
+                      onChange={(e) => setUserQuery(e.target.value)}
+                    />
+                  </div>
                   {users.length === 0 ? (
                     <p>No hay usuarios.</p>
                   ) : (
