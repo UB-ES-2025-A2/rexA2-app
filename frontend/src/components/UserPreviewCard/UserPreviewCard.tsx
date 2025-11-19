@@ -22,7 +22,6 @@ const UserPreviewCard: React.FC<Props> = ({
   return (
     <div className="user-card" onClick={onClick}>
       
-      {/* Avatar */}
       <div className="user-card-avatar">
         {avatar_url ? (
           <img src={avatar_url} alt={`Avatar de ${username}`} />
@@ -31,13 +30,11 @@ const UserPreviewCard: React.FC<Props> = ({
         )}
       </div>
 
-      {/* Text */}
       <div className="user-card-info">
         <div className="user-card-name-row">
           <h3 className="user-card-username">{username}</h3>
         </div>
 
-        {/* Email con shrink */}
         <p className="user-card-email">{email}</p>
       </div>
 
