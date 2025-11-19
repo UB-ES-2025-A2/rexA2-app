@@ -14,7 +14,7 @@ def _users_col():
     """
     if USERS_COL is not None:
         return USERS_COL
-    db = get_db()             # <- debe ser AsyncIOMotorDatabase
+    db = get_db()
     return db["users"]
 
 
@@ -208,12 +208,30 @@ async def search_users(
     *,
     limit: int = 20,
 ) -> List[Dict[str, Any]]:
-    """
-    Busca usuarios por coincidencia parcial en name, username o email (case-insensitive).
-    Devuelve una lista de dicts con campos públicos básicos.
-    """
     col = _users_col()
     q = (query or "").strip()
+
+    # 🔥 NUEVO: si piden "all", devolver todos
+    if q.lower() == "all":
+        cursor = col.find(
+            {},
+            {
+                "name": 1,
+                "username": 1,
+                "email": 1,
+                "avatar_url": 1,
+            },
+        ).limit(limit)
+
+        results: List[Dict[str, Any]] = []
+        async for doc in cursor:
+            doc["id"] = str(doc["_id"])
+            doc.pop("_id", None)
+            results.append(doc)
+
+        return results
+
+    # Si no hay query y no pidieron "all", devolver vacío (búsqueda normal)
     if not q:
         return []
 

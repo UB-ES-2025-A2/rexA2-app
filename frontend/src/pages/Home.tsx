@@ -10,6 +10,10 @@ import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 
+import "../styles/Home.css";
+import { useNavigate } from "react-router-dom";
+import UserPreviewCard from "../components/UserPreviewCard/UserPreviewCard";
+
 type RouteItem = {
   id: string;
   name: string;
@@ -18,9 +22,6 @@ type RouteItem = {
   points: Array<[number, number]>;
   visibility: boolean;
 };
-
-import "../styles/Home.css";
-import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -52,11 +53,11 @@ export default function Home() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
 
-  // favoritos del usuario
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
-  // ⬇️ NUEVO: modo del selector (Rutas / Usuarios)
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
+
+  const [users, setUsers] = useState<any[]>([]);
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -119,6 +120,23 @@ export default function Home() {
 
     fetchAll();
   }, [token]);
+
+  useEffect(() => {
+    if (searchMode !== "users") return;
+
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${API}/users/search?q=all`);
+        if (!res.ok) throw new Error("Error cargando usuarios");
+        const data = await res.json();
+        setUsers(data);
+      } catch (err) {
+        console.error("Error obteniendo usuarios:", err);
+      }
+    };
+
+    fetchUsers();
+  }, [searchMode]);
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
@@ -308,9 +326,25 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  
+                  {users.length === 0 ? (
+                    <p>No hay usuarios.</p>
+                  ) : (
+                    <div className="user-list">
+                      {users.map(u => (
+                        <UserPreviewCard
+                          key={u.id}
+                          id={u.id}
+                          username={u.username}
+                          email={u.email}
+                          name={u.name}
+                          avatar_url={u.avatar_url}
+                          onClick={() => console.log("User:", u.id)}
+                        />
+                      ))}
+
+                    </div>
+                  )}
                 </>
-                // Implementar busqueda de usuarios
               )}
             </div>
           )}

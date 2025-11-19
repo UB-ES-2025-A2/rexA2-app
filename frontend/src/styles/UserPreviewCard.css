@@ -1,0 +1,64 @@
+.user-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #ffffff;
+    padding: 14px 16px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+    margin-bottom: 10px;
+  }
+  
+  .user-preview-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  }
+  
+  .user-avatar {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .user-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+  }
+  
+  .user-avatar-placeholder {
+    width: 48px;
+    height: 48px;
+    background: #70c489;
+    border-radius: 50%;
+    display: flex;
+    color: white;
+    font-weight: bold;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+  
+  .user-info {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .user-username {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  
+  .user-name {
+    font-size: 0.9rem;
+    color: #555;
+    margin: 2px 0;
+  }
+  
+  .user-email {
+    font-size: 0.85rem;
+    color: #777;
+  }
+  
