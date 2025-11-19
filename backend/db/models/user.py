@@ -211,7 +211,6 @@ async def search_users(
     col = _users_col()
     q = (query or "").strip()
 
-    # 🔥 NUEVO: si piden "all", devolver todos
     if q.lower() == "all":
         cursor = col.find(
             {},
@@ -231,7 +230,6 @@ async def search_users(
 
         return results
 
-    # Si no hay query y no pidieron "all", devolver vacío (búsqueda normal)
     if not q:
         return []
 
