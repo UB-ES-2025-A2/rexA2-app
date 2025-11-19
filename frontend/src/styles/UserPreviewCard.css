@@ -1,64 +1,90 @@
-.user-preview-card {
+
+.user-card {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 16px;
     background: #ffffff;
-    padding: 14px 16px;
-    border-radius: 10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    padding: 18px 20px;
+    border-radius: 22px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    transition: 0.15s ease;
     cursor: pointer;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
   }
   
-  .user-preview-card:hover {
+  .user-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.15);
   }
   
-  .user-avatar {
-    width: 48px;
-    height: 48px;
+
+  .user-card-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
   }
   
-  .user-avatar img {
+  .user-card-avatar img {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
+    object-fit: cover;
   }
   
-  .user-avatar-placeholder {
-    width: 48px;
-    height: 48px;
-    background: #70c489;
-    border-radius: 50%;
+  .avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    background: #5a5a5a;
     display: flex;
-    color: white;
-    font-weight: bold;
-    align-items: center;
     justify-content: center;
-    font-size: 20px;
+    align-items: center;
+    color: white;
+    font-weight: 700;
+    font-size: 26px;
   }
   
-  .user-info {
+.user-card-info {
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
   }
   
-  .user-username {
-    font-size: 1.1rem;
-    font-weight: 600;
+  .user-card-username {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: 700;
     margin: 0;
+    color: #1a1a1a;
+  
+    max-width: 100%;
+    min-width: 0; 
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
-  .user-name {
-    font-size: 0.9rem;
-    color: #555;
-    margin: 2px 0;
+  .user-card-name {
+    margin: 3px 0 0 0;
+    color: #666;
+    font-size: clamp(0.85rem, 2.2vw, 1rem);
+  
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
-  .user-email {
-    font-size: 0.85rem;
-    color: #777;
+  .user-card-email {
+    margin: 4px 0 0;
+    color: #888;
+    font-size: clamp(0.7rem, 2vw, 0.9rem);
+  
+    max-width: 100%;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   

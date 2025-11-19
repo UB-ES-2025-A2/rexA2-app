@@ -1,39 +1,48 @@
-import type React from "react";
+import React from "react";
 import "../../styles/UserPreviewCard.css";
 
 type Props = {
   id: string;
   username: string;
+  name?: string;
   email: string;
-  name?: string | null;
   avatar_url?: string | null;
   onClick?: () => void;
 };
 
 const UserPreviewCard: React.FC<Props> = ({
-  id,
   username,
-  email,
   name,
+  email,
   avatar_url,
-  onClick,
+  onClick
 }) => {
+  const initial = (name || username || "?")[0]?.toUpperCase();
+
   return (
-    <div className="user-preview-card" onClick={onClick}>
-      <div className="user-avatar">
+    <div className="user-card" onClick={onClick}>
+      
+      {/* Avatar */}
+      <div className="user-card-avatar">
         {avatar_url ? (
-          <img src={avatar_url} alt="avatar" />
+          <img src={avatar_url} alt={`Avatar de ${username}`} />
         ) : (
-          <div className="user-avatar-placeholder">{username[0].toUpperCase()}</div>
+          <div className="avatar-placeholder">{initial}</div>
         )}
       </div>
 
-      <div className="user-info">
-        <h3 className="user-username">@{username}</h3>
+      {/* Text */}
+      <div className="user-card-info">
+        <div className="user-card-name-row">
+          <h3 className="user-card-username">{username}</h3>
+        </div>
 
+        <p className="user-card-name">{name || "—"}</p>
 
-        <p className="user-email">{email}</p>
+        {/* Email con shrink */}
+        <p className="user-card-email">{email}</p>
       </div>
+
     </div>
   );
 };
