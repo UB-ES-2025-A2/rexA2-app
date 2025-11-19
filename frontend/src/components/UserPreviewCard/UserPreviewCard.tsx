@@ -37,8 +37,6 @@ const UserPreviewCard: React.FC<Props> = ({
           <h3 className="user-card-username">{username}</h3>
         </div>
 
-        <p className="user-card-name">{name || "—"}</p>
-
         {/* Email con shrink */}
         <p className="user-card-email">{email}</p>
       </div>

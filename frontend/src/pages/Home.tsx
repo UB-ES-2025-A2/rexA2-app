@@ -59,6 +59,7 @@ export default function Home() {
   const [userQuery, setUserQuery] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -124,10 +125,11 @@ export default function Home() {
 
   useEffect(() => {
     if (searchMode !== "users") return;
-  
+
     const q = userQuery.trim() || "all";
-  
+
     const timeout = setTimeout(async () => {
+      setUsersLoading(true);
       try {
         const res = await fetch(`${API}/users/search?q=${encodeURIComponent(q)}`);
         if (!res.ok) throw new Error("Error cargando usuarios");
@@ -135,11 +137,14 @@ export default function Home() {
         setUsers(data);
       } catch (err) {
         console.error("Error obteniendo usuarios:", err);
+        setUsers([]);
+      } finally {
+        setUsersLoading(false);
       }
     }, 300); // debounce 300ms
-  
+
     return () => clearTimeout(timeout);
-  }, [searchMode, userQuery]);  
+  }, [searchMode, userQuery]);
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
@@ -174,7 +179,9 @@ export default function Home() {
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
     );
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -208,17 +215,6 @@ export default function Home() {
               >
                 Mi perfil
               </button>
-              {/*
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
-              >
-                Ajustes
-              </button>
-              */}
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -329,7 +325,7 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                <div className="user-search-container">
+                  <div className="user-search-container">
                     <input
                       type="text"
                       autoComplete="off"
@@ -339,11 +335,18 @@ export default function Home() {
                       onChange={(e) => setUserQuery(e.target.value)}
                     />
                   </div>
-                  {users.length === 0 ? (
-                    <p>No hay usuarios.</p>
+
+                  {usersLoading ? (
+                    <p>Cargando usuarios...</p>
+                  ) : users.length === 0 ? (
+                    <p>
+                      {userQuery.trim()
+                        ? "Sin coincidencias"
+                        : "No hay usuarios."}
+                    </p>
                   ) : (
                     <div className="user-list">
-                      {users.map(u => (
+                      {users.map((u) => (
                         <UserPreviewCard
                           key={u.id}
                           id={u.id}
