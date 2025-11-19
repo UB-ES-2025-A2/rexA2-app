@@ -48,4 +48,9 @@ async def search_users_endpoint(
     """
     Devuelve usuarios que coincidan parcial o totalmente en name, username o email.
     """
-    return await user_crud.search_users(q, limit=limit)
+
+    try:
+        result = await user_crud.search_users(q, limit=limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="No se han podido cargar los resultados")
+    return result

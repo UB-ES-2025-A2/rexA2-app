@@ -9,6 +9,7 @@ import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
+import { useAlert } from "../context/AlertContext";
 
 import "../styles/Home.css";
 import { useNavigate } from "react-router-dom";
@@ -31,6 +32,7 @@ const GEO_ZOOM = 13;
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [routeCardOpen, setRouteCardOpen] = useState(false);
@@ -136,12 +138,13 @@ export default function Home() {
         const data = await res.json();
         setUsers(data);
       } catch (err) {
-        console.error("Error obteniendo usuarios:", err);
+        const msg = err instanceof Error ? err.message : "No se han podido cargar los resultados";
+        showAlert(msg, "error")
         setUsers([]);
       } finally {
         setUsersLoading(false);
       }
-    }, 300); // debounce 300ms
+    }, 300);
 
     return () => clearTimeout(timeout);
   }, [searchMode, userQuery]);
