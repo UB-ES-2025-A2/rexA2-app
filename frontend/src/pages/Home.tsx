@@ -337,7 +337,7 @@ export default function Home() {
                   </div>
 
                   {usersLoading ? (
-                    <p>Cargando usuarios...</p>
+                    <p>Cargando usuarios... </p>
                   ) : users.length === 0 ? (
                     <p>
                       {userQuery.trim()
