@@ -13,7 +13,8 @@ import { useAlert } from "../context/AlertContext";
 
 import "../styles/Home.css";
 import { useNavigate } from "react-router-dom";
-import UserPreviewCard from "../components/UserPreviewCard/UserPreviewCard";
+import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
+import UserCardView from "../components/UserViewCard/UserViewCard";
 
 type RouteItem = {
   id: string;
@@ -22,6 +23,14 @@ type RouteItem = {
   category: string;
   points: Array<[number, number]>;
   visibility: boolean;
+};
+
+type SelectedUser = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  avatar_url?: string | null;
 };
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
@@ -62,6 +71,8 @@ export default function Home() {
 
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -116,7 +127,9 @@ export default function Home() {
         }));
 
         setRoutes(formatted);
-        setAvailableCategories(Array.from(new Set(formatted.map(r => r.category))));
+        setAvailableCategories(
+          Array.from(new Set(formatted.map((r) => r.category)))
+        );
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
@@ -133,13 +146,19 @@ export default function Home() {
     const timeout = setTimeout(async () => {
       setUsersLoading(true);
       try {
-        const res = await fetch(`${API}/users/search?q=${encodeURIComponent(q)}`);
+        const res = await fetch(
+          `${API}/users/search?q=${encodeURIComponent(q)}`
+        );
         if (!res.ok) throw new Error("Error cargando usuarios");
         const data = await res.json();
+        console.log(data);
         setUsers(data);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : "No se han podido cargar los resultados";
-        showAlert(msg, "error")
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "No se han podido cargar los resultados";
+        showAlert(msg, "error");
         setUsers([]);
       } finally {
         setUsersLoading(false);
@@ -147,7 +166,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchMode, userQuery]);
+  }, [searchMode, userQuery, showAlert]);
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
@@ -187,6 +206,20 @@ export default function Home() {
     };
   }, []);
 
+  const handleOpenUser = (u: any) => {
+    setSelectedRoute(null);
+    setRouteCardOpen(false);
+    setSelectedRoutePoints([]);
+
+    setSelectedUser({
+      id: u.id,
+      username: u.username,
+      name: u.name,
+      email: u.email,
+      avatar_url: u.avatar_url,
+    });
+  };
+
   return (
     <div className="home">
       <header className="home__header">
@@ -207,7 +240,11 @@ export default function Home() {
           </button>
 
           {user || token ? (
-            <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -253,6 +290,21 @@ export default function Home() {
               isPrivate={!selectedRoute.visibility}
               onClose={() => setSelectedRoute(null)}
             />
+          ) : selectedUser ? (
+            <UserCardView
+              username={selectedUser.username}
+              email={selectedUser.email}
+              avatarUrl={selectedUser.avatar_url}
+              onClose={() => setSelectedUser(null)}
+              onRouteClick={(routeId) => {
+                const r = routes.find((rt) => rt.id === routeId);
+                if (r) {
+                  setSelectedRoute(r);
+                  setSelectedRoutePoints(r.points);
+                  setSelectedUser(null);
+                }
+              }}
+            />
           ) : (
             <div>
               <div className="container">
@@ -286,11 +338,17 @@ export default function Home() {
               {searchMode === "routes" ? (
                 <>
                   <div className="category-filter">
-                <label className="category-label">Filtrar por categoría</label>
+                    <label className="category-label">
+                      Filtrar por categoría
+                    </label>
                     <select
                       className="category-select"
                       value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
+                      onChange={(e) =>
+                        setSelectedCategory(
+                          e.target.value as Category | "todos"
+                        )
+                      }
                     >
                       <option value="todos">Todas</option>
                       {availableCategories.map((cat) => (
@@ -306,7 +364,11 @@ export default function Home() {
                   ) : (
                     <div className="route-list">
                       {routes
-                    .filter((r) => selectedCategory === "todos" || r.category === selectedCategory)
+                        .filter(
+                          (r) =>
+                            selectedCategory === "todos" ||
+                            r.category === selectedCategory
+                        )
                         .map((r) => (
                           <RoutePreviewCard
                             key={r.id}
@@ -357,10 +419,9 @@ export default function Home() {
                           email={u.email}
                           name={u.name}
                           avatar_url={u.avatar_url}
-                          onClick={() => console.log("User:", u.id)}
+                          onClick={() => handleOpenUser(u)}
                         />
                       ))}
-
                     </div>
                   )}
                 </>
@@ -384,6 +445,7 @@ export default function Home() {
             onClick={() =>
               requireAuth(() => {
                 setSelectedRoute(null);
+                setSelectedUser(null);
                 setRouteCardOpen((prev) => {
                   setDrawPoints([]);
                   setSelectedRoutePoints([]);
