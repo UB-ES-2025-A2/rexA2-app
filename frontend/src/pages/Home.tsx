@@ -296,13 +296,9 @@ export default function Home() {
               email={selectedUser.email}
               avatarUrl={selectedUser.avatar_url}
               onClose={() => setSelectedUser(null)}
-              onRouteClick={(routeId) => {
-                const r = routes.find((rt) => rt.id === routeId);
-                if (r) {
-                  setSelectedRoute(r);
-                  setSelectedRoutePoints(r.points);
-                  setSelectedUser(null);
-                }
+              onRouteClick={(route) => {
+                setSelectedRoute(route);
+                setSelectedRoutePoints(route.points);
               }}
             />
           ) : (
