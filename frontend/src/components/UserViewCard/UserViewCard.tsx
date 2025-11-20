@@ -86,11 +86,10 @@ const UserViewCard: React.FC<Props> = ({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [username]); // solo se ejecuta cuando cambia el username
+  }, [username]);
 
   return (
     <div className="usercard">
-      {/* X arriba a la derecha */}
       <button
         className="usercard__close"
         type="button"
@@ -100,7 +99,6 @@ const UserViewCard: React.FC<Props> = ({
         ✕
       </button>
 
-      {/* Header: avatar (si hay), username, email */}
       <div className="usercard__header">
         {avatarUrl && (
           <div className="usercard__avatar-wrapper">
