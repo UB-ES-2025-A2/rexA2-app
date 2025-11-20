@@ -116,7 +116,7 @@ const UserViewCard: React.FC<Props> = ({
 
       <div className="usercard__routes">
         {loading ? (
-          <p className="muted">Cargando rutas…</p>
+          <p className="muted">Cargando rutas… </p>
         ) : routes.length === 0 ? (
           <p className="muted">Este usuario aún no tiene rutas.</p>
         ) : (
