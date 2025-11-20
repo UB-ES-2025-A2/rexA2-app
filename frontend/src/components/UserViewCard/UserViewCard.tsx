@@ -34,6 +34,7 @@ const UserViewCard: React.FC<Props> = ({
   const { showAlert } = useAlert();
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!username) return;
@@ -43,12 +44,22 @@ const UserViewCard: React.FC<Props> = ({
     const fetchRoutes = async () => {
       setLoading(true);
       setRoutes([]);
+      setProfileError(null);
 
       try {
         const res = await fetch(
           `${API}/routes/user/${encodeURIComponent(username)}`
         );
+
+        // Usuario no existe o el endpoint devuelve 404
         if (!res.ok) {
+          if (res.status === 404) {
+            if (!cancelled) {
+              setProfileError("perfil no disponible");
+              setRoutes([]);
+            }
+            return;
+          }
           throw new Error("Error cargando rutas del usuario");
         }
 
@@ -56,7 +67,7 @@ const UserViewCard: React.FC<Props> = ({
         if (cancelled) return;
 
         const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route.id,
+          id: route.id ?? route._id,
           name: route.name,
           description: route.description || "Sin descripción",
           category: route.category || "sin categoría",
@@ -69,12 +80,14 @@ const UserViewCard: React.FC<Props> = ({
         setRoutes(formatted);
       } catch (err) {
         if (cancelled) return;
+
         const msg =
           err instanceof Error
             ? err.message
             : "No se han podido cargar las rutas del usuario";
+
         showAlert(msg, "error");
-        
+        setProfileError("perfil no disponible");
         setRoutes([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -116,7 +129,9 @@ const UserViewCard: React.FC<Props> = ({
       </h3>
 
       <div className="usercard__routes">
-        {loading ? (
+        {profileError ? (
+          <p className="muted">{profileError}</p>
+        ) : loading ? (
           <p className="muted">Cargando rutas… </p>
         ) : routes.length === 0 ? (
           <p className="muted">Este usuario aún no tiene rutas.</p>
