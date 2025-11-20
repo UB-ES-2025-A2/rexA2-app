@@ -63,6 +63,16 @@ async def create_user(
     return doc
 
 
+async def get_user_by_username(username: str) -> dict | None:
+    """
+    Busca un usuario por su username.
+    """
+    col = _users_col()
+    user = await col.find_one({"username": username})
+    return user
+
+
+
 async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     """
     Busca un usuario por su _id (string) o devuelve None si no existe/mal formado.

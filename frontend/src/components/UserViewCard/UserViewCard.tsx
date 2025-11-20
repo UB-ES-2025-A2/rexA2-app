@@ -18,17 +18,16 @@ type RouteItem = {
 type Props = {
   username: string;
   email: string;
-  avatarUrl?: string | null; // por si algún día quieres usarlo
+  avatarUrl?: string | null;
 
   onClose: () => void;
-  // Le pasamos la ruta completa al padre por si quiere abrir el detalle
   onRouteClick?: (route: RouteItem) => void;
 };
 
 const UserViewCard: React.FC<Props> = ({
   username,
   email,
-  avatarUrl, 
+  avatarUrl,
   onClose,
   onRouteClick,
 }) => {
@@ -37,32 +36,36 @@ const UserViewCard: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!username) return;
+
     let cancelled = false;
-  
+
     const fetchRoutes = async () => {
       setLoading(true);
       setRoutes([]);
-  
+
       try {
         const res = await fetch(
-          `${API}/users/${encodeURIComponent(username)}/routes`
+          `${API}/routes/user/${encodeURIComponent(username)}`
         );
         if (!res.ok) {
           throw new Error("Error cargando rutas del usuario");
         }
-  
+
         const data = await res.json();
         if (cancelled) return;
-  
+
         const formatted: RouteItem[] = data.map((route: any) => ({
           id: route.id,
           name: route.name,
           description: route.description || "Sin descripción",
           category: route.category || "sin categoría",
-          points: route.points.map((p: any) => [p.longitude, p.latitude]),
+          points: Array.isArray(route.points)
+            ? route.points.map((p: any) => [p.longitude, p.latitude])
+            : [],
           visibility: route.visibility ?? false,
         }));
-  
+
         setRoutes(formatted);
       } catch (err) {
         if (cancelled) return;
@@ -76,14 +79,14 @@ const UserViewCard: React.FC<Props> = ({
         if (!cancelled) setLoading(false);
       }
     };
-  
+
     fetchRoutes();
-  
+
     return () => {
       cancelled = true;
     };
-  }, [username]);
-  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username]); // solo se ejecuta cuando cambia el username
 
   return (
     <div className="usercard">
@@ -96,23 +99,23 @@ const UserViewCard: React.FC<Props> = ({
       >
         ✕
       </button>
-  
-      {/* Header centrado: avatar (si hay), username + email */}
+
+      {/* Header: avatar (si hay), username, email */}
       <div className="usercard__header">
         {avatarUrl && (
           <div className="usercard__avatar-wrapper">
             <img src={avatarUrl} alt={`Avatar de ${username}`} />
           </div>
         )}
-  
+
         <h2 className="usercard__username">{username}</h2>
         <p className="usercard__email">{email}</p>
       </div>
-  
+
       <h3 className="usercard__routes-title">
         Rutas del usuario '{username}'
       </h3>
-  
+
       <div className="usercard__routes">
         {loading ? (
           <p className="muted">Cargando rutas…</p>
