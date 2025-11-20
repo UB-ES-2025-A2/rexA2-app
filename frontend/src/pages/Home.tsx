@@ -181,7 +181,6 @@ export default function Home() {
     setDrawPoints((prev) => [...prev, [lng, lat]]);
   };
 
-  // Geolocalización: si falla/no hay permiso, se queda BCN
   useEffect(() => {
     let cancelled = false;
     if (!("geolocation" in navigator)) return;
