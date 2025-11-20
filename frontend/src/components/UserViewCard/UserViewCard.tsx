@@ -74,6 +74,7 @@ const UserViewCard: React.FC<Props> = ({
             ? err.message
             : "No se han podido cargar las rutas del usuario";
         showAlert(msg, "error");
+        
         setRoutes([]);
       } finally {
         if (!cancelled) setLoading(false);
