@@ -4,6 +4,10 @@ import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
+import { useAlert } from "../../context/AlertContext";
+import { useAuth } from "../../context/AuthContext";
+
+const API = import.meta.env.VITE_API_URL as string || window.location.origin;
 
 interface RouteDetailsCardProps {
   name: string;
