@@ -8,7 +8,7 @@ router = APIRouter(prefix="/users", tags=["follow"])
 @router.post("/{user_id}/follow", response_model=FollowActionResponse, status_code=201)
 async def follow_user(user_id: str, me = Depends(get_current_user)):
     if str(me["_id"]) == user_id:
-        raise HTTPException(status_code=400, detail="No puedes seguirte a mismo")
+        raise HTTPException(status_code=400, detail="No puedes seguirte a ti ismo")
 
     try:
         await follow_crud.follow(str(me["_id"]), user_id)

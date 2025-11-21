@@ -18,10 +18,18 @@ type Props = {
   onSubmit?: (values: Record<string, string>) => void;
 };
 
-type Touched = { email?: boolean; username?: boolean; password?: boolean; confirm?: boolean };
+type Touched = {
+  email?: boolean;
+  username?: boolean;
+  password?: boolean;
+  confirm?: boolean;
+};
 
-export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Props) {
-  // Estado controlado con todos los campos
+export default function AuthCard({
+  mode = "login",
+  onSwitchMode,
+  onSubmit,
+}: Props) {
   const [state, setState] = useState({
     email: "",
     username: "",
@@ -29,7 +37,6 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
     confirm: "",
   });
 
-  // Estados auxiliares
   const [errors, setErrors] = useState<FieldErrors>({});
   const [touched, setTouched] = useState<Touched>({});
   const [formError, setFormError] = useState("");
@@ -37,7 +44,6 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
 
   const auth = useAuth();
 
-  // Validadores por campo
   const validators = {
     email: validateEmail,
     username: validateUsername,
@@ -45,10 +51,8 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
     confirm: (value: string) => validateConfirmPassword(state.password, value),
   } as const;
 
-  // HANDLE: actualiza valor, valida y, si cambia password en signup, revalida confirm
   const handle =
-    (field: keyof typeof state) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    (field: keyof typeof state) => (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setState((s) => ({ ...s, [field]: value }));
       setErrors((prev) => ({ ...prev, [field]: validators[field]?.(value) }));
@@ -61,27 +65,26 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
       }
     };
 
-  // Marca touched al primer blur
   const handleBlur = (field: keyof typeof state) => () =>
     setTouched((prev) => ({ ...prev, [field]: true }));
 
-  // SUBMIT: limpia banner, set submitting, valida y corta si hay errores
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
     setIsSubmitting(true);
 
-    // Validaciones sincrónicas previas
     const currentErrors: FieldErrors = {
       email: validateEmail(state.email),
       password: validatePassword(state.password),
     };
     if (mode === "signup") {
       currentErrors.username = validateUsername(state.username);
-      currentErrors.confirm = validateConfirmPassword(state.password, state.confirm);
+      currentErrors.confirm = validateConfirmPassword(
+        state.password,
+        state.confirm
+      );
     }
 
-    // Si hay errores, márcalos y corta antes de la API
     const hasErrors = Object.values(currentErrors).some(Boolean);
     if (hasErrors) {
       setErrors((prev) => ({ ...prev, ...currentErrors }));
@@ -103,22 +106,59 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
           username: state.username,
           password: state.password,
         });
+
         // 2) Login automático
-        const authResp = await login({ email: state.email, password: state.password });
+        const authResp = await login({
+          email: state.email,
+          password: state.password,
+        });
+
+        // [DEBUG] ver exactamente qué devuelve el backend
+        console.log("[AUTHCARD][signup] login response", authResp);
+        console.log("[AUTHCARD][signup] authResp.user", authResp?.user);
+        console.log(
+          "[AUTHCARD][signup] authResp.access_token",
+          authResp?.access_token
+        );
+
         saveAuth(authResp);
-        auth.login({ user: authResp.user, token: authResp.access_token || "" });
-        // 3) Aviso opcional y callback
+
+        auth.login({
+          user: authResp.user,
+          token: authResp.access_token || "",
+        });
+
+        console.log("[AUTHCARD][signup] after auth.login");
+
         onSubmit?.({ ...state, _autologin: "true" });
         return;
       }
 
       // Login normal
-      const authResp = await login({ email: state.email, password: state.password });
+      const authResp = await login({
+        email: state.email,
+        password: state.password,
+      });
+
+      // [DEBUG] ver exactamente qué devuelve el backend
+      console.log("[AUTHCARD][login] login response", authResp);
+      console.log("[AUTHCARD][login] authResp.user", authResp?.user);
+      console.log(
+        "[AUTHCARD][login] authResp.access_token",
+        authResp?.access_token
+      );
+
       saveAuth(authResp);
-      auth.login({ user: authResp.user, token: authResp.access_token || "" });
+
+      auth.login({
+        user: authResp.user,
+        token: authResp.access_token || "",
+      });
+
+      console.log("[AUTHCARD][login] after auth.login");
+
       onSubmit?.(state);
     } catch (err: any) {
-      // Errores inline en campos o banner general
       if (mode === "signup" && err?.status === 409) {
         const msg = String(err?.message || "").toLowerCase();
         if (msg.includes("email")) {
@@ -145,7 +185,9 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
         <div className="auth__avatar-img">👤</div>
       </div>
 
-      <h1 className="auth__title">{mode === "login" ? "Welcome back" : "Create account"}</h1>
+      <h1 className="auth__title">
+        {mode === "login" ? "Welcome back" : "Create account"}
+      </h1>
       <p className="auth__subtitle">
         {mode === "login" ? "Sign in to continue" : "Join us in a few seconds"}
       </p>
@@ -191,16 +233,6 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
             error={touched.confirm ? errors.confirm : undefined}
           />
         )}
-        {/* 
-        {mode === "login" && (
-          <div className="auth__utils">
-            <label className="auth__checkbox">
-              <input type="checkbox" /> <span>Remember me</span>
-            </label>
-            <button type="button" className="auth__link">Forgot password?</button>
-          </div>
-        )}
-        */}
 
         <button
           className="btn btn--primary"
@@ -211,7 +243,9 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
         </button>
 
         {formError && (
-          <p className="auth__form-error" role="alert">{formError}</p>
+          <p className="auth__form-error" role="alert">
+            {formError}
+          </p>
         )}
       </form>
 
@@ -219,25 +253,25 @@ export default function AuthCard({ mode = "login", onSwitchMode, onSubmit }: Pro
         {mode === "login" ? (
           <>
             Don’t have an account?{" "}
-            <button className="auth__link" onClick={() => onSwitchMode?.("signup")}>
+            <button
+              className="auth__link"
+              onClick={() => onSwitchMode?.("signup")}
+            >
               Sign up
             </button>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <button className="auth__link" onClick={() => onSwitchMode?.("login")}>
+            <button
+              className="auth__link"
+              onClick={() => onSwitchMode?.("login")}
+            >
               Sign in
             </button>
           </>
         )}
       </div>
-      {/*  
-      <div className="auth__divider"><span>or</span></div>
-      <div className="auth__socials">
-        <button className="btn btn--ghost">Continue with Google</button>
-        <button className="btn btn--ghost">Continue with GitHub</button>
-      </div>*/} 
     </div>
   );
 }

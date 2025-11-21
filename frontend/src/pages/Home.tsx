@@ -291,6 +291,7 @@ export default function Home() {
             />
           ) : selectedUser ? (
             <UserCardView
+              userId={selectedUser.id}
               username={selectedUser.username}
               email={selectedUser.email}
               avatarUrl={selectedUser.avatar_url}

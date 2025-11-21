@@ -39,18 +39,38 @@ async def follow(follower_id: str, followee_id: str) -> Dict[str, Any]:
 
 async def unfollow(follower_id: str, followee_id: str) -> Dict[str, Any]:
     col = _col()
-    await col.delete_one({
+    result = await col.delete_one({
         "follower_id": _oid(follower_id),
-        "followew_id": _oid(followee_id)
+        "followee_id": _oid(followee_id)
     })
+
+    print("[FOLLOW-CRUD] unfollow", {
+        "follower_id": follower_id,
+        "followee_id": followee_id,
+        "deleted": result.deleted_count,
+    })
+
     return {"ok": True}
 
 async def is_following(follower_id: str, followee_id: str) -> bool:
     col = _col()
+
+    filtro = {
+        "follower_id": _oid(follower_id),
+        "followee_id": _oid(followee_id),
+    }
     doc = await col.find_one({
         "follower_id": _oid(follower_id),
         "followee_id": _oid(followee_id)
     }, {"_id": 1})
+
+    print("[FOLLOW-CRUD] is_following", {
+        "follower_id": follower_id,
+        "followee_id": followee_id,
+        "filter": filtro,
+        "found": doc is not None,
+    })
+
     return doc is not None
 
 async def count_followers(user_id: str) -> int:
@@ -87,7 +107,6 @@ async def list_followers(user_id: str, *, skip: int=0, limit: int=20) -> Dict[st
     total = await col.count_documents({"followee_id": _oid(user_id)})
     return {"total": total, "items": items}
 
-# FIXME
 async def list_following(user_id: str, *, skip: int=0, limit: int=20) -> Dict[str, Any]:
     col = _col()
 
@@ -112,4 +131,4 @@ async def list_following(user_id: str, *, skip: int=0, limit: int=20) -> Dict[st
     ]
     items = [i async for i in col.aggregate(pipeline)]
     total = await col.count_documents({"follower_id": _oid(user_id)})
-    return {"total": total, "item": items}
+    return {"total": total, "items": items}
