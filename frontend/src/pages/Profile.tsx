@@ -297,7 +297,7 @@ export default function Profile() {
   }, [createdRoutes, selectedCreatedRoute]);
 
   useEffect(() => {
-    if (!accessToken) {
+    if (!accessToken || !profile?.id) {
       setFollowers([]);
       setFollowersStatus("idle");
       setFollowersError("");
@@ -316,18 +316,29 @@ export default function Profile() {
 
     async function fetchFollowers() {
       try {
-        const res = await fetch(`${API_BASE}/users/me/followers`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          signal: controller.signal,
-        });
+        // !!! Potencial --> NO es null
+        const res = await fetch(
+          `${API_BASE}/users/${profile.id}/followers?skip=0&limit=50`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+          }
+        );
 
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
           throw new Error(detail || "No se pudieron cargar los seguidores.");
         }
 
-        const data = (await res.json()) as FollowerAPI[];
-        setFollowers(data.map(normalizeFollower));
+        const data = (await res.json()) as FollowerListAPI | FollowerAPI[];
+
+        const rawItems: FollowerAPI[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+        setFollowers(rawItems.map(normalizeFollower));
         setFollowersStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -340,7 +351,7 @@ export default function Profile() {
 
     fetchFollowers();
     return () => controller.abort();
-  }, [accessToken]);
+  }, [accessToken, profile?.id]);
 
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -738,16 +749,21 @@ function normalizeFavoriteRoute(
 type FollowerAPI = {
   id: string;
   username: string;
-  name: string;
-  avatarUrl?: string | null;
+  name?: string | null;
+  avatar_url?: string | null;
+};
+
+type FollowerListAPI = {
+  items: FollowerAPI[];
+  total: number;
 };
 
 function normalizeFollower(payload: FollowerAPI): Follower {
   return {
     id: payload.id,
     username: payload.username,
-    name: payload.name,
-    avatarUrl: payload.avatarUrl ?? null,
+    name: payload.name ?? payload.username,
+    avatarUrl: payload.avatar_url ?? null,
   };
 }
 
@@ -1211,7 +1227,6 @@ type FollowersPanelProps = {
 
 function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
   const navigate = useNavigate();
-  /**Seguir aquí con el paso 3 de ajustar el panel */
   if (status === "loading" && followers.length === 0) {
     return (
       <div className="card fill">
@@ -1268,7 +1283,18 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     if (!follower) return;
 
     // Aquí falta la URL del endpoint
-    navigate("");
+    navigate("/", {
+      state: {
+        openUserFromFollowers: {
+          id: follower.id,
+          username: follower.username,
+          name: follower.name,
+          // de momento no tenemos email en followers → lo dejamos vacío o lo añades en la API
+          email: "",
+          avatar_url: follower.avatarUrl ?? null,
+        },
+      },
+    });
   };
 
   return (

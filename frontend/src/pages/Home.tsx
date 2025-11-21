@@ -12,7 +12,7 @@ import type { Category } from "../components/types";
 import { useAlert } from "../context/AlertContext";
 
 import "../styles/Home.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 
@@ -53,6 +53,7 @@ export default function Home() {
     "todos"
   );
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [availableCategories, setAvailableCategories] = useState<Array<string>>(
@@ -204,6 +205,28 @@ export default function Home() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const state = location.state as {
+      openUserFromFollowers?: SelectedUser;
+    } | null;
+
+    if (state?.openUserFromFollowers) {
+      const u = state.openUserFromFollowers;
+
+      setSelectedRoute(null);
+      setRouteCardOpen(false);
+      setSelectedRoutePoints([]);
+
+      setSelectedUser({
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        email: u.email,
+        avatar_url: u.avatar_url,
+      });
+    }
+  }, [location.state]);
 
   const handleOpenUser = (u: any) => {
     setSelectedRoute(null);
