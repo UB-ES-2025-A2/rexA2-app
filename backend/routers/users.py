@@ -23,10 +23,6 @@ async def register_user(payload: UserCreate):
         email=payload.email,
         password=payload.password,
         username=payload.username,
-        #name=payload.name,
-        #phone=payload.phone,
-        #preferred_units=payload.preferred_units,
-        #avatar_url=payload.avatar_url,
     )
 
     return {

@@ -15,15 +15,6 @@ async def check_name(name: str = Query(..., min_length=1), current_user: dict = 
     exists = await route_crud.get_route_by_name(current_user["_id"], name) is not None
     return {"exists": exists}
 
-# @router.post("", response_model=RoutePublic, status_code=201)
-# async def create_route(payload: RouteCreate, current_user: dict = Depends(get_current_user)):
-#     '''
-#     Crea una nueva ruta asociada al usuario autenticado
-#     '''
-#     route = await route_crud.create_route(current_user["_id"], payload.dict())
-#     route["_id"] = str(route["_id"])
-#     return route
-
 @router.post("", response_model=RoutePublic, status_code=status.HTTP_201_CREATED)
 async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depends(get_current_user)):
     """

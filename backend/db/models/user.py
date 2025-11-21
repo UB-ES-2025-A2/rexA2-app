@@ -5,7 +5,7 @@ from pymongo.errors import DuplicateKeyError
 
 from ..client import get_db
 from ...core.security import get_password_hash
-
+from . import follow as follow_crud
 USERS_COL = None
 
 def _users_col():
@@ -114,7 +114,9 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
     created = await _count_routes_created(user_id)
     completed = await _count_routes_completed(user_id)
     favorites = await _count_favorites(user_id)
-
+    
+    followers = await follow_crud.count_followers(user_id)
+    following = await follow_crud.count_following(user_id)
     return {
         "id": user_id,
         "username": user.get("username") or user.get("name") or "",
@@ -127,6 +129,8 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
             "routes_completed": completed,
             "routes_favorites": favorites,
         },
+        "followers": followers,
+        "following": following,
     }
 
 
