@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from .core.config import settings
 from .db.client import init_db
-from .routers import users, auth, routes, users_profile, favorite
+from .routers import users, auth, routes, users_profile, favorite, follow
 
 # === Instancia principal ===
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -33,6 +33,7 @@ app.include_router(users_profile.router)
 app.include_router(auth.router)
 app.include_router(routes.router)
 app.include_router(favorite.router)
+app.include_router(follow.router)
 
 # === Endpoint de salud ===
 @app.get("/health")
