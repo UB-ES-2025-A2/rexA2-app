@@ -4,10 +4,10 @@ import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
-import { useAlert } from "../../context/AlertContext";
-import { useAuth } from "../../context/AuthContext";
+// import { useAlert } from "../../context/AlertContext";
+// import { useAuth } from "../../context/AuthContext";
 
-const API = import.meta.env.VITE_API_URL as string || window.location.origin;
+// const API = (import.meta.env.VITE_API_URL as string) || window.location.origin;
 
 interface RouteDetailsCardProps {
   name: string;
@@ -43,7 +43,9 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       <div className="route-details-card">
         <header className="route-details-card__header">
           <h2 className="route-details-card__title">{name}</h2>
-          <button className="route-details-card__close" onClick={onClose}>✕</button>
+          <button className="route-details-card__close" onClick={onClose}>
+            ✕
+          </button>
         </header>
 
         <section className="route-details-card__body">
@@ -66,16 +68,25 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             <ul>
               {points.map(([lng, lat], i) => (
                 <li key={i}>
-                  {i + 1}. <code>{lng.toFixed(4)}</code>, <code>{lat.toFixed(4)}</code>
+                  {i + 1}. <code>{lng.toFixed(4)}</code>,{" "}
+                  <code>{lat.toFixed(4)}</code>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="route-details-card__footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "12px" }}>
+          <div
+            className="route-details-card__footer"
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
             <CommentButton onClick={handleCommentsClick} />
-            <FavoriteButton 
-              routeId={routeId} 
+            <FavoriteButton
+              routeId={routeId}
               initialSaved={initialSaved}
               onSavedChange={onSavedChange}
             />
@@ -83,7 +94,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         </section>
       </div>
 
-      <CommentsModal 
+      <CommentsModal
         open={commentsOpen}
         onClose={() => setCommentsOpen(false)}
         routeId={routeId}
