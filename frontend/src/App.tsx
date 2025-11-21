@@ -1,9 +1,9 @@
-import './styles/App.css'
-import Home from './pages/Home'
-import Profile from './pages/Profile'
-import { Routes, Route } from 'react-router-dom';
+import "./styles/App.css";
+import "./styles/tailwindstyles.css";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import { Routes, Route } from "react-router-dom";
 import { AlertProvider } from "./context/AlertContext";
-
 
 function App() {
   return (
@@ -15,6 +15,5 @@ function App() {
     </AlertProvider>
   );
 }
-
 
 export default App;

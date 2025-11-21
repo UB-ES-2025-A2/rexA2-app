@@ -5,10 +5,15 @@ import { useAuth } from "../context/AuthContext";
 import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
-
-type TabKey = "profile" | "favorites" | "created";
+import AnimatedList from "../components/AnimatedList";
+import defaultAvatar from "../assets/profile_pic.png";
+type TabKey = "profile" | "favorites" | "created" | "followers";
 type Units = "km" | "mi";
-type ProfileStats = { routes_created: number; routes_completed: number; routes_favorites: number };
+type ProfileStats = {
+  routes_created: number;
+  routes_completed: number;
+  routes_favorites: number;
+};
 type ProfileResponse = {
   id: string;
   username?: string;
@@ -53,12 +58,26 @@ type FavoriteRoute = {
   points: Array<[number, number]>;
 };
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL?.trim() ||
-    (typeof window !== "undefined" ? window.location.origin : ""))
-    .replace(/\/$/, "");
+// ============= Seguidores =============
+type Follower = {
+  id: string;
+  name: string;
+  username: string;
+  // Añado también el avatar
+  avatarUrl?: string | null;
+};
+// =======================================
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL?.trim() ||
+  (typeof window !== "undefined" ? window.location.origin : "")
+).replace(/\/$/, "");
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
-const EMPTY_STATS: ProfileStats = { routes_created: 0, routes_completed: 0, routes_favorites: 0 };
+const EMPTY_STATS: ProfileStats = {
+  routes_created: 0,
+  routes_completed: 0,
+  routes_favorites: 0,
+};
 
 export default function Profile() {
   const [active, setActive] = useState<TabKey>("profile");
@@ -66,26 +85,98 @@ export default function Profile() {
   const { token, logout } = useAuth();
   const [profileMenuOpen, setProfileMenuOpen] = useState(false); // <-- nuevo
 
-
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [profileStatus, setProfileStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [profileError, setProfileError] = useState("");
 
-  const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() => createDraftFromProfile());
+  const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() =>
+    createDraftFromProfile()
+  );
+
+  // TODO: substituir por datos reales de la api cuando las tengamos
+  const [followers] = useState<Follower[]>([
+    { id: "1", name: "Juan Pérez", username: "juanp" },
+    { id: "2", name: "María López", username: "marial" },
+    { id: "3", name: "Carlos Ruiz", username: "carlos_r" },
+    { id: "4", name: "Laura Gómez", username: "laurag" },
+    { id: "5", name: "Pedro Sánchez", username: "pedros" },
+    { id: "6", name: "Ana Torres", username: "ana_t" },
+    { id: "7", name: "Luis Martínez", username: "luism" },
+    { id: "8", name: "Sofía Díaz", username: "sofiad" },
+
+    { id: "9", name: "Daniel Castro", username: "danic" },
+    { id: "10", name: "Patricia Herrera", username: "path" },
+    { id: "11", name: "Jorge Navarro", username: "jorgen" },
+    { id: "12", name: "Isabel Molina", username: "isam" },
+    { id: "13", name: "Ricardo Ortiz", username: "rortiz" },
+    { id: "14", name: "Elena Flores", username: "elenaf" },
+    { id: "15", name: "Andrés Vidal", username: "andresv" },
+    { id: "16", name: "Valeria Rivas", username: "valer" },
+
+    { id: "17", name: "Miguel Ramos", username: "miguelr" },
+    { id: "18", name: "Natalia Pardo", username: "natp" },
+    { id: "19", name: "Héctor Luna", username: "hectorl" },
+    { id: "20", name: "Claudia Vega", username: "clau_v" },
+    { id: "21", name: "Fernando Gil", username: "fergil" },
+    { id: "22", name: "Paula Montes", username: "paulam" },
+    { id: "23", name: "Adrián Soto", username: "adri_s" },
+    { id: "24", name: "Rocío Medina", username: "rociom" },
+
+    { id: "25", name: "Gabriel Silva", username: "gabis" },
+    { id: "26", name: "Sara Campos", username: "sarac" },
+    { id: "27", name: "Iván Beltrán", username: "ivanb" },
+    { id: "28", name: "Daniela Reyes", username: "danyr" },
+    { id: "29", name: "Óscar Fuentes", username: "oscarf" },
+    { id: "30", name: "Marta Serrano", username: "martas" },
+    { id: "31", name: "Sebastián Cruz", username: "sebcruz" },
+    { id: "32", name: "Lucía Prieto", username: "lup" },
+
+    { id: "33", name: "Tomás Roldán", username: "tomasr" },
+    { id: "34", name: "Karina Duarte", username: "karid" },
+    { id: "35", name: "Eduardo Peña", username: "edup" },
+    { id: "36", name: "Noelia Bravo", username: "noelib" },
+    { id: "37", name: "Diego Valdés", username: "dvaldes" },
+    { id: "38", name: "Andrea Bustos", username: "andreab" },
+    { id: "39", name: "Hugo Cabrera", username: "hugoc" },
+    { id: "40", name: "Fabiola Suárez", username: "fabs" },
+
+    { id: "41", name: "Rodrigo Campos", username: "rodcam" },
+    { id: "42", name: "Teresa Álvarez", username: "teresa_a" },
+    { id: "43", name: "Javier Godoy", username: "javg" },
+    { id: "44", name: "Beatriz Vela", username: "beavel" },
+    { id: "45", name: "Mauricio Arce", username: "mauar" },
+    { id: "46", name: "Inés Cabrera", username: "inesc" },
+    { id: "47", name: "César Pino", username: "cesarp" },
+    { id: "48", name: "Camila Duarte", username: "camilad" },
+    { id: "49", name: "Álvaro Ríos", username: "alvaror" },
+    { id: "50", name: "Julia Medina", username: "juliam" },
+  ]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
-  const [favoritesStatus, setFavoritesStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [favoritesStatus, setFavoritesStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [favoritesError, setFavoritesError] = useState("");
-  const [selectedFavorite, setSelectedFavorite] = useState<FavoriteRoute | null>(null);
+  const [selectedFavorite, setSelectedFavorite] =
+    useState<FavoriteRoute | null>(null);
   const [createdRoutes, setCreatedRoutes] = useState<FavoriteRoute[]>([]);
-  const [createdStatus, setCreatedStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [createdStatus, setCreatedStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [createdError, setCreatedError] = useState("");
-  const [selectedCreatedRoute, setSelectedCreatedRoute] = useState<FavoriteRoute | null>(null);
+  const [selectedCreatedRoute, setSelectedCreatedRoute] =
+    useState<FavoriteRoute | null>(null);
 
   const accessToken =
-    token || (typeof window !== "undefined" ? localStorage.getItem("access_token") || "" : "");
+    token ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem("access_token") || ""
+      : "");
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -142,7 +233,9 @@ export default function Profile() {
       } catch (err) {
         if (controller.signal.aborted) return;
         setProfileStatus("error");
-        setProfileError(err instanceof Error ? err.message : "Error cargando el perfil.");
+        setProfileError(
+          err instanceof Error ? err.message : "Error cargando el perfil."
+        );
       }
     }
 
@@ -174,12 +267,16 @@ export default function Profile() {
           throw new Error(detail || "No se pudieron cargar tus rutas creadas.");
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setCreatedRoutes(data.map((route) => normalizeFavoriteRoute(route, ownerFallback)));
+        setCreatedRoutes(
+          data.map((route) => normalizeFavoriteRoute(route, ownerFallback))
+        );
         setCreatedStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
         setCreatedStatus("error");
-        setCreatedError(err instanceof Error ? err.message : "Error al cargar tus rutas.");
+        setCreatedError(
+          err instanceof Error ? err.message : "Error al cargar tus rutas."
+        );
       }
     }
 
@@ -207,7 +304,9 @@ export default function Profile() {
         });
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
-          throw new Error(detail || "No se pudieron cargar las rutas favoritas.");
+          throw new Error(
+            detail || "No se pudieron cargar las rutas favoritas."
+          );
         }
         const data = (await res.json()) as FavoriteRouteApi[];
         setFavorites(data.map((route) => normalizeFavoriteRoute(route)));
@@ -215,7 +314,9 @@ export default function Profile() {
       } catch (err) {
         if (controller.signal.aborted) return;
         setFavoritesStatus("error");
-        setFavoritesError(err instanceof Error ? err.message : "Error al cargar las favoritas.");
+        setFavoritesError(
+          err instanceof Error ? err.message : "Error al cargar las favoritas."
+        );
       }
     }
 
@@ -267,7 +368,10 @@ export default function Profile() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setDraftExtras((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+        setDraftExtras((prev) => ({
+          ...prev,
+          avatarUrl: reader.result as string,
+        }));
         setAvatarError("");
       }
     };
@@ -318,14 +422,17 @@ export default function Profile() {
       setProfile(updated);
       setIsEditing(false);
     } catch (err) {
-      setProfileError(err instanceof Error ? err.message : "Error al guardar el perfil.");
+      setProfileError(
+        err instanceof Error ? err.message : "Error al guardar el perfil."
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   const showFavoriteRoute = active === "favorites" && Boolean(selectedFavorite);
-  const showCreatedRoute = active === "created" && Boolean(selectedCreatedRoute);
+  const showCreatedRoute =
+    active === "created" && Boolean(selectedCreatedRoute);
 
   const handleSelectFavorite = (route: FavoriteRoute) => {
     setSelectedFavorite(route);
@@ -345,7 +452,9 @@ export default function Profile() {
 
   const handleFavoriteSavedChange = (saved: boolean) => {
     if (saved || !selectedFavorite) return;
-    setFavorites((prev) => prev.filter((route) => route.id !== selectedFavorite.id));
+    setFavorites((prev) =>
+      prev.filter((route) => route.id !== selectedFavorite.id)
+    );
     closeFavoriteView();
   };
 
@@ -368,67 +477,80 @@ export default function Profile() {
       <header className="header">
         <div className="header__inner">
           <div className="header-left">
-            <button aria-label="Ir al inicio" onClick={() => navigate("/")} className="btn-home">
+            <button
+              aria-label="Ir al inicio"
+              onClick={() => navigate("/")}
+              className="btn-home"
+            >
               🏠
             </button>
             <div className="header-title">
-              <span className="eyebrow">Panel</span>
+              <span className="eyebrow"></span>
               <h1>Perfil</h1>
             </div>
           </div>
           <div className="profile-menu-container">
             <button
-                className="profile-menu-btn"
-                onClick={() => {
-                if (token) setProfileMenuOpen(v => !v);
+              className="profile-menu-btn"
+              onClick={() => {
+                if (token) setProfileMenuOpen((v) => !v);
                 else navigate("/"); // si no está logueado, llévalo a Home a iniciar sesión
-                }}
-                aria-label="Profile"
-                aria-haspopup={token ? "menu" : undefined}
-                aria-expanded={token ? profileMenuOpen : undefined}
+              }}
+              aria-label="Profile"
+              aria-haspopup={token ? "menu" : undefined}
+              aria-expanded={token ? profileMenuOpen : undefined}
             >
-                <span>👤</span>
+              <span>👤</span>
             </button>
 
             {token ? (
-                <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+              <div
+                className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+                role="menu"
+                aria-label="Profile menu"
+              >
                 <button
-                    className="profile-menu__item"
-                    role="menuitem"
-                    onClick={() => {
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
                     setProfileMenuOpen(false);
-                    navigate("/perfil");   // ya estás en perfil, pero así es consistente
-                    }}
+                    navigate("/perfil"); // ya estás en perfil, pero así es consistente
+                  }}
                 >
-                    Mi perfil
+                  Mi perfil
                 </button>
 
-
                 <button
-                    className="profile-menu__item"
-                    role="menuitem"
-                    onClick={() => {
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
                     logout();
                     setProfileMenuOpen(false);
                     navigate("/");
-                    }}
+                  }}
                 >
-                    Cerrar sesión
+                  Cerrar sesión
                 </button>
-                </div>
+              </div>
             ) : null}
-            </div>
+          </div>
         </div>
       </header>
-      
+
       <main className="profile-layout">
-        <aside className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""}`}>
+        <aside
+          className={`sidebar ${
+            showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
+          }`}
+        >
           {showFavoriteRoute && selectedFavorite ? (
             <RouteDetailsCard
               routeId={selectedFavorite.id}
               name={selectedFavorite.name}
               description={selectedFavorite.description || "Sin descripción"}
-              category={(selectedFavorite.category as Category) || "entretenimiento"}
+              category={
+                (selectedFavorite.category as Category) || "entretenimiento"
+              }
               points={selectedFavorite.points}
               isPrivate={!selectedFavorite.visibility}
               onClose={closeFavoriteView}
@@ -439,12 +561,18 @@ export default function Profile() {
             <RouteDetailsCard
               routeId={selectedCreatedRoute.id}
               name={selectedCreatedRoute.name}
-              description={selectedCreatedRoute.description || "Sin descripción"}
-              category={(selectedCreatedRoute.category as Category) || "entretenimiento"}
+              description={
+                selectedCreatedRoute.description || "Sin descripción"
+              }
+              category={
+                (selectedCreatedRoute.category as Category) || "entretenimiento"
+              }
               points={selectedCreatedRoute.points}
               isPrivate={!selectedCreatedRoute.visibility}
               onClose={closeCreatedView}
-              initialSaved={favorites.some((route) => route.id === selectedCreatedRoute.id)}
+              initialSaved={favorites.some(
+                (route) => route.id === selectedCreatedRoute.id
+              )}
               onSavedChange={handleCreatedSavedChange}
             />
           ) : (
@@ -457,7 +585,7 @@ export default function Profile() {
                   <span className="icon" aria-hidden="true">
                     👤
                   </span>
-                  <span className="label">Datos personales</span>
+                  <span className="label">Perfil</span>
                 </button>
               </li>
               <li>
@@ -482,10 +610,23 @@ export default function Profile() {
                   <span className="label">Mis rutas</span>
                 </button>
               </li>
+
+              {/* Pestaña del Panel Seguidores */}
+              <li>
+                <button
+                  className={`btn ${active === "followers" ? "active" : ""}`}
+                  onClick={() => setActive("followers")}
+                >
+                  <span className="icon" aria-hidden="true">
+                    👥
+                  </span>
+                  <span className="label">Seguidores</span>
+                </button>
+              </li>
             </ul>
           )}
         </aside>
-        
+
         <section className="content">
           {active === "profile" && (
             <PersonalData
@@ -502,6 +643,12 @@ export default function Profile() {
               saving={isSaving}
               onAvatarFile={handleAvatarFile}
               avatarError={avatarError}
+              // Seguidores
+              followers={followers}
+              // Para poder acceder desde el panel
+              onGoToFollowers={() => setActive("followers")}
+              onGoToFavorites={() => setActive("favorites")}
+              onGoToCreated={() => setActive("created")}
             />
           )}
           {active === "favorites" && (
@@ -524,8 +671,8 @@ export default function Profile() {
               onCloseRoute={closeCreatedView}
             />
           )}
+          {active === "followers" && <FollowersPanel followers={followers} />}
         </section>
-        
       </main>
     </div>
   );
@@ -555,18 +702,24 @@ function normalizeProfile(payload: ProfileResponse): ProfileData {
   };
 }
 
-function normalizeFavoriteRoute(route: FavoriteRouteApi, ownerFallback?: string): FavoriteRoute {
+function normalizeFavoriteRoute(
+  route: FavoriteRouteApi,
+  ownerFallback?: string
+): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
         .filter(
           (point): point is FavoriteRoutePoint =>
-            typeof point?.longitude === "number" && typeof point?.latitude === "number",
+            typeof point?.longitude === "number" &&
+            typeof point?.latitude === "number"
         )
         .map((point) => [point.longitude, point.latitude])
     : [];
 
   const createdAt =
-    typeof route.created_at === "string" ? route.created_at : new Date(route.created_at).toISOString();
+    typeof route.created_at === "string"
+      ? route.created_at
+      : new Date(route.created_at).toISOString();
 
   return {
     id: route.id ?? route._id ?? "",
@@ -584,7 +737,11 @@ function normalizeFavoriteRoute(route: FavoriteRouteApi, ownerFallback?: string)
 function formatDateLabel(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 type PersonalDataProps = {
@@ -601,6 +758,12 @@ type PersonalDataProps = {
   saving: boolean;
   onAvatarFile: (file: File | null) => void;
   avatarError: string;
+  // Para los seguidores
+  followers: Follower[];
+  onGoToFollowers: () => void;
+  //
+  onGoToFavorites: () => void;
+  onGoToCreated: () => void;
 };
 
 function PersonalData({
@@ -617,6 +780,10 @@ function PersonalData({
   saving,
   onAvatarFile,
   avatarError,
+  followers,
+  onGoToFollowers,
+  onGoToFavorites,
+  onGoToCreated,
 }: PersonalDataProps) {
   const viewExtras = isEditing ? draftExtras : createDraftFromProfile(profile);
   const username = profile?.username ?? "";
@@ -626,16 +793,24 @@ function PersonalData({
     <div className="card fill profile-panel">
       <div className="panel-header">
         <div>
-          <h2>Datos personales</h2>
-          <p>Información conectada con tu cuenta</p>
+          <h2>Perfil</h2>
         </div>
         <div className="panel-actions">
           {isEditing ? (
             <>
-              <button className="btn-ghost sm" type="button" onClick={onCancelEdit}>
+              <button
+                className="btn-ghost sm"
+                type="button"
+                onClick={onCancelEdit}
+              >
                 Cancelar
               </button>
-              <button className="btn-primary sm" type="button" onClick={onSaveEdit} disabled={saving}>
+              <button
+                className="btn-primary sm"
+                type="button"
+                onClick={onSaveEdit}
+                disabled={saving}
+              >
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             </>
@@ -651,19 +826,11 @@ function PersonalData({
           )}
         </div>
       </div>
-
       {error && <div className="alert error">{error}</div>}
 
-      <div className="info-grid">
-        <InfoRow
-          label="Nombre de usuario"
-          value={username || "Sin definir"}
-          loading={loadingProfile}
-        />
-        <InfoRow label="Email" value={email || "Sin email"} loading={loadingProfile} />
-      </div>
-
-      <div className="profile-widgets">
+      {/* NUEVO layout*/}
+      <div className="profile-top">
+        {/* Avatar primero, bajo el título */}
         <div className="avatar-block">
           <div className="avatar-frame">
             {viewExtras.avatarUrl ? (
@@ -672,6 +839,7 @@ function PersonalData({
               <span>{username?.[0]?.toUpperCase() || "?"}</span>
             )}
           </div>
+
           {isEditing ? (
             <div className="avatar-inputs">
               <label className="btn-ghost sm" htmlFor="avatar-upload">
@@ -689,7 +857,11 @@ function PersonalData({
                 }}
               />
               {viewExtras.avatarUrl && (
-                <button className="btn-ghost sm" type="button" onClick={() => onAvatarFile(null)}>
+                <button
+                  className="btn-ghost sm"
+                  type="button"
+                  onClick={() => onAvatarFile(null)}
+                >
                   Quitar foto
                 </button>
               )}
@@ -700,70 +872,130 @@ function PersonalData({
               )}
             </div>
           ) : (
-            <p className="muted">{viewExtras.avatarUrl ? "Foto personalizada." : "Personaliza tu foto cuando quieras."}</p>
+            <p className="muted">
+              {viewExtras.avatarUrl
+                ? "Foto personalizada."
+                : "Personaliza tu foto cuando quieras."}
+            </p>
           )}
         </div>
 
-        <div className="extra-block">
-          <span className="extra-label">Teléfono (opcional)</span>
-          {isEditing ? (
-            <input
-              className="input"
-              type="tel"
-              placeholder="+34 600 000 000"
-              value={draftExtras.phone}
-              onChange={(event) => onChangeDraft({ phone: event.target.value })}
+        {/* Columna derecha: nombre, email, teléfono, unidades */}
+        <div className="profile-top-main">
+          {/* Nombre de usuario + email al lado (en desktop) */}
+          <div className="info-grid info-grid--main">
+            <InfoRow
+              label="Nombre de usuario"
+              value={username || "Sin definir"}
+              loading={loadingProfile}
             />
-          ) : (
-            <p className="data-highlight">{viewExtras.phone || "Sin número"}</p>
-          )}
-        </div>
+            <InfoRow
+              label="Email"
+              value={email || "Sin email"}
+              loading={loadingProfile}
+            />
+          </div>
 
-        <div className="extra-block">
-          <span className="extra-label">Unidades preferidas</span>
-          {isEditing ? (
-            <div className="unit-options" role="radiogroup" aria-label="Elegir unidades">
-              {(["km", "mi"] as Units[]).map((unit) => (
-                <label key={unit} className={`unit-chip ${draftExtras.units === unit ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="units"
-                    value={unit}
-                    checked={draftExtras.units === unit}
-                    onChange={() => onChangeDraft({ units: unit })}
-                  />
-                  {unit === "km" ? "Kilómetros" : "Millas"}
-                </label>
-              ))}
+          {/* Debajo, teléfono y unidades  (yo lo quitaría)*/}
+          <div className="profile-widgets">
+            {/*
+            <div className="extra-block">
+              <span className="extra-label">Teléfono (opcional)</span>
+              {isEditing ? (
+                <input
+                  className="input"
+                  type="tel"
+                  placeholder="+34 600 000 000"
+                  value={draftExtras.phone}
+                  onChange={(event) =>
+                    onChangeDraft({ phone: event.target.value })
+                  }
+                />
+              ) : (
+                <p className="data-highlight">
+                  {viewExtras.phone || "Sin número"}
+                </p>
+              )}
             </div>
-          ) : (
-            <span className="badge">{viewExtras.units === "km" ? "Kilómetros" : "Millas"}</span>
-          )}
+            */}
+            {/*
+            <div className="extra-block">
+              <span className="extra-label">Unidades preferidas</span>
+              {isEditing ? (
+                <div
+                  className="unit-options"
+                  role="radiogroup"
+                  aria-label="Elegir unidades"
+                >
+                  {(["km", "mi"] as Units[]).map((unit) => (
+                    <label
+                      key={unit}
+                      className={`unit-chip ${
+                        draftExtras.units === unit ? "selected" : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="units"
+                        value={unit}
+                        checked={draftExtras.units === unit}
+                        onChange={() => onChangeDraft({ units: unit })}
+                      />
+                      {unit === "km" ? "Kilómetros" : "Millas"}
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <span className="badge">
+                  {viewExtras.units === "km" ? "Kilómetros" : "Millas"}
+                </span>
+              )}
+            </div>
+            */}
+          </div>
         </div>
       </div>
+      {/* 1) Seguidores, solo arriba */}
+      <div className="stats-summary">
+        <button type="button" className="stats-card" onClick={onGoToFollowers}>
+          <span className="stat-value">{followers.length}</span>
+          <span className="stat-label">
+            {followers.length === 1 ? "Seguidor" : "Seguidores"}
+          </span>
+        </button>
+      </div>
 
-      <div className="stats-grid">
-        <StatCard label="Rutas creadas" value={stats.routes_created} />
-        <StatCard label="Rutas realizadas" value={stats.routes_completed} />
+      {/* 2) Bajo seguidores, todo lo relacionado con rutas */}
+      <div className="stats-summary">
+        <button type="button" className="stats-card" onClick={onGoToCreated}>
+          <span className="stats-card-title">Rutas creadas</span>
+          <span className="stats-card-count">{stats.routes_created}</span>
+          <span className="stats-card-cta">Ver mis rutas</span>
+        </button>
+
+        <button type="button" className="stats-card" onClick={onGoToFavorites}>
+          <span className="stats-card-title">Rutas favoritas</span>
+          <span className="stats-card-count">{stats.routes_favorites}</span>
+          <span className="stats-card-cta">Ver rutas favoritas</span>
+        </button>
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value, loading }: { label: string; value: ReactNode; loading?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  loading,
+}: {
+  label: string;
+  value: ReactNode;
+  loading?: boolean;
+}) {
   return (
     <div className="info-row">
       <span className="info-label">{label}</span>
       <span className="info-value">{loading ? "Cargando…" : value}</span>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="stat-card">
-      <span className="stat-value">{value}</span>
-      <span className="stat-label">{label}</span>
     </div>
   );
 }
@@ -793,7 +1025,8 @@ function FavoritesPanel({
           <div>
             <h2>{selectedRoute.name}</h2>
             <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+              {formatDateLabel(selectedRoute.createdAt)}
             </p>
           </div>
           <button className="btn-ghost" type="button" onClick={onCloseRoute}>
@@ -801,11 +1034,30 @@ function FavoritesPanel({
           </button>
         </div>
         <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+          <MapView
+            className="favorites-map"
+            highlightPoints={selectedRoute.points}
+          />
         </div>
       </div>
     );
   }
+
+  const hasFavorites = favorites.length > 0;
+
+  const favoriteItems = favorites.map((route) => (
+    <div className="route-row">
+      <div className="route-row-main">
+        <div className="route-row-title">{route.name}</div>
+        <div className="route-row-meta">
+          <span>{route.ownerName || route.ownerId}</span>
+          <span>· {route.category}</span>
+          <span>· {formatDateLabel(route.createdAt)}</span>
+        </div>
+      </div>
+      <div className="route-row-cta">Ver detalles</div>
+    </div>
+  ));
 
   return (
     <div className="card fill">
@@ -813,42 +1065,26 @@ function FavoritesPanel({
         <h2>Rutas favoritas</h2>
         <p>Accede y gestiona tus rutas</p>
       </div>
-      {status === "error" && error && <div className="alert error">{error}</div>}
-      <div className="table-scroll grow">
-        {status === "loading" && favorites.length === 0 ? (
-          <p className="muted">Cargando tus rutas guardadas…</p>
-        ) : favorites.length === 0 ? (
-          <p className="muted">Aún no has guardado rutas favoritas.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ruta</th>
-                <th>Propietario</th>
-                <th>Categoría</th>
-                <th>Creada</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {favorites.map((route) => (
-                <tr key={route.id}>
-                  <td>{route.name}</td>
-                  <td>{route.ownerName || route.ownerId}</td>
-                  <td>{route.category}</td>
-                  <td>{formatDateLabel(route.createdAt)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {status === "loading" && favorites.length > 0 && (
+
+      {status === "error" && error && (
+        <div className="alert error">{error}</div>
+      )}
+
+      {status === "loading" && !hasFavorites ? (
+        <p className="muted">Cargando tus rutas guardadas…</p>
+      ) : !hasFavorites ? (
+        <p className="muted">Aún no has guardado rutas favoritas.</p>
+      ) : (
+        <AnimatedList
+          items={favoriteItems}
+          className="routes-animated-list"
+          itemClassName="routes-animated-item"
+          showGradients
+          onItemSelect={(index) => onViewRoute(favorites[index])}
+        />
+      )}
+
+      {status === "loading" && hasFavorites && (
         <p className="muted" style={{ marginTop: 12 }}>
           Actualizando lista…
         </p>
@@ -882,7 +1118,8 @@ function CreatedRoutesPanel({
           <div>
             <h2>{selectedRoute.name}</h2>
             <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+              {formatDateLabel(selectedRoute.createdAt)}
             </p>
           </div>
           <button className="btn-ghost" type="button" onClick={onCloseRoute}>
@@ -890,11 +1127,30 @@ function CreatedRoutesPanel({
           </button>
         </div>
         <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+          <MapView
+            className="favorites-map"
+            highlightPoints={selectedRoute.points}
+          />
         </div>
       </div>
     );
   }
+
+  const hasRoutes = routes.length > 0;
+
+  const createdItems = routes.map((route) => (
+    <div className="route-row">
+      <div className="route-row-main">
+        <div className="route-row-title">{route.name}</div>
+        <div className="route-row-meta">
+          <span>{route.ownerName || route.ownerId}</span>
+          <span>· {route.category}</span>
+          <span>· {formatDateLabel(route.createdAt)}</span>
+        </div>
+      </div>
+      <div className="route-row-cta">Ver detalles</div>
+    </div>
+  ));
 
   return (
     <div className="card fill">
@@ -902,46 +1158,89 @@ function CreatedRoutesPanel({
         <h2>Mis rutas</h2>
         <p>Listado de rutas creadas por ti</p>
       </div>
-      {status === "error" && error && <div className="alert error">{error}</div>}
-      <div className="table-scroll grow">
-        {status === "loading" && routes.length === 0 ? (
-          <p className="muted">Cargando tus rutas…</p>
-        ) : routes.length === 0 ? (
-          <p className="muted">Todavía no has creado rutas.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ruta</th>
-                <th>Propietario</th>
-                <th>Categoría</th>
-                <th>Creada</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {routes.map((route) => (
-                <tr key={route.id}>
-                  <td>{route.name}</td>
-                  <td>{route.ownerName || route.ownerId}</td>
-                  <td>{route.category}</td>
-                  <td>{formatDateLabel(route.createdAt)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {status === "loading" && routes.length > 0 && (
+
+      {status === "error" && error && (
+        <div className="alert error">{error}</div>
+      )}
+
+      {status === "loading" && !hasRoutes ? (
+        <p className="muted">Cargando tus rutas…</p>
+      ) : !hasRoutes ? (
+        <p className="muted">Todavía no has creado rutas.</p>
+      ) : (
+        <AnimatedList
+          items={createdItems}
+          className="routes-animated-list"
+          itemClassName="routes-animated-item"
+          showGradients
+          onItemSelect={(index) => onViewRoute(routes[index])}
+        />
+      )}
+
+      {status === "loading" && hasRoutes && (
         <p className="muted" style={{ marginTop: 12 }}>
           Actualizando lista…
         </p>
       )}
+    </div>
+  );
+}
+
+type FollowersPanelProps = {
+  followers: Follower[];
+};
+
+function FollowersPanel({ followers }: FollowersPanelProps) {
+  const navigate = useNavigate();
+  if (followers.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Seguidores</h2>
+          <p>Personas que siguen tus rutas y actividad</p>
+        </div>
+        <p className="muted">Todavía no tienes seguidores.</p>
+      </div>
+    );
+  }
+
+  const followerItems = followers.map((follower) => (
+    <div className="follower-row">
+      <div className="followers-avatar">
+        <img
+          src={follower.avatarUrl || defaultAvatar}
+          alt={"Avatar de ${follower.username}"}
+        />
+      </div>
+      <div className="followers-info">
+        <div className="followers-username">@{follower.username}</div>
+        <div className="followers-name">{follower.name}</div>
+      </div>
+    </div>
+  ));
+
+  const handleSelectFollower = (index: number) => {
+    const follower = followers[index];
+    if (!follower) return;
+
+    // Aquí falta la URL del endpoint
+    navigate("{}");
+  };
+
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Seguidores</h2>
+        <p>Personas que siguen tus rutas y actividad</p>
+      </div>
+
+      <AnimatedList
+        items={followerItems}
+        className="followers-animated-list"
+        itemClassName="followers-animated-item"
+        showGradients
+        onItemSelect={handleSelectFollower}
+      />
     </div>
   );
 }
