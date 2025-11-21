@@ -33,7 +33,6 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
     route["_id"] = result.inserted_id
     return route
 
-# ============ GET OPERATIONS ============
 async def get_route_by_id(route_id: str) -> dict | None:
     '''
     Devuelve una ruta por su ID o None si no existe

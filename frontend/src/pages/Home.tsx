@@ -9,6 +9,12 @@ import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
+import { useAlert } from "../context/AlertContext";
+
+import "../styles/Home.css";
+import { useNavigate } from "react-router-dom";
+import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
+import UserCardView from "../components/UserViewCard/UserViewCard";
 
 type RouteItem = {
   id: string;
@@ -19,8 +25,13 @@ type RouteItem = {
   visibility: boolean;
 };
 
-import "../styles/Home.css";
-import { useNavigate } from "react-router-dom";
+type SelectedUser = {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  avatar_url?: string | null;
+};
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -30,24 +41,38 @@ const GEO_ZOOM = 13;
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [routeCardOpen, setRouteCardOpen] = useState(false);
   const [drawPoints, setDrawPoints] = useState<Array<[number, number]>>([]);
-  const [selectedRoutePoints, setSelectedRoutePoints] = useState<Array<[number, number]>>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">("todos");
-  const navigate = useNavigate(); // <-- añade esto
+  const [selectedRoutePoints, setSelectedRoutePoints] = useState<
+    Array<[number, number]>
+  >([]);
+  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">(
+    "todos"
+  );
+  const navigate = useNavigate();
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
+  const [availableCategories, setAvailableCategories] = useState<Array<string>>(
+    []
+  );
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
 
-  // ⬇️ NUEVO: favoritos del usuario
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
+  const [userQuery, setUserQuery] = useState("");
+
+  const [users, setUsers] = useState<any[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
@@ -102,7 +127,9 @@ export default function Home() {
         }));
 
         setRoutes(formatted);
-        setAvailableCategories(Array.from(new Set(formatted.map(r => r.category))));
+        setAvailableCategories(
+          Array.from(new Set(formatted.map((r) => r.category)))
+        );
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
@@ -111,7 +138,37 @@ export default function Home() {
     fetchAll();
   }, [token]);
 
-  const toggleProfileMenu = () => setProfileMenuOpen(v => !v);
+  useEffect(() => {
+    if (searchMode !== "users") return;
+
+    const q = userQuery.trim() || "all";
+
+    const timeout = setTimeout(async () => {
+      setUsersLoading(true);
+      try {
+        const res = await fetch(
+          `${API}/users/search?q=${encodeURIComponent(q)}`
+        );
+        if (!res.ok) throw new Error("Error cargando usuarios");
+        const data = await res.json();
+        console.log(data);
+        setUsers(data);
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "No se han podido cargar los resultados";
+        showAlert(msg, "error");
+        setUsers([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchMode, userQuery, showAlert]);
+
+  const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
   useEffect(() => {
     if (user || token) {
@@ -121,10 +178,9 @@ export default function Home() {
   }, [user, token]);
 
   const handleMapClick = (lng: number, lat: number) => {
-    setDrawPoints(prev => [...prev, [lng, lat]]);
+    setDrawPoints((prev) => [...prev, [lng, lat]]);
   };
 
-  // Geolocalización: si falla/no hay permiso, se queda BCN
   useEffect(() => {
     let cancelled = false;
     if (!("geolocation" in navigator)) return;
@@ -144,8 +200,24 @@ export default function Home() {
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
     );
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const handleOpenUser = (u: any) => {
+    setSelectedRoute(null);
+    setRouteCardOpen(false);
+    setSelectedRoutePoints([]);
+
+    setSelectedUser({
+      id: u.id,
+      username: u.username,
+      name: u.name,
+      email: u.email,
+      avatar_url: u.avatar_url,
+    });
+  };
 
   return (
     <div className="home">
@@ -167,7 +239,11 @@ export default function Home() {
           </button>
 
           {user || token ? (
-            <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -178,17 +254,6 @@ export default function Home() {
               >
                 Mi perfil
               </button>
-              {/*
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                }}
-              >
-                Ajustes
-              </button>
-              */}
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -224,47 +289,138 @@ export default function Home() {
               isPrivate={!selectedRoute.visibility}
               onClose={() => setSelectedRoute(null)}
             />
+          ) : selectedUser ? (
+            <UserCardView
+              userId={selectedUser.id}
+              username={selectedUser.username}
+              email={selectedUser.email}
+              avatarUrl={selectedUser.avatar_url}
+              onClose={() => setSelectedUser(null)}
+              onRouteClick={(route) => {
+                setSelectedRoute(route);
+                setSelectedRoutePoints(route.points);
+              }}
+            />
           ) : (
             <div>
-              <div className="category-filter">
-                <label className="category-label">Filtrar por categoría</label>
-                <select
-                  className="category-select"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value as Category | "todos")}
-                >
-                  <option value="todos">Todas</option>
-                  {availableCategories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                    </option>
-                  ))}
-                </select>
+              <div className="container">
+                <div className="tabs">
+                  <input
+                    type="radio"
+                    id="radio-1"
+                    name="tabs"
+                    checked={searchMode === "routes"}
+                    onChange={() => setSearchMode("routes")}
+                  />
+                  <label className="tab" htmlFor="radio-1">
+                    Rutas
+                  </label>
+
+                  <input
+                    type="radio"
+                    id="radio-2"
+                    name="tabs"
+                    checked={searchMode === "users"}
+                    onChange={() => setSearchMode("users")}
+                  />
+                  <label className="tab" htmlFor="radio-2">
+                    Usuarios
+                  </label>
+
+                  <span className="glider"></span>
+                </div>
               </div>
 
-              {routes.length === 0 ? (
-                <p>No hay rutas disponibles.</p>
+              {searchMode === "routes" ? (
+                <>
+                  <div className="category-filter">
+                    <label className="category-label">
+                      Filtrar por categoría
+                    </label>
+                    <select
+                      className="category-select"
+                      value={selectedCategory}
+                      onChange={(e) =>
+                        setSelectedCategory(
+                          e.target.value as Category | "todos"
+                        )
+                      }
+                    >
+                      <option value="todos">Todas</option>
+                      {availableCategories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {routes.length === 0 ? (
+                    <p>No hay rutas disponibles</p>
+                  ) : (
+                    <div className="route-list">
+                      {routes
+                        .filter(
+                          (r) =>
+                            selectedCategory === "todos" ||
+                            r.category === selectedCategory
+                        )
+                        .map((r) => (
+                          <RoutePreviewCard
+                            key={r.id}
+                            id={r.id}
+                            name={r.name}
+                            category={r.category as Category}
+                            points={r.points}
+                            initialSaved={favoriteIds.has(String(r.id))}
+                            onClick={() =>
+                              requireAuth(() => {
+                                setSelectedRoute(r);
+                                setSelectedRoutePoints(r.points);
+                              })
+                            }
+                          />
+                        ))}
+                    </div>
+                  )}
+                </>
               ) : (
-                <div className="route-list">
-                  {routes
-                    .filter((r) => selectedCategory === "todos" || r.category === selectedCategory)
-                    .map((r) => (
-                      <RoutePreviewCard
-                        key={r.id}
-                        id={r.id}
-                        name={r.name}
-                        category={r.category as Category}
-                        points={r.points}
-                        initialSaved={favoriteIds.has(String(r.id))} // ⬅️ favorito pre-marcado
-                        onClick={() =>
-                          requireAuth(() => {
-                            setSelectedRoute(r);
-                            setSelectedRoutePoints(r.points);
-                          })
-                        }
-                      />
-                    ))}
-                </div>
+                <>
+                  <div className="user-search-container">
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      className="input"
+                      placeholder="Buscar usuario..."
+                      value={userQuery}
+                      onChange={(e) => setUserQuery(e.target.value)}
+                    />
+                  </div>
+
+                  {usersLoading ? (
+                    <p>Cargando usuarios... </p>
+                  ) : users.length === 0 ? (
+                    <p>
+                      {userQuery.trim()
+                        ? "Sin coincidencias"
+                        : "No hay usuarios."}
+                    </p>
+                  ) : (
+                    <div className="user-list">
+                      {users.map((u) => (
+                        <UserPreviewCard
+                          key={u.id}
+                          id={u.id}
+                          username={u.username}
+                          email={u.email}
+                          name={u.name}
+                          avatar_url={u.avatar_url}
+                          onClick={() => handleOpenUser(u)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
@@ -285,6 +441,7 @@ export default function Home() {
             onClick={() =>
               requireAuth(() => {
                 setSelectedRoute(null);
+                setSelectedUser(null);
                 setRouteCardOpen((prev) => {
                   setDrawPoints([]);
                   setSelectedRoutePoints([]);
