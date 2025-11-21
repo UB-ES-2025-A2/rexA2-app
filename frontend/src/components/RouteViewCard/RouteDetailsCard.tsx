@@ -19,6 +19,8 @@ interface RouteDetailsCardProps {
   routeId: string;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
+  onDelete?: (routeId: string) => Promise<void>;
+  isOwnRoute?: boolean;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -31,11 +33,31 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
+  onDelete,
+  isOwnRoute = false,
 }) => {
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCommentsClick = () => {
     setCommentsOpen(true);
+  };
+
+  const handleDeleteClick = async () => {
+    if (window.confirm("¿Estás seguro de que deseas eliminar esta ruta? Esta acción no se puede deshacer.")) {
+      setIsDeleting(true);
+      try {
+        if (onDelete) {
+          await onDelete(routeId);
+        }
+        onClose();
+      } catch (error) {
+        console.error("Error al eliminar la ruta:", error);
+        alert("Error al eliminar la ruta");
+      } finally {
+        setIsDeleting(false);
+      }
+    }
   };
 
   return (
@@ -82,14 +104,27 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               justifyContent: "space-between",
               alignItems: "center",
               gap: "12px",
+              flexWrap: "wrap",
             }}
           >
-            <CommentButton onClick={handleCommentsClick} />
-            <FavoriteButton
-              routeId={routeId}
-              initialSaved={initialSaved}
-              onSavedChange={onSavedChange}
-            />
+            <div style={{ display: "flex", gap: "12px" }}>
+              <CommentButton onClick={handleCommentsClick} />
+              <FavoriteButton
+                routeId={routeId}
+                initialSaved={initialSaved}
+                onSavedChange={onSavedChange}
+              />
+            </div>
+            {isOwnRoute && onDelete && (
+              <button
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="route-details-card__delete-btn"
+                title="Eliminar ruta"
+              >
+                {isDeleting ? "Eliminando..." : "🗑️ Eliminar"}
+              </button>
+            )}
           </div>
         </section>
       </div>
