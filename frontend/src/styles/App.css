@@ -1,4 +1,4 @@
-#root {
+root {
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
@@ -41,7 +41,9 @@
   color: #888;
 }
 .mapboxgl-ctrl-attrib,
-.mapboxgl-ctrl-logo { display: none !important; }
+.mapboxgl-ctrl-logo {
+  display: none !important;
+}
 
 .route-card-panel {
   background: var(--card);
@@ -81,8 +83,6 @@
   color: #fff;
   border-color: var(--brand);
 }
-
-
 
 /* Estilos del botón de perfil y el menú desplegable */
 /* Estilo para asegurarnos de que el menú flotante se muestra encima del mapa */
@@ -131,7 +131,6 @@
   border-radius: 50%;
 }
 
-
 .profile-menu button {
   background: none;
   border: none;
@@ -146,4 +145,3 @@
 .profile-menu button:hover {
   background-color: #f3f4f6;
 }
-
