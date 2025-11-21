@@ -48,19 +48,23 @@ async def create_user(
         "avatar_url": avatar_url,                   # None por defecto
         "is_active": True,
     }
-
-    # Si quieres evitar el 409 por carrera, puedes pre-chequear aquí:
-    # if await col.find_one({"email": email}, {"_id": 1}):
-    #     raise DuplicateKeyError("email dup", 11000, {})
-
     try:
         result = await col.insert_one(doc)
     except DuplicateKeyError:
-        # Repropaga para que el router traduzca a 409
         raise
 
     doc["_id"] = result.inserted_id
     return doc
+
+
+async def get_user_by_username(username: str) -> dict | None:
+    """
+    Busca un usuario por su username.
+    """
+    col = _users_col()
+    user = await col.find_one({"username": username})
+    return user
+
 
 
 async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
