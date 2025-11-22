@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
 
 type Props = {
   open: boolean;
@@ -7,7 +7,16 @@ type Props = {
   routeId: string;
 };
 
-const EXAMPLE_COMMENTS = [
+type Comment = {
+  id: string;
+  author: string;
+  avatar: string;
+  timestamp: string;
+  content: string;
+  timestampValue?: number;
+};
+
+const EXAMPLE_COMMENTS: Comment[] = [
   {
     id: '1',
     author: 'Juan García',
@@ -80,18 +89,31 @@ const EXAMPLE_COMMENTS = [
   },
 ];
 
+const API = import.meta.env.VITE_API_URL || window.location.origin;
+
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
-  const [comments] = useState(EXAMPLE_COMMENTS);
+  const [comments] = useState(
+    EXAMPLE_COMMENTS.map((c, idx) => ({
+      ...c,
+      timestampValue: Date.now() - idx * 1000,
+    }))
+  );
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmitReply = (e: React.FormEvent) => {
+  const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const text = replyText.trim();
+    if (!text) return;
+    if (!token) {
+      showAlert("Debes iniciar sesión para comentar");
+      return;
+    }
 
     setSubmitting(true);
     // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+    console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
+    // Vaciar el cuadro de texto tras publicar
     setReplyText('');
     setSubmitting(false);
   };
@@ -117,7 +139,11 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
 
           {/* Comments List */}
           <div className="comments-list">
-            {comments.map((comment) => (
+            {[...comments]
+              .sort(
+                (a, b) => (b.timestampValue ?? 0) - (a.timestampValue ?? 0)
+              )
+              .map((comment) => (
               <div key={comment.id} className="comment-card">
                 <div className="comment-avatar">{comment.avatar}</div>
                 <div className="comment-info">
@@ -147,7 +173,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 placeholder="Escribe un comentario..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                aria-label="Escribe un comentario"
               />
+              {error ? <p className="comment-error">{error}</p> : null}
               <div className="comment-actions-bar">
                 <button
                   type="submit"
