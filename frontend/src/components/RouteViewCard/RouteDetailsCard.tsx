@@ -1,13 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
-// import { useAlert } from "../../context/AlertContext";
-// import { useAuth } from "../../context/AuthContext";
-
-// const API = (import.meta.env.VITE_API_URL as string) || window.location.origin;
+import { useAuth } from "../../context/AuthContext";
+import { fetchWithAuth } from "../../services/api";
 
 interface RouteDetailsCardProps {
   name: string;
@@ -33,32 +31,62 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
-  onDelete,
   isOwnRoute = false,
 }) => {
+  const { token } = useAuth();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [routeData, setRouteData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleCommentsClick = () => {
-    setCommentsOpen(true);
-  };
+  useEffect(() => {
+    const loadRoute = async () => {
+      if (!token || !routeId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const res = await fetchWithAuth(`/routes/${routeId}`);
+        
+        if (res.ok) {
+          const data = await res.json();
+          setRouteData(data);
+        }
+      } catch (err) {
+        console.error("Error loading route:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRoute();
+  }, [routeId, token]);
 
   const handleDeleteClick = async () => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta ruta? Esta acción no se puede deshacer.")) {
+    if (window.confirm("¿Estás seguro de que deseas eliminar esta ruta?")) {
       setIsDeleting(true);
       try {
-        if (onDelete) {
-          await onDelete(routeId);
+        const res = await fetchWithAuth(`/routes/${routeId}`, {
+          method: "DELETE",
+        });
+        
+        if (!res.ok) {
+          throw new Error(`Error ${res.status}: No se pudo eliminar`);
         }
+        
         onClose();
       } catch (error) {
-        console.error("Error al eliminar la ruta:", error);
-        alert("Error al eliminar la ruta");
+        console.error("Error al eliminar:", error);
+        alert(error instanceof Error ? error.message : "Error al eliminar la ruta");
       } finally {
         setIsDeleting(false);
       }
     }
   };
+
+  const canDelete = isOwnRoute || routeData?.is_owner;
 
   return (
     <>
@@ -108,14 +136,14 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             }}
           >
             <div style={{ display: "flex", gap: "12px" }}>
-              <CommentButton onClick={handleCommentsClick} />
+              <CommentButton onClick={() => setCommentsOpen(true)} />
               <FavoriteButton
                 routeId={routeId}
                 initialSaved={initialSaved}
                 onSavedChange={onSavedChange}
               />
             </div>
-            {isOwnRoute && onDelete && (
+            {canDelete && (
               <button
                 onClick={handleDeleteClick}
                 disabled={isDeleting}

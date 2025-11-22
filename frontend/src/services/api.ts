@@ -12,4 +12,32 @@ const api = axios.create({
   },
 });
 
+const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+export function getAccessToken(): string {
+  return localStorage.getItem("access_token") || "";
+}
+
+export async function fetchWithAuth(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const token = getAccessToken();
+  const url = `${API_BASE}${endpoint}`;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  return fetch(url, {
+    ...options,
+    headers,
+  });
+}
+
 export default api;
