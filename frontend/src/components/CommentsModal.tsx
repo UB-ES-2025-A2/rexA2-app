@@ -83,13 +83,27 @@ const EXAMPLE_COMMENTS = [
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmitReply = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const text = replyText.trim();
+    if (!text) {
+      setError("El comentario no puede estar vacío");
+      return;
+    }
+    if (text.length < 3) {
+      setError("El comentario debe tener al menos 3 caracteres");
+      return;
+    }
+    if (text.length > 500) {
+      setError("El comentario debe tener 500 caracteres o menos");
+      return;
+    }
+    setError(null);
 
     // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+    console.log('Nuevo comentario:', text, 'Para ruta:', routeId);
     setReplyText('');
   };
 
@@ -144,7 +158,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 placeholder="Escribe un comentario..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                aria-label="Escribe un comentario"
               />
+              {error ? <p className="comment-error">{error}</p> : null}
               <div className="comment-actions-bar">
                 <button
                   type="submit"
