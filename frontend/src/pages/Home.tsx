@@ -316,7 +316,6 @@ export default function Home() {
               category={selectedRoute.category as Category}
               points={selectedRoute.points}
               isPrivate={!selectedRoute.visibility}
-              
               isOwnRoute={selectedRoute.is_owner || false}
               onClose={() => {
                 setSelectedRoute(null);

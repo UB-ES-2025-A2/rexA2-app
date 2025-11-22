@@ -69,7 +69,7 @@ const CommentsModal: React.FC<Props> = ({
         if (!cancelled) setComments(data);
       } catch (err) {
         if (cancelled) return;
-        showAlert(err instanceof Error ? err.message : err);
+        showAlert(err instanceof Error ? err.message : "Error desconocido");
         setComments([]);
       } finally {
         if (!cancelled) setLoading(false);
@@ -126,7 +126,7 @@ const CommentsModal: React.FC<Props> = ({
       setReplyText("");
       setReplyingTo(null);
     } catch (err) {
-      showAlert(err instanceof Error ? err.message : err);
+      showAlert(err instanceof Error ? err.message : "Error desconocido");
     } finally {
       setSubmitting(false);
     }

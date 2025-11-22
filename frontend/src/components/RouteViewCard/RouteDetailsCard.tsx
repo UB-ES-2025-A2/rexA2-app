@@ -36,9 +36,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   initialSaved = false,
   onSavedChange,
   onShowComments,
-}) => {
-  const handleCommentsClick = () => {
-    onShowComments?.();
   onDelete,
   isOwnRoute = false,
 }) => {
@@ -74,6 +71,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     if (onDelete) {
       await onDelete(routeId);
     }
+  };
+
+  const handleCommentClick = () => {
+    setCommentsOpen(true);
+    onShowComments?.();
   };
 
   const canDelete = isOwnRoute || routeData?.is_owner;
@@ -126,7 +128,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             }}
           >
             <div style={{ display: "flex", gap: "12px" }}>
-              <CommentButton onClick={() => setCommentsOpen(true)} />
+              <CommentButton onClick={handleCommentClick} />
               <FavoriteButton
                 routeId={routeId}
                 initialSaved={initialSaved}
