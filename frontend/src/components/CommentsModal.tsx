@@ -1,7 +1,5 @@
 import React, { useState } from "react";
 import "../styles/Comments.css";
-import { useAuth } from "../context/AuthContext";
-import { useAlert } from "../context/AlertContext";
 
 type Props = {
   open: boolean;
@@ -85,9 +83,7 @@ const EXAMPLE_COMMENTS = [
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
-  const { token } = useAuth();
-  const { showAlert } = useAlert();
-  const [comments] = useState(EXAMPLE_COMMENTS);
+  const [comments, setComments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -100,24 +96,19 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
       return;
     }
 
-    try {
-      const res = await fetch(`${API}/routes/${routeId}/comments`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: text }),
-      });
-      if (!res.ok) {
-        const detail = (await res.json().catch(() => null)) as { detail?: string } | null;
-        throw new Error(detail?.detail || "No se pudo publicar el comentario");
-      }
-      console.log("Comentario publicado");
-      setReplyText('');
-    } catch (err) {
-      showAlert(err instanceof Error ? err.message : "No se pudo publicar el comentario");
-    }
+    // TODO: Enviar comentario al backend
+    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+
+    // Añadir al estado local sin recargar
+    const newComment = {
+      id: String(Date.now()),
+      author: "Tú",
+      avatar: "",
+      timestamp: new Date().toLocaleString(),
+      content: text,
+    };
+    setComments((prev) => [newComment, ...prev]);
+    setReplyText('');
   };
 
   // TODO: Implementar like de comentarios
