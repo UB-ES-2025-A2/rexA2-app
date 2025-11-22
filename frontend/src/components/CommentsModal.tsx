@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
+import { useAlert } from "../context/AlertContext";
 
 type Props = {
   open: boolean;
@@ -81,6 +82,7 @@ const EXAMPLE_COMMENTS = [
 ];
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
+  const { showAlert } = useAlert();
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
 
@@ -88,9 +90,14 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
     e.preventDefault();
     if (!replyText.trim()) return;
 
-    // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
-    setReplyText('');
+    try {
+      // TODO: Enviar comentario al backend
+      console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+      setReplyText('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "No se pudo publicar el comentario";
+      showAlert(msg, "error");
+    }
   };
 
   // TODO: Implementar like de comentarios
