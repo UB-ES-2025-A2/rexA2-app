@@ -419,11 +419,10 @@
   transition: border-color 0.2s;
 }
 
-.comment-login-hint {
-  margin: 0;
-  padding: 12px;
-  color: #666;
-  font-size: 0.95em;
+.comment-error {
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 0.9em;
 }
 
 .comment-input:focus {
