@@ -4,6 +4,7 @@ import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
+import DeleteRouteModal from "./DeleteRouteModal";
 import { useAuth } from "../../context/AuthContext";
 import { fetchWithAuth } from "../../services/api";
 
@@ -31,11 +32,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
+  onDelete,
   isOwnRoute = false,
 }) => {
   const { token } = useAuth();
   const [commentsOpen, setCommentsOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +51,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       try {
         setLoading(true);
         const res = await fetchWithAuth(`/routes/${routeId}`);
-        
+
         if (res.ok) {
           const data = await res.json();
           setRouteData(data);
@@ -64,25 +66,9 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     loadRoute();
   }, [routeId, token]);
 
-  const handleDeleteClick = async () => {
-    if (window.confirm("¿Estás seguro de que deseas eliminar esta ruta?")) {
-      setIsDeleting(true);
-      try {
-        const res = await fetchWithAuth(`/routes/${routeId}`, {
-          method: "DELETE",
-        });
-        
-        if (!res.ok) {
-          throw new Error(`Error ${res.status}: No se pudo eliminar`);
-        }
-        
-        onClose();
-      } catch (error) {
-        console.error("Error al eliminar:", error);
-        alert(error instanceof Error ? error.message : "Error al eliminar la ruta");
-      } finally {
-        setIsDeleting(false);
-      }
+  const handleDeleteConfirm = async () => {
+    if (onDelete) {
+      await onDelete(routeId);
     }
   };
 
@@ -145,12 +131,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             </div>
             {canDelete && (
               <button
-                onClick={handleDeleteClick}
-                disabled={isDeleting}
+                onClick={() => setDeleteModalOpen(true)}
                 className="route-details-card__delete-btn"
                 title="Eliminar ruta"
               >
-                {isDeleting ? "Eliminando..." : "🗑️ Eliminar"}
+                🗑️ Eliminar
               </button>
             )}
           </div>
@@ -161,6 +146,13 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         open={commentsOpen}
         onClose={() => setCommentsOpen(false)}
         routeId={routeId}
+      />
+
+      <DeleteRouteModal
+        open={deleteModalOpen}
+        routeName={name}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalOpen(false)}
       />
     </>
   );
