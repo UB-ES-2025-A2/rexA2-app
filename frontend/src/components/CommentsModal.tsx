@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "../styles/Comments.css";
+import { useAlert } from "../context/AlertContext";
 
 type Props = {
   open: boolean;
@@ -92,12 +93,8 @@ const EXAMPLE_COMMENTS: Comment[] = [
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
-  const [comments] = useState(
-    EXAMPLE_COMMENTS.map((c, idx) => ({
-      ...c,
-      timestampValue: Date.now() - idx * 1000,
-    }))
-  );
+  const { showAlert } = useAlert();
+  const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -110,12 +107,14 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
       return;
     }
 
-    setSubmitting(true);
-    // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
-    // Vaciar el cuadro de texto tras publicar
-    setReplyText('');
-    setSubmitting(false);
+    try {
+      // TODO: Enviar comentario al backend
+      console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+      setReplyText('');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "No se pudo publicar el comentario";
+      showAlert(msg, "error");
+    }
   };
 
   // TODO: Implementar like de comentarios
