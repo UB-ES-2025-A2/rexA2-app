@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
+import { useAuth } from "../context/AuthContext";
+import { useAlert } from "../context/AlertContext";
 
 type Props = {
   open: boolean;
@@ -80,17 +82,41 @@ const EXAMPLE_COMMENTS = [
   },
 ];
 
+const API = import.meta.env.VITE_API_URL || window.location.origin;
+
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
+  const { token } = useAuth();
+  const { showAlert } = useAlert();
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
 
-  const handleSubmitReply = (e: React.FormEvent) => {
+  const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const text = replyText.trim();
+    if (!text) return;
+    if (!token) {
+      showAlert("Debes iniciar sesión para comentar");
+      return;
+    }
 
-    // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
-    setReplyText('');
+    try {
+      const res = await fetch(`${API}/routes/${routeId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ content: text }),
+      });
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(detail?.detail || "No se pudo publicar el comentario");
+      }
+      console.log("Comentario publicado");
+      setReplyText('');
+    } catch (err) {
+      showAlert(err instanceof Error ? err.message : "No se pudo publicar el comentario");
+    }
   };
 
   // TODO: Implementar like de comentarios
