@@ -89,7 +89,8 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
     if (!replyText.trim()) return;
 
     // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+    console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
+    // Vaciar el cuadro de texto tras publicar
     setReplyText('');
   };
 
