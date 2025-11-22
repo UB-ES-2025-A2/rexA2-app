@@ -83,14 +83,17 @@ const EXAMPLE_COMMENTS = [
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmitReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim()) return;
 
+    setSubmitting(true);
     // TODO: Enviar comentario al backend
     console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
     setReplyText('');
+    setSubmitting(false);
   };
 
   // TODO: Implementar like de comentarios
@@ -149,9 +152,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 <button
                   type="submit"
                   className="comment-submit-btn"
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || submitting}
                 >
-                  Enviar
+                  {submitting ? "Enviando..." : "Enviar"}
                 </button>
               </div>
             </form>
