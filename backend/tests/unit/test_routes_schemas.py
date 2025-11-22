@@ -54,6 +54,7 @@ def test_route_public_alias_dump():
     dumped = rp.model_dump(by_alias=True)
     assert dumped["id"] == "abc123"
     assert "_id" not in dumped    # No debe exponerse el campo interno
+    assert dumped["comments"] == []
 
 def test_route_create_default_duration_and_rating_none():
     # Si no se envían, duration_minutes y rating deben ser None
@@ -131,3 +132,11 @@ def test_rating_above_5_fails():
     payload = _valid_payload(rating=5.5)
     with pytest.raises(ValidationError):
         RouteCreate(**payload)
+
+
+def test_comment_create_requires_content():
+    from backend.db.schemas.route import CommentCreate
+    with pytest.raises(ValidationError):
+        CommentCreate(content="   ")
+    ok = CommentCreate(content="Hola", parent_id=None)
+    assert ok.content == "Hola"

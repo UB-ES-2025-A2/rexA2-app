@@ -2,6 +2,42 @@ from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import List
 from datetime import datetime
 
+
+class CommentCreate(BaseModel):
+    content: str
+    parent_id: str | None = None
+
+    @field_validator("content")
+    @classmethod
+    def _content_present(cls, v: str):
+        if not v.strip():
+            raise ValueError("El comentario no puede estar vacío")
+        return v
+
+
+class CommentReply(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    content: str
+    created_at: datetime
+    parent_id: str | None = None
+    avatar_url: str | None = None
+
+
+class CommentThread(CommentReply):
+    replies: List[CommentReply] = Field(default_factory=list)
+
+
+class CommentCreated(BaseModel):
+    id: str
+    user_id: str
+    username: str
+    content: str
+    created_at: datetime
+    parent_id: str | None = None
+    avatar_url: str | None = None
+
 # Modelo simple para representar un punto geográfico
 class Point(BaseModel):
     latitude: float     # Lattitude en grados
@@ -71,3 +107,4 @@ class RoutePublic(RouteBase):
     owner_id: str                   # Identificador del propietario de la ruta    
     created_at: datetime            # Fecha y hora de la creación
     owner_username: str | None = None
+    comments: List[CommentThread] = Field(default_factory=list)

@@ -1,11 +1,38 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from backend.db.models import route as route_crud
 from backend.db.models import user as user_crud
-from backend.db.schemas.route import RouteCreate, RoutePublic
+from backend.db.schemas.route import (
+    RouteCreate,
+    RoutePublic,
+    CommentCreate,
+    CommentThread,
+    CommentCreated,
+)
 from backend.core.security import get_current_user
 from pymongo.errors import DuplicateKeyError
+from bson.errors import InvalidId
 
 router = APIRouter(prefix="/routes", tags=["routes"])
+
+
+async def _ensure_route_access(route_id: str, current_user: dict) -> dict:
+    """
+    Devuelve la ruta si el usuario puede acceder a ella; lanza HTTPException en caso contrario.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_public = bool(route.get("visibility"))
+    is_owner = route.get("owner_id") == current_user["_id"]
+
+    if not is_public and not is_owner:
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    return route
 
 @router.get("/check-name")
 async def check_name(name: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
@@ -76,16 +103,7 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
-    route = await route_crud.get_route_by_id(route_id)
-    if not route:
-        raise HTTPException(status_code=404, detail="Ruta no encontrada")
-    
-    is_public = bool(route.get("visibility"))
-    is_owner = route.get("owner_id") == current_user["_id"]
-
-    if not is_public and not is_owner:
-        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
-    
+    route = await _ensure_route_access(route_id, current_user)
     route["_id"] = str(route["_id"])
     return route
 
@@ -101,6 +119,70 @@ async def get_public_route_by_name(name: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     route["_id"] = str(route["_id"])
     return route
+
+
+@router.get(
+    "/{route_id}/comments",
+    response_model=list[CommentThread],
+)
+async def list_route_comments(
+    route_id: str, current_user: dict = Depends(get_current_user)
+):
+    """
+    Devuelve los comentarios de una ruta si es pública o el usuario es el propietario.
+    """
+    route = await _ensure_route_access(route_id, current_user)
+    return route.get("comments", [])
+
+
+@router.post(
+    "/{route_id}/comments",
+    response_model=CommentCreated,
+    status_code=status.HTTP_201_CREATED,
+)
+async def add_route_comment(
+    route_id: str,
+    payload: CommentCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Añade un comentario o respuesta a una ruta.
+    - Si `parent_id` viene informado, se añade como respuesta de ese comentario.
+    """
+    route = await _ensure_route_access(route_id, current_user)
+
+    if payload.parent_id:
+        has_parent = any(
+            c.get("id") == payload.parent_id for c in route.get("comments", [])
+        )
+        if not has_parent:
+            raise HTTPException(status_code=404, detail="Comentario padre no encontrado")
+
+    username = (
+        current_user.get("username")
+        or current_user.get("name")
+        or current_user.get("email")
+        or "usuario"
+    )
+    avatar_url = current_user.get("avatar_url")
+
+    created = await route_crud.add_comment(
+        route_id,
+        user_id=str(current_user["_id"]),
+        username=username,
+        content=payload.content,
+        parent_id=payload.parent_id,
+        avatar_url=avatar_url,
+    )
+
+    if not created:
+        raise HTTPException(status_code=404, detail="Comentario padre no encontrado")
+
+    # Devuelve solo los datos relevantes (las claves extras son ignoradas por el schema)
+    created["username"] = created.get("username") or username
+    created["parent_id"] = payload.parent_id
+    created["avatar_url"] = created.get("avatar_url") or avatar_url
+    return created
 
 @router.delete("/{route_id}", status_code=204)
 async def delete_route(route_id: str, current_user: dict = Depends(get_current_user)):

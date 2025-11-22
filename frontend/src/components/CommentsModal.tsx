@@ -1,194 +1,262 @@
-import React, { useState } from "react";
-import "../styles/Comments.css";
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../context/AlertContext";
+import "../styles/Comments.css";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   routeId: string;
+  placement?: "modal" | "panel";
 };
 
-type Comment = {
+type CommentReply = {
   id: string;
-  author: string;
-  avatar: string;
-  timestamp: string;
+  user_id: string;
+  username: string;
   content: string;
-  timestampValue?: number;
+  created_at: string;
+  parent_id?: string | null;
+  avatar_url?: string | null;
 };
 
-const EXAMPLE_COMMENTS: Comment[] = [
-  {
-    id: '1',
-    author: 'Juan García',
-    avatar: 'JG',
-    timestamp: 'Hace 2 horas',
-    content: 'Excelente ruta! Las vistas son increíbles.',
-  },
-  {
-    id: '2',
-    author: 'María López',
-    avatar: 'ML',
-    timestamp: 'Hace 1 hora',
-    content: 'Muy bien marcada y fácil de seguir. Recomendado!',
-  },
-  {
-    id: '3',
-    author: 'Carlos Ruiz',
-    avatar: 'CR',
-    timestamp: 'Hace 45 minutos',
-    content: 'La subida fue bastante dura pero vale la pena. Llevar agua!',
-  },
-  {
-    id: '4',
-    author: 'Laura Fernández',
-    avatar: 'LF',
-    timestamp: 'Hace 30 minutos',
-    content: 'Perfecto para un domingo. La familia lo disfrutó mucho.',
-  },
-  {
-    id: '5',
-    author: 'David Martínez',
-    avatar: 'DM',
-    timestamp: 'Hace 20 minutos',
-    content: 'He visto muchos pájaros en el bosque, muy bonito!',
-  },
-  {
-    id: '6',
-    author: 'Ana Sánchez',
-    avatar: 'AS',
-    timestamp: 'Hace 15 minutos',
-    content: 'Cuidado en el km 5, hay un tramo resbaladizo cuando llueve.',
-  },
-  {
-    id: '7',
-    author: 'Roberto López',
-    avatar: 'RL',
-    timestamp: 'Hace 10 minutos',
-    content: 'Acabo de hacerla, está en perfectas condiciones.',
-  },
-  {
-    id: '8',
-    author: 'Sophie Bernard',
-    avatar: 'SB',
-    timestamp: 'Hace 5 minutos',
-    content: 'Una joya escondida! No la conocía, gracias por compartirla.',
-  },
-  {
-    id: '9',
-    author: 'Miguel Ángel',
-    avatar: 'MA',
-    timestamp: 'Hace 2 minutos',
-    content: 'Primer intento y me encantó. Volveré el próximo fin de semana.',
-  },
-  {
-    id: '10',
-    author: 'Isabel Gómez',
-    avatar: 'IG',
-    timestamp: 'Hace 1 minuto',
-    content: 'Excelente vista desde la cima. El atardecer fue espectacular.',
-  },
-];
+type CommentThread = CommentReply & {
+  replies: CommentReply[];
+};
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
-const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
+const CommentsModal: React.FC<Props> = ({
+  open,
+  onClose,
+  routeId,
+  placement = "modal",
+}) => {
+  const { token } = useAuth();
   const { showAlert } = useAlert();
-  const [comments] = useState(EXAMPLE_COMMENTS);
-  const [replyText, setReplyText] = useState('');
+
+  const [comments, setComments] = useState<CommentThread[]>([]);
+  const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+
+  const isPanel = placement === "panel";
+
+  useEffect(() => {
+    if (!open) {
+      setReplyingTo(null);
+      setReplyText("");
+      return;
+    }
+
+    let cancelled = false;
+    const fetchComments = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/routes/${routeId}/comments`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!res.ok) {
+          const detail = (await res.json().catch(() => null)) as {
+            detail?: string;
+          } | null;
+          throw new Error(detail?.detail || "No se pudieron cargar los comentarios");
+        }
+
+        const data = (await res.json()) as CommentThread[];
+        if (!cancelled) setComments(data);
+      } catch (err) {
+        if (cancelled) return;
+        showAlert(err instanceof Error ? err.message : err);
+        setComments([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    fetchComments();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, routeId, token, showAlert]);
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    const text = replyText.trim();
-    if (!text) return;
+    if (!replyText.trim()) return;
     if (!token) {
       showAlert("Debes iniciar sesión para comentar");
       return;
     }
 
+    setSubmitting(true);
     try {
-      // TODO: Enviar comentario al backend
-      console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
-      setReplyText('');
+      const res = await fetch(`${API}/routes/${routeId}/comments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          content: replyText.trim(),
+          parent_id: replyingTo,
+        }),
+      });
+
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => null)) as { detail?: string } | null;
+        throw new Error(detail?.detail || "No se pudo enviar el comentario");
+      }
+
+      const created = (await res.json()) as CommentReply;
+
+      setComments((prev) => {
+        if (replyingTo) {
+          return prev.map((c) =>
+            c.id === replyingTo
+              ? { ...c, replies: [...(c.replies || []), created] }
+              : c
+          );
+        }
+        return [{ ...created, replies: [] }, ...prev];
+      });
+
+      setReplyText("");
+      setReplyingTo(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "No se pudo publicar el comentario";
-      showAlert(msg, "error");
+      showAlert(err instanceof Error ? err.message : err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // TODO: Implementar like de comentarios
-  // const handleLikeComment = (commentId: string) => {
-  //   console.log('Like en comentario:', commentId);
-  // };
+  const formatDate = (iso: string) => {
+    const date = new Date(iso);
+    if (!iso || Number.isNaN(date.getTime())) return "";
+    return date.toLocaleString();
+  };
+
+  const renderAvatar = (username?: string | null, avatarUrl?: string | null) => {
+    if (avatarUrl) {
+      return <img className="comment-avatar comment-avatar--image" src={avatarUrl} alt={username || "avatar"} />;
+    }
+    const letters = (username || "??").slice(0, 2).toUpperCase();
+    return <div className="comment-avatar">{letters}</div>;
+  };
+
+  const content = (
+    <div
+      className={`comments-modal-content ${
+        isPanel ? "comments-modal-content--panel" : ""
+      }`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="comments-modal-header">
+        <div>
+          <h2>Comentarios</h2>
+          {replyingTo ? (
+            <p className="comment-replying-to">
+              Respondiendo a un comentario ·{" "}
+              <button type="button" onClick={() => setReplyingTo(null)}>
+                Cancelar
+              </button>
+            </p>
+          ) : null}
+        </div>
+        <button className="comments-modal-close" onClick={onClose}>
+          ✕
+        </button>
+      </div>
+
+      <div className="comments-list">
+        {loading ? (
+          <p>Cargando comentarios...</p>
+        ) : comments.length === 0 ? (
+          <p>No hay comentarios todavía.</p>
+        ) : (
+          comments.map((comment) => (
+            <div key={comment.id} className="comment-card">
+              {renderAvatar(comment.username, comment.avatar_url)}
+              <div className="comment-info">
+                <div className="comment-header">
+                  <span className="comment-author">{comment.username}</span>
+                  <span className="comment-time">
+                    {formatDate(comment.created_at)}
+                  </span>
+                </div>
+                <p className="comment-text">{comment.content}</p>
+                <div className="comment-actions">
+                  <button
+                    className="comment-reply-btn"
+                    type="button"
+                    onClick={() => setReplyingTo(comment.id)}
+                  >
+                    Responder
+                  </button>
+                </div>
+
+                {comment.replies?.length ? (
+                  <div className="comment-replies">
+                    {comment.replies.map((reply) => (
+                      <div key={reply.id} className="comment-card comment-card--reply">
+                        {renderAvatar(reply.username, reply.avatar_url)}
+                        <div className="comment-info">
+                          <div className="comment-header">
+                            <span className="comment-author">{reply.username}</span>
+                            <span className="comment-time">
+                              {formatDate(reply.created_at)}
+                            </span>
+                          </div>
+                          <p className="comment-text">{reply.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <div className="comments-input-section">
+        <form className="comment-form" onSubmit={handleSubmitReply}>
+          <textarea
+            className="comment-input"
+            placeholder={
+              replyingTo ? "Responde al comentario..." : "Escribe un comentario..."
+            }
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            disabled={submitting}
+          />
+          <div className="comment-actions-bar">
+            <div />
+            <button
+              type="submit"
+              className="comment-submit-btn"
+              disabled={!replyText.trim() || submitting}
+            >
+              {submitting ? "Enviando..." : "Enviar"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 
   if (!open) return null;
 
+  if (isPanel) {
+    return <div className="comments-panel">{content}</div>;
+  }
+
   return (
-    <>
-      <div className="comments-modal-overlay" onClick={onClose}>
-        <div className="comments-modal-content" onClick={(e) => e.stopPropagation()}>
-          {/* Header */}
-          <div className="comments-modal-header">
-            <h2>Comentarios</h2>
-            <button className="comments-modal-close" onClick={onClose}>
-              ✕
-            </button>
-          </div>
-
-          {/* Comments List */}
-          <div className="comments-list">
-            {[...comments]
-              .sort(
-                (a, b) => (b.timestampValue ?? 0) - (a.timestampValue ?? 0)
-              )
-              .map((comment) => (
-              <div key={comment.id} className="comment-card">
-                <div className="comment-avatar">{comment.avatar}</div>
-                <div className="comment-info">
-                  <div className="comment-header">
-                    <span className="comment-author">{comment.author}</span>
-                    <span className="comment-time">{comment.timestamp}</span>
-                  </div>
-                  <p className="comment-text">{comment.content}</p>
-                  <div className="comment-actions">
-                    {/* TODO: Descomentar cuando implementemos likes */}
-                    {/* <button className="comment-like-btn" onClick={() => handleLikeComment(comment.id)}>
-                      ❤️ {comment.likes}
-                    </button> */}
-                    
-                    <button className="comment-reply-btn">Responder</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Input Section */}
-          <div className="comments-input-section">
-            <form className="comment-form" onSubmit={handleSubmitReply}>
-              <textarea
-                className="comment-input"
-                placeholder="Escribe un comentario..."
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                aria-label="Escribe un comentario"
-              />
-              {error ? <p className="comment-error">{error}</p> : null}
-              <div className="comment-actions-bar">
-                <button
-                  type="submit"
-                  className="comment-submit-btn"
-                  disabled={!replyText.trim() || submitting}
-                >
-                  {submitting ? "Enviando..." : "Enviar"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </>
+    <div className="comments-modal-overlay" onClick={onClose}>
+      {content}
+    </div>
   );
 };
 

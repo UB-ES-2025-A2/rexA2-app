@@ -1,9 +1,8 @@
-import React, { useState } from "react";
+import React from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
-import CommentsModal from "../CommentsModal";
 // import { useAlert } from "../../context/AlertContext";
 // import { useAuth } from "../../context/AuthContext";
 
@@ -19,6 +18,7 @@ interface RouteDetailsCardProps {
   routeId: string;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
+  onShowComments?: () => void;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -31,11 +31,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
+  onShowComments,
 }) => {
-  const [commentsOpen, setCommentsOpen] = useState(false);
-
   const handleCommentsClick = () => {
-    setCommentsOpen(true);
+    onShowComments?.();
   };
 
   return (
@@ -93,12 +92,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           </div>
         </section>
       </div>
-
-      <CommentsModal
-        open={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-        routeId={routeId}
-      />
     </>
   );
 };
