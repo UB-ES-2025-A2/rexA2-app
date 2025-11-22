@@ -89,6 +89,7 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
   const { showAlert } = useAlert();
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +171,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 placeholder="Escribe un comentario..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                aria-label="Escribe un comentario"
               />
+              {error ? <p className="comment-error">{error}</p> : null}
               <div className="comment-actions-bar">
                 <button
                   type="submit"
