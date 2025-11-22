@@ -9,7 +9,7 @@ import AnimatedList from "../components/AnimatedList";
 import defaultAvatar from "../assets/profile_pic.png";
 //import { addAttrValue } from "framer-motion";
 //import { div } from "framer-motion/client";
-type TabKey = "profile" | "favorites" | "created" | "followers";
+type TabKey = "profile" | "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
 type ProfileStats = {
   routes_created: number;
@@ -59,16 +59,6 @@ type FavoriteRoute = {
   visibility: boolean;
   points: Array<[number, number]>;
 };
-
-// ============= Seguidores =============
-type Follower = {
-  id: string;
-  name: string;
-  username: string;
-  // Añado también el avatar
-  avatarUrl?: string | null;
-};
-// =======================================
 
 const API_BASE = (
   import.meta.env.VITE_API_URL?.trim() ||
@@ -353,6 +343,74 @@ export default function Profile() {
     return () => controller.abort();
   }, [accessToken, profile?.id]);
 
+  // ============= Siguiendo =============
+  const [following, setFollowing] = useState<Follower[]>([]);
+  const [followingStatus, setFollowingStatus] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+  const [followingError, setFollowingError] = useState("");
+  // =======================================
+  useEffect(() => {
+    if (!accessToken || !profile?.id) {
+      setFollowing([]);
+      setFollowingStatus("idle");
+      setFollowingError("");
+      return;
+    }
+
+    if (!API_BASE) {
+      setFollowingStatus("error");
+      setFollowingError(
+        "Configura VITE_API_URL para cargar la gente que sigues"
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    setFollowingStatus("loading");
+    setFollowingError("");
+
+    async function fetchFollowing() {
+      try {
+        const res = await fetch(
+          `${API_BASE}/users/${profile.id}/following?skip=0&limit=50`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+          }
+        );
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(
+            detail || "No se pudo cargar la lista de usuarios que sigues."
+          );
+        }
+        const data = (await res.json()) as FollowerListAPI | FollowerAPI[];
+
+        const rawItems: FollowerAPI[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+        setFollowing(rawItems.map(normalizeFollower));
+        setFollowingStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setFollowingStatus("error");
+        setFollowingError(
+          err instanceof Error
+            ? err.message
+            : "Error al cargar la lista de usuarios a los que sigues."
+        );
+      }
+    }
+
+    fetchFollowing();
+    return () => controller.abort();
+  }, [accessToken, profile?.id]);
+
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
   };
@@ -629,6 +687,18 @@ export default function Profile() {
                   <span className="label">Seguidores</span>
                 </button>
               </li>
+              {/* Pestaña Siguiendo */}
+              <li>
+                <button
+                  className={`btn ${active === "following" ? "active" : ""}`}
+                  onClick={() => setActive("following")}
+                >
+                  <span className="icon" aria-hidden="true">
+                    ➡️
+                  </span>
+                  <span className="label">Siguiendo</span>
+                </button>
+              </li>
             </ul>
           )}
         </aside>
@@ -653,6 +723,9 @@ export default function Profile() {
               followers={followers}
               // Para poder acceder desde el panel
               onGoToFollowers={() => setActive("followers")}
+              // Para los seguidos
+              following={following}
+              onGoToFollowing={() => setActive("followers")}
               onGoToFavorites={() => setActive("favorites")}
               onGoToCreated={() => setActive("created")}
             />
@@ -682,6 +755,14 @@ export default function Profile() {
               followers={followers}
               status={followersStatus}
               error={followersError}
+            />
+          )}
+          {/* NUEVO */}
+          {active === "following" && (
+            <FollowingPanel
+              following={following}
+              status={followingStatus}
+              error={followingError}
             />
           )}
         </section>
@@ -745,6 +826,14 @@ function normalizeFavoriteRoute(
     points: normalizedPoints,
   };
 }
+// ============= Seguidores =============
+type Follower = {
+  id: string;
+  name: string;
+  username: string;
+  // Añado también el avatar
+  avatarUrl?: string | null;
+};
 
 type FollowerAPI = {
   id: string;
@@ -757,6 +846,7 @@ type FollowerListAPI = {
   items: FollowerAPI[];
   total: number;
 };
+// =======================================
 
 function normalizeFollower(payload: FollowerAPI): Follower {
   return {
@@ -794,7 +884,10 @@ type PersonalDataProps = {
   // Para los seguidores
   followers: Follower[];
   onGoToFollowers: () => void;
-  //
+  // Para los seguidos
+  following: Follower[];
+  onGoToFollowing: () => void;
+  // Para las rutas favoritas
   onGoToFavorites: () => void;
   onGoToCreated: () => void;
 };
@@ -815,6 +908,8 @@ function PersonalData({
   avatarError,
   followers,
   onGoToFollowers,
+  following,
+  onGoToFollowing,
   onGoToFavorites,
   onGoToCreated,
 }: PersonalDataProps) {
@@ -995,6 +1090,11 @@ function PersonalData({
           <span className="stat-label">
             {followers.length === 1 ? "Seguidor" : "Seguidores"}
           </span>
+        </button>
+        {/* 1) Siguiendo, justo al lado */}
+        <button type="button" className="stats-card" onClick={onGoToFollowing}>
+          <span className="stat-value">{following.length}</span>
+          <span className="stat-label">Siguiendo</span>
         </button>
       </div>
 
@@ -1297,19 +1397,114 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     });
   };
 
+  return;
+  <div className="card fill">
+    <div className="section-title">
+      <h2>Seguidores</h2>
+      <p>Personas que siguen tus rutas y actividad</p>
+    </div>
+
+    <AnimatedList
+      items={followerItems}
+      className="followers-animated-list"
+      itemClassName="followers-animated-item"
+      showGradients
+      onItemSelect={handleSelectFollower}
+    />
+  </div>;
+}
+
+type FollowingPanelProps = {
+  following: Follower[];
+  status: "idle" | "loading" | "error";
+  error: string;
+};
+
+function FollowingPanel({ following, status, error }: FollowingPanelProps) {
+  const navigate = useNavigate();
+
+  if (status === "loading" && following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Cargando lista…</p>
+      </div>
+    );
+  }
+
+  if (status === "error" && error) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <div className="alert error">{error}</div>
+      </div>
+    );
+  }
+
+  if (following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Todavía no sigues a nadie.</p>
+      </div>
+    );
+  }
+
+  const followingItems = following.map((user) => (
+    <div className="follower-row" key={user.id}>
+      <div className="followers-avatar">
+        <img
+          src={user.avatarUrl || defaultAvatar}
+          alt={`Avatar de ${user.username}`}
+        />
+      </div>
+      <div className="followers-info">
+        <div className="followers-username">@{user.username}</div>
+        <div className="followers-name">{user.name}</div>
+      </div>
+    </div>
+  ));
+
+  const handleSelectFollowing = (index: number) => {
+    const user = following[index];
+    if (!user) return;
+
+    // Igual que hicimos con Followers: mandamos al Home con state
+    navigate("/", {
+      state: {
+        openUserFromFollowers: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: "",
+          avatar_url: user.avatarUrl ?? null,
+        },
+      },
+    });
+  };
+
   return (
     <div className="card fill">
       <div className="section-title">
-        <h2>Seguidores</h2>
-        <p>Personas que siguen tus rutas y actividad</p>
+        <h2>Siguiendo</h2>
+        <p>Personas a las que sigues</p>
       </div>
 
       <AnimatedList
-        items={followerItems}
+        items={followingItems}
         className="followers-animated-list"
         itemClassName="followers-animated-item"
         showGradients
-        onItemSelect={handleSelectFollower}
+        onItemSelect={handleSelectFollowing}
       />
     </div>
   );
