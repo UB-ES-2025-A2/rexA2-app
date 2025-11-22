@@ -12,32 +12,44 @@ const api = axios.create({
   },
 });
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export function getAccessToken(): string {
   return localStorage.getItem("access_token") || "";
 }
 
 export async function fetchWithAuth(
-  endpoint: string,
-  options: RequestInit = {}
+  path: string,
+  options?: RequestInit
 ): Promise<Response> {
-  const token = getAccessToken();
-  const url = `${API_BASE}${endpoint}`;
+  const token =
+    localStorage.getItem("access_token") ||
+    (typeof window !== "undefined" ? localStorage.getItem("access_token") : "");
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
   };
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (token && typeof token === "string") {
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
-  return fetch(url, {
-    ...options,
-    headers,
-  });
+  const requestBody = options?.body;
+  if (
+    requestBody &&
+    typeof requestBody === "string" &&
+    !headers["Content-Type"]
+  ) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  return fetch(
+    `${import.meta.env.VITE_API_URL || window.location.origin}${path}`,
+    {
+      ...options,
+      headers: { ...headers, ...(options?.headers as Record<string, string>) },
+    }
+  );
 }
 
 export default api;

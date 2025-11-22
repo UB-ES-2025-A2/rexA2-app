@@ -306,9 +306,12 @@ export default function Profile() {
 
     async function fetchFollowers() {
       try {
-        // !!! Potencial --> NO es null
+        // Type guard: aquí profile está garantizado que no es null
+        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+        
+        const profileId: string = profile.id;
         const res = await fetch(
-          `${API_BASE}/users/${profile.id}/followers?skip=0&limit=50`,
+          `${API_BASE}/users/${profileId}/followers?skip=0&limit=50`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
             signal: controller.signal,
@@ -341,7 +344,7 @@ export default function Profile() {
 
     fetchFollowers();
     return () => controller.abort();
-  }, [accessToken, profile?.id]);
+  }, [accessToken, profile]);
 
   // ============= Siguiendo =============
   const [following, setFollowing] = useState<Follower[]>([]);
@@ -372,8 +375,12 @@ export default function Profile() {
 
     async function fetchFollowing() {
       try {
+        // Type guard: aquí profile está garantizado que no es null
+        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+        
+        const profileId: string = profile.id;
         const res = await fetch(
-          `${API_BASE}/users/${profile.id}/following?skip=0&limit=50`,
+          `${API_BASE}/users/${profileId}/following?skip=0&limit=50`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
             signal: controller.signal,
@@ -409,7 +416,7 @@ export default function Profile() {
 
     fetchFollowing();
     return () => controller.abort();
-  }, [accessToken, profile?.id]);
+  }, [accessToken, profile]);
 
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -745,10 +752,10 @@ export default function Profile() {
               saving={isSaving}
               onAvatarFile={handleAvatarFile}
               avatarError={avatarError}
-              // Seguidores
               followers={followers}
-              // Para poder acceder desde el panel
               onGoToFollowers={() => setActive("followers")}
+              following={following}
+              onGoToFollowing={() => setActive("following")}
               onGoToFavorites={() => setActive("favorites")}
               onGoToCreated={() => setActive("created")}
             />
@@ -1355,7 +1362,7 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
       <div className="card fill">
         <div className="section-title">
           <h2>Seguidores</h2>
-          <p>Personas qeu siguen tus rutas y actividad</p>
+          <p>Personas que siguen tus rutas y actividad</p>
         </div>
         <p className="muted">Cargando seguidores...</p>
       </div>
@@ -1374,12 +1381,12 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     );
   }
 
-  if (status.length === 0) {
+  if (followers.length === 0) {
     return (
       <div className="card fill">
         <div className="section-title">
           <h2>Seguidores</h2>
-          <p>Personas qeu siguen tus rutas y tu actividad</p>
+          <p>Personas que siguen tus rutas y actividad</p>
         </div>
         <p className="muted">Todavía no tienes seguidores</p>
       </div>
@@ -1405,14 +1412,12 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     const follower = followers[index];
     if (!follower) return;
 
-    // Aquí falta la URL del endpoint
     navigate("/", {
       state: {
         openUserFromFollowers: {
           id: follower.id,
           username: follower.username,
           name: follower.name,
-          // de momento no tenemos email en followers → lo dejamos vacío o lo añades en la API
           email: "",
           avatar_url: follower.avatarUrl ?? null,
         },
@@ -1420,21 +1425,22 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     });
   };
 
-  return;
-  <div className="card fill">
-    <div className="section-title">
-      <h2>Seguidores</h2>
-      <p>Personas que siguen tus rutas y actividad</p>
-    </div>
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Seguidores</h2>
+        <p>Personas que siguen tus rutas y actividad</p>
+      </div>
 
-    <AnimatedList
-      items={followerItems}
-      className="followers-animated-list"
-      itemClassName="followers-animated-item"
-      showGradients
-      onItemSelect={handleSelectFollower}
-    />
-  </div>;
+      <AnimatedList
+        items={followerItems}
+        className="followers-animated-list"
+        itemClassName="followers-animated-item"
+        showGradients
+        onItemSelect={handleSelectFollower}
+      />
+    </div>
+  );
 }
 
 type FollowingPanelProps = {
