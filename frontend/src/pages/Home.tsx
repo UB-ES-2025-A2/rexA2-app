@@ -24,6 +24,7 @@ type RouteItem = {
   category: string;
   points: Array<[number, number]>;
   visibility: boolean;
+  is_owner?: boolean;
 };
 
 type SelectedUser = {
@@ -315,12 +316,22 @@ export default function Home() {
               category={selectedRoute.category as Category}
               points={selectedRoute.points}
               isPrivate={!selectedRoute.visibility}
+              
+              isOwnRoute={selectedRoute.is_owner || false}
               onClose={() => {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);
                 setShowComments(false);
               }}
               onShowComments={() => setShowComments(true)}
+              onDelete={async (routeId) => {
+                const res = await fetch(`${API}/routes/${routeId}`, {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error("No se pudo eliminar");
+                setRoutes((prev) => prev.filter((r) => r.id !== routeId));
+              }}
             />
           ) : selectedUser ? (
             <UserCardView

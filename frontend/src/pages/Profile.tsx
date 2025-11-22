@@ -9,7 +9,7 @@ import AnimatedList from "../components/AnimatedList";
 import defaultAvatar from "../assets/profile_pic.png";
 //import { addAttrValue } from "framer-motion";
 //import { div } from "framer-motion/client";
-type TabKey = "profile" | "favorites" | "created" | "followers";
+type TabKey = "profile" | "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
 type ProfileStats = {
   routes_created: number;
@@ -59,16 +59,6 @@ type FavoriteRoute = {
   visibility: boolean;
   points: Array<[number, number]>;
 };
-
-// ============= Seguidores =============
-type Follower = {
-  id: string;
-  name: string;
-  username: string;
-  // Añado también el avatar
-  avatarUrl?: string | null;
-};
-// =======================================
 
 const API_BASE = (
   import.meta.env.VITE_API_URL?.trim() ||
@@ -316,9 +306,12 @@ export default function Profile() {
 
     async function fetchFollowers() {
       try {
-        // !!! Potencial --> NO es null
+        // Type guard: aquí profile está garantizado que no es null
+        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+
+        const profileId: string = profile.id;
         const res = await fetch(
-          `${API_BASE}/users/${profile.id}/followers?skip=0&limit=50`,
+          `${API_BASE}/users/${profileId}/followers?skip=0&limit=50`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
             signal: controller.signal,
@@ -351,7 +344,79 @@ export default function Profile() {
 
     fetchFollowers();
     return () => controller.abort();
-  }, [accessToken, profile?.id]);
+  }, [accessToken, profile]);
+
+  // ============= Siguiendo =============
+  const [following, setFollowing] = useState<Follower[]>([]);
+  const [followingStatus, setFollowingStatus] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+  const [followingError, setFollowingError] = useState("");
+  // =======================================
+  useEffect(() => {
+    if (!accessToken || !profile?.id) {
+      setFollowing([]);
+      setFollowingStatus("idle");
+      setFollowingError("");
+      return;
+    }
+
+    if (!API_BASE) {
+      setFollowingStatus("error");
+      setFollowingError(
+        "Configura VITE_API_URL para cargar la gente que sigues"
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    setFollowingStatus("loading");
+    setFollowingError("");
+
+    async function fetchFollowing() {
+      try {
+        // Type guard: aquí profile está garantizado que no es null
+        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+
+        const profileId: string = profile.id;
+        const res = await fetch(
+          `${API_BASE}/users/${profileId}/following?skip=0&limit=50`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+          }
+        );
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(
+            detail || "No se pudo cargar la lista de usuarios que sigues."
+          );
+        }
+        const data = (await res.json()) as FollowerListAPI | FollowerAPI[];
+
+        const rawItems: FollowerAPI[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+        setFollowing(rawItems.map(normalizeFollower));
+        setFollowingStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setFollowingStatus("error");
+        setFollowingError(
+          err instanceof Error
+            ? err.message
+            : "Error al cargar la lista de usuarios a los que sigues."
+        );
+      }
+    }
+
+    fetchFollowing();
+    return () => controller.abort();
+  }, [accessToken, profile]);
 
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
@@ -478,6 +543,31 @@ export default function Profile() {
     });
   };
 
+  const handleDeleteCreatedRoute = async (routeId: string) => {
+    if (!accessToken) {
+      return;
+    }
+    if (!API_BASE) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/routes/${routeId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || "No se pudo eliminar la ruta.");
+      }
+      setCreatedRoutes((prev) => prev.filter((route) => route.id !== routeId));
+      setSelectedCreatedRoute(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar la ruta.");
+    }
+  };
+
   return (
     <div className="profile-root">
       <header className="header">
@@ -487,9 +577,7 @@ export default function Profile() {
               aria-label="Ir al inicio"
               onClick={() => navigate("/")}
               className="btn-home"
-            >
-              🏠
-            </button>
+            ></button>
             <div className="header-title">
               <span className="eyebrow"></span>
               <h1>Perfil</h1>
@@ -580,6 +668,8 @@ export default function Profile() {
                 (route) => route.id === selectedCreatedRoute.id
               )}
               onSavedChange={handleCreatedSavedChange}
+              onDelete={handleDeleteCreatedRoute}
+              isOwnRoute={true}
             />
           ) : (
             <ul className="menu">
@@ -588,9 +678,7 @@ export default function Profile() {
                   className={`btn ${active === "profile" ? "active" : ""}`}
                   onClick={() => setActive("profile")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    👤
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Perfil</span>
                 </button>
               </li>
@@ -599,9 +687,7 @@ export default function Profile() {
                   className={`btn ${active === "favorites" ? "active" : ""}`}
                   onClick={() => setActive("favorites")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    ⭐
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Favoritas</span>
                 </button>
               </li>
@@ -610,9 +696,7 @@ export default function Profile() {
                   className={`btn ${active === "created" ? "active" : ""}`}
                   onClick={() => setActive("created")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    🛣️
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Mis rutas</span>
                 </button>
               </li>
@@ -623,10 +707,18 @@ export default function Profile() {
                   className={`btn ${active === "followers" ? "active" : ""}`}
                   onClick={() => setActive("followers")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    👥
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Seguidores</span>
+                </button>
+              </li>
+              {/* Pestaña Siguiendo */}
+              <li>
+                <button
+                  className={`btn ${active === "following" ? "active" : ""}`}
+                  onClick={() => setActive("following")}
+                >
+                  <span className="icon" aria-hidden="true"></span>
+                  <span className="label">Siguiendo</span>
                 </button>
               </li>
             </ul>
@@ -649,10 +741,10 @@ export default function Profile() {
               saving={isSaving}
               onAvatarFile={handleAvatarFile}
               avatarError={avatarError}
-              // Seguidores
               followers={followers}
-              // Para poder acceder desde el panel
               onGoToFollowers={() => setActive("followers")}
+              following={following}
+              onGoToFollowing={() => setActive("following")}
               onGoToFavorites={() => setActive("favorites")}
               onGoToCreated={() => setActive("created")}
             />
@@ -682,6 +774,14 @@ export default function Profile() {
               followers={followers}
               status={followersStatus}
               error={followersError}
+            />
+          )}
+          {/* NUEVO */}
+          {active === "following" && (
+            <FollowingPanel
+              following={following}
+              status={followingStatus}
+              error={followingError}
             />
           )}
         </section>
@@ -745,6 +845,14 @@ function normalizeFavoriteRoute(
     points: normalizedPoints,
   };
 }
+// ============= Seguidores =============
+type Follower = {
+  id: string;
+  name: string;
+  username: string;
+  // Añado también el avatar
+  avatarUrl?: string | null;
+};
 
 type FollowerAPI = {
   id: string;
@@ -757,6 +865,7 @@ type FollowerListAPI = {
   items: FollowerAPI[];
   total: number;
 };
+// =======================================
 
 function normalizeFollower(payload: FollowerAPI): Follower {
   return {
@@ -794,7 +903,10 @@ type PersonalDataProps = {
   // Para los seguidores
   followers: Follower[];
   onGoToFollowers: () => void;
-  //
+  // Para los seguidos
+  following: Follower[];
+  onGoToFollowing: () => void;
+  // Para las rutas favoritas
   onGoToFavorites: () => void;
   onGoToCreated: () => void;
 };
@@ -815,6 +927,8 @@ function PersonalData({
   avatarError,
   followers,
   onGoToFollowers,
+  following,
+  onGoToFollowing,
   onGoToFavorites,
   onGoToCreated,
 }: PersonalDataProps) {
@@ -995,6 +1109,11 @@ function PersonalData({
           <span className="stat-label">
             {followers.length === 1 ? "Seguidor" : "Seguidores"}
           </span>
+        </button>
+        {/* 1) Siguiendo, justo al lado */}
+        <button type="button" className="stats-card" onClick={onGoToFollowing}>
+          <span className="stat-value">{following.length}</span>
+          <span className="stat-label">Siguiendo</span>
         </button>
       </div>
 
@@ -1232,7 +1351,7 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
       <div className="card fill">
         <div className="section-title">
           <h2>Seguidores</h2>
-          <p>Personas qeu siguen tus rutas y actividad</p>
+          <p>Personas que siguen tus rutas y actividad</p>
         </div>
         <p className="muted">Cargando seguidores...</p>
       </div>
@@ -1251,12 +1370,12 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     );
   }
 
-  if (status.length === 0) {
+  if (followers.length === 0) {
     return (
       <div className="card fill">
         <div className="section-title">
           <h2>Seguidores</h2>
-          <p>Personas qeu siguen tus rutas y tu actividad</p>
+          <p>Personas que siguen tus rutas y actividad</p>
         </div>
         <p className="muted">Todavía no tienes seguidores</p>
       </div>
@@ -1282,14 +1401,12 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     const follower = followers[index];
     if (!follower) return;
 
-    // Aquí falta la URL del endpoint
     navigate("/", {
       state: {
         openUserFromFollowers: {
           id: follower.id,
           username: follower.username,
           name: follower.name,
-          // de momento no tenemos email en followers → lo dejamos vacío o lo añades en la API
           email: "",
           avatar_url: follower.avatarUrl ?? null,
         },
@@ -1310,6 +1427,102 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
         itemClassName="followers-animated-item"
         showGradients
         onItemSelect={handleSelectFollower}
+      />
+    </div>
+  );
+}
+
+type FollowingPanelProps = {
+  following: Follower[];
+  status: "idle" | "loading" | "error";
+  error: string;
+};
+
+function FollowingPanel({ following, status, error }: FollowingPanelProps) {
+  const navigate = useNavigate();
+
+  if (status === "loading" && following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Cargando lista…</p>
+      </div>
+    );
+  }
+
+  if (status === "error" && error) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <div className="alert error">{error}</div>
+      </div>
+    );
+  }
+
+  if (following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Todavía no sigues a nadie.</p>
+      </div>
+    );
+  }
+
+  const followingItems = following.map((user) => (
+    <div className="follower-row" key={user.id}>
+      <div className="followers-avatar">
+        <img
+          src={user.avatarUrl || defaultAvatar}
+          alt={`Avatar de ${user.username}`}
+        />
+      </div>
+      <div className="followers-info">
+        <div className="followers-username">@{user.username}</div>
+        <div className="followers-name">{user.name}</div>
+      </div>
+    </div>
+  ));
+
+  const handleSelectFollowing = (index: number) => {
+    const user = following[index];
+    if (!user) return;
+
+    // Igual que hicimos con Followers: mandamos al Home con state
+    navigate("/", {
+      state: {
+        openUserFromFollowers: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: "",
+          avatar_url: user.avatarUrl ?? null,
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Siguiendo</h2>
+        <p>Personas a las que sigues</p>
+      </div>
+
+      <AnimatedList
+        items={followingItems}
+        className="followers-animated-list"
+        itemClassName="followers-animated-item"
+        showGradients
+        onItemSelect={handleSelectFollowing}
       />
     </div>
   );

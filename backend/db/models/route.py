@@ -154,5 +154,5 @@ async def delete_route(route_id: str, user_id: str) -> bool:
     '''
     Elimina una ruta solo si pertenece al usuario.
     '''
-    result = await db_client.db["routes"].delete_one({"_id": ObjectId(route_id), "owner_id": user_id})
+    result = await db_client.db["routes"].delete_one({"_id": ObjectId(route_id), "owner_id": str(user_id)})
     return result.deleted_count == 1

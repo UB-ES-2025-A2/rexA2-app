@@ -1,5 +1,6 @@
-import {useEffect } from "react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
+import "../styles/Modal.css";
 
 type Props = {
   open: boolean;
@@ -24,9 +25,12 @@ export default function Modal({ open, onClose, children }: Props) {
         aria-modal="true"
         onClick={(e) => e.stopPropagation()}
       >
-        <button className="modal__close close-x" onClick={onClose} aria-label="Close">
-              <span aria-hidden="true"></span>
-
+        <button
+          className="modal__close close-x"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          <span aria-hidden="true"></span>
         </button>
         {children}
       </div>
