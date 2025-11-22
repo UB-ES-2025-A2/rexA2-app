@@ -2,6 +2,7 @@
 import backend.db.client as db_client
 from bson import ObjectId
 from datetime import datetime, timezone
+from uuid import uuid4
 # from typing import Dict
 
 # ============ HELPERS ======================
@@ -27,6 +28,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "created_at": datetime.now(timezone.utc),
         "duration_minutes": route_data.get("duration_minutes"),
         "rating": route_data.get("rating"),
+        "comments": [],
     }
 
     result = await db_client.db["routes"].insert_one(route)
@@ -93,6 +95,59 @@ async def get_public_route_by_name(name: str) -> dict | None:
         "name": name,
         "visibility": True,
     })
+
+
+async def add_comment(
+    route_id: str,
+    *,
+    user_id: str,
+    username: str,
+    content: str,
+    parent_id: str | None = None,
+    avatar_url: str | None = None,
+) -> dict | None:
+    """
+    Inserta un comentario o respuesta en la ruta.
+    Devuelve el documento de comentario insertado o None si no se pudo insertar (p.e. padre inexistente).
+    """
+    now = datetime.now(timezone.utc)
+    comment_id = str(uuid4())
+
+    if parent_id:
+        reply_doc = {
+            "id": comment_id,
+            "user_id": user_id,
+            "username": username,
+            "content": content,
+            "created_at": now,
+            "parent_id": parent_id,
+            "avatar_url": avatar_url,
+        }
+        result = await db_client.db["routes"].update_one(
+            {"_id": ObjectId(route_id), "comments.id": parent_id},
+            {"$push": {"comments.$.replies": reply_doc}},
+        )
+        if result.modified_count == 0:
+            return None
+        return reply_doc
+
+    comment_doc = {
+        "id": comment_id,
+        "user_id": user_id,
+        "username": username,
+        "content": content,
+        "created_at": now,
+        "parent_id": None,
+        "replies": [],
+        "avatar_url": avatar_url,
+    }
+    result = await db_client.db["routes"].update_one(
+        {"_id": ObjectId(route_id)},
+        {"$push": {"comments": comment_doc}},
+    )
+    if result.modified_count == 0:
+        return None
+    return comment_doc
 
 # ============ DELETE OPERATIONS ============
 async def delete_route(route_id: str, user_id: str) -> bool:

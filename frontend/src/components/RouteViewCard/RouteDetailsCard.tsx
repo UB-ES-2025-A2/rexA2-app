@@ -20,6 +20,7 @@ interface RouteDetailsCardProps {
   routeId: string;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
+  onShowComments?: () => void;
   onDelete?: (routeId: string) => Promise<void>;
   isOwnRoute?: boolean;
 }
@@ -34,6 +35,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
+  onShowComments,
+}) => {
+  const handleCommentsClick = () => {
+    onShowComments?.();
   onDelete,
   isOwnRoute = false,
 }) => {

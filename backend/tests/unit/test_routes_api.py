@@ -383,6 +383,62 @@ async def test_delete_route_204(ac, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_add_comment_ok(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "comments": [],
+        }
+
+    async def fake_add_comment(route_id: str, **kwargs):
+        return {
+            "id": "c1",
+            "user_id": kwargs["user_id"],
+            "username": kwargs["username"],
+            "avatar_url": kwargs.get("avatar_url"),
+            "content": kwargs["content"],
+            "created_at": "2025-01-01T00:00:00Z",
+            "parent_id": kwargs.get("parent_id"),
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post("/routes/abc/comments", json={"content": "Hola"})
+    assert res.status_code == 201
+    assert res.json()["content"] == "Hola"
+
+
+@pytest.mark.anyio
+async def test_add_comment_parent_not_found(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "comments": [],
+        }
+
+    async def fake_add_comment(route_id: str, **kwargs):
+        return None
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/abc/comments", json={"content": "Hola", "parent_id": "nope"}
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
+
+
+@pytest.mark.anyio
 async def test_create_route_invalid_duration_returns_422(ac):
     payload = {
         "name": "Ruta duración inválida",

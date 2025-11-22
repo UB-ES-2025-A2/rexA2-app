@@ -67,6 +67,45 @@ class FakeRoutesCol:
             return all(d.get(k) == v for k, v in filter_.items())
         return FakeCursor([d for d in self._docs if match(d)])
 
+    async def update_one(self, filter_, update):
+        matched = None
+        for d in self._docs:
+            if "_id" in filter_ and d.get("_id") != filter_["_id"]:
+                continue
+
+            parent_id = filter_.get("comments.id")
+            if parent_id:
+                has_parent = any(c.get("id") == parent_id for c in d.get("comments", []))
+                if not has_parent:
+                    continue
+
+            matched = d
+            break
+
+        class _Upd:
+            matched_count = 0
+            modified_count = 0
+
+        res = _Upd()
+        if not matched:
+            return res
+
+        res.matched_count = 1
+
+        push_ops = update.get("$push", {})
+        for key, val in push_ops.items():
+            if key == "comments":
+                matched.setdefault("comments", []).append(val)
+                res.modified_count = 1
+            elif key == "comments.$.replies":
+                for c in matched.get("comments", []):
+                    if c.get("id") == filter_.get("comments.id"):
+                        c.setdefault("replies", []).append(val)
+                        res.modified_count = 1
+                        break
+
+        return res
+
     async def delete_one(self, filter_):
         # Elimina por filtro y expone deleted_count como en PyMongo
         before = len(self._docs)
@@ -105,6 +144,7 @@ def _route(owner="u1", name="Ruta", vis=True):
         "duration_minutes": 30,
         "rating": 4.0,
         "created_at": datetime.now(timezone.utc),
+        "comments": [],
     }
 
 @pytest.mark.anyio
@@ -168,3 +208,36 @@ async def test_get_route_by_id_not_found_returns_none(fake_db):
     fake_id = str(ObjectId())
     got = await route_crud.get_route_by_id(fake_id)
     assert got is None
+
+
+@pytest.mark.anyio
+async def test_add_comment_and_reply(fake_db):
+    r = await route_crud.create_route("u1", _route(name="Com"))
+    route_id = str(r["_id"])
+
+    comment = await route_crud.add_comment(
+        route_id,
+        user_id="u1",
+        username="alice",
+        content="Primero",
+        avatar_url="http://img/a.png",
+    )
+    assert comment is not None
+    assert comment["content"] == "Primero"
+
+    stored = await route_crud.get_route_by_id(route_id)
+    assert len(stored["comments"]) == 1
+    assert stored["comments"][0]["content"] == "Primero"
+
+    reply = await route_crud.add_comment(
+        route_id,
+        user_id="u2",
+        username="bob",
+        content="Hola",
+        parent_id=comment["id"],
+        avatar_url=None,
+    )
+    assert reply is not None
+    updated = await route_crud.get_route_by_id(route_id)
+    assert len(updated["comments"][0]["replies"]) == 1
+    assert updated["comments"][0]["replies"][0]["content"] == "Hola"

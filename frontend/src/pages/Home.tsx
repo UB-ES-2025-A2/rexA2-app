@@ -10,6 +10,7 @@ import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 import { useAlert } from "../context/AlertContext";
+import CommentsModal from "../components/CommentsModal";
 
 import "../styles/Home.css";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -62,6 +63,7 @@ export default function Home() {
   );
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [showComments, setShowComments] = useState(false);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
@@ -87,6 +89,7 @@ export default function Home() {
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
     setDrawPoints([]);
+    setShowComments(false);
   }
 
   const routeCtrl = useRouteCard({
@@ -218,6 +221,7 @@ export default function Home() {
       setSelectedRoute(null);
       setRouteCardOpen(false);
       setSelectedRoutePoints([]);
+      setShowComments(false);
 
       setSelectedUser({
         id: u.id,
@@ -233,6 +237,7 @@ export default function Home() {
     setSelectedRoute(null);
     setRouteCardOpen(false);
     setSelectedRoutePoints([]);
+    setShowComments(false);
 
     setSelectedUser({
       id: u.id,
@@ -311,8 +316,14 @@ export default function Home() {
               category={selectedRoute.category as Category}
               points={selectedRoute.points}
               isPrivate={!selectedRoute.visibility}
+              
               isOwnRoute={selectedRoute.is_owner || false}
-              onClose={() => setSelectedRoute(null)}
+              onClose={() => {
+                setSelectedRoute(null);
+                setSelectedRoutePoints([]);
+                setShowComments(false);
+              }}
+              onShowComments={() => setShowComments(true)}
               onDelete={async (routeId) => {
                 const res = await fetch(`${API}/routes/${routeId}`, {
                   method: "DELETE",
@@ -332,6 +343,7 @@ export default function Home() {
               onRouteClick={(route) => {
                 setSelectedRoute(route);
                 setSelectedRoutePoints(route.points);
+                setShowComments(false);
               }}
             />
           ) : (
@@ -410,6 +422,7 @@ export default function Home() {
                               requireAuth(() => {
                                 setSelectedRoute(r);
                                 setSelectedRoutePoints(r.points);
+                                setShowComments(false);
                               })
                             }
                           />
@@ -460,32 +473,46 @@ export default function Home() {
         </div>
 
         <div className="home__map-skeleton">
-          <MapView
-            className="home__map-skeleton"
-            center={mapCenter}
-            zoom={mapZoom}
-            allowPickPoint={routeCardOpen}
-            onPickPoint={handleMapClick}
-            highlightPoints={selectedRoutePoints}
-          />
+          {showComments && selectedRoute ? (
+            <div className="comments-full">
+              <CommentsModal
+                open={showComments}
+                onClose={() => setShowComments(false)}
+                routeId={selectedRoute.id}
+                placement="panel"
+              />
+            </div>
+          ) : (
+            <>
+              <MapView
+                className="home__map-skeleton"
+                center={mapCenter}
+                zoom={mapZoom}
+                allowPickPoint={routeCardOpen}
+                onPickPoint={handleMapClick}
+                highlightPoints={selectedRoutePoints}
+              />
 
-          <button
-            className="fab"
-            onClick={() =>
-              requireAuth(() => {
-                setSelectedRoute(null);
-                setSelectedUser(null);
-                setRouteCardOpen((prev) => {
-                  setDrawPoints([]);
-                  setSelectedRoutePoints([]);
-                  return !prev;
-                });
-              })
-            }
-            title={routeCardOpen ? "Volver a la lista" : "Crear ruta"}
-          >
-            {routeCardOpen ? "←" : "＋"}
-          </button>
+              <button
+                className="fab"
+                onClick={() =>
+                  requireAuth(() => {
+                    setSelectedRoute(null);
+                    setSelectedUser(null);
+                    setRouteCardOpen((prev) => {
+                      setDrawPoints([]);
+                      setSelectedRoutePoints([]);
+                      setShowComments(false);
+                      return !prev;
+                    });
+                  })
+                }
+                title={routeCardOpen ? "Volver a la lista" : "Crear ruta"}
+              >
+                {routeCardOpen ? "←" : "＋"}
+              </button>
+            </>
+          )}
         </div>
       </main>
 

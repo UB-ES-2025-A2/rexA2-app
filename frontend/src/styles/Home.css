@@ -41,6 +41,48 @@ button {
 }
 
 .category-filter {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .category-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 0.3rem;
+    text-align: center;
+  }
+  
+  .category-select {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    background-color: white;
+    color: #333;
+    outline: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    display: block;
+    margin: 0 auto;
+  }
+  
+  .category-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  }
+  
+.home__content {
+  display: flex;
+  height: calc(100vh - 60px);
+  overflow: hidden;
+  padding: 24px 24px 24px 24px;
+  box-sizing: border-box;
+  gap: 16px;
   display: flex;
   justify-content: center;
   padding: 20px 20px;
@@ -114,6 +156,32 @@ button {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+}
+
+.comments-full {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+}
+
+.comments-full .comments-panel {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+.comments-full .comments-modal-content--panel {
+  border-radius: 16px;
+  max-width: none;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  box-shadow: none;
+  display: flex;
 }
 
 .container {
