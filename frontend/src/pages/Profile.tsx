@@ -7,8 +7,8 @@ import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
 import AnimatedList from "../components/AnimatedList";
 import defaultAvatar from "../assets/profile_pic.png";
-//import { addAttrValue } from "framer-motion";
-//import { div } from "framer-motion/client";
+import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
+
 type TabKey = "profile" | "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
 type ProfileStats = {
@@ -75,7 +75,7 @@ export default function Profile() {
   const [active, setActive] = useState<TabKey>("profile");
   const navigate = useNavigate();
   const { token, logout } = useAuth();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false); // <-- nuevo
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileStatus, setProfileStatus] = useState<
@@ -306,8 +306,7 @@ export default function Profile() {
 
     async function fetchFollowers() {
       try {
-        // Type guard: aquí profile está garantizado que no es null
-        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+        if (!profile?.id) return;
 
         const profileId: string = profile.id;
         const res = await fetch(
@@ -375,8 +374,7 @@ export default function Profile() {
 
     async function fetchFollowing() {
       try {
-        // Type guard: aquí profile está garantizado que no es null
-        if (!profile?.id) return; // Validación extra para satisfacer TypeScript
+        if (!profile?.id) return;
 
         const profileId: string = profile.id;
         const res = await fetch(
@@ -588,7 +586,7 @@ export default function Profile() {
               className="profile-menu-btn"
               onClick={() => {
                 if (token) setProfileMenuOpen((v) => !v);
-                else navigate("/"); // si no está logueado, llévalo a Home a iniciar sesión
+                else navigate("/");
               }}
               aria-label="Profile"
               aria-haspopup={token ? "menu" : undefined}
@@ -608,7 +606,7 @@ export default function Profile() {
                   role="menuitem"
                   onClick={() => {
                     setProfileMenuOpen(false);
-                    navigate("/perfil"); // ya estás en perfil, pero así es consistente
+                    navigate("/perfil");
                   }}
                 >
                   Mi perfil
@@ -700,8 +698,6 @@ export default function Profile() {
                   <span className="label">Mis rutas</span>
                 </button>
               </li>
-
-              {/* Pestaña del Panel Seguidores */}
               <li>
                 <button
                   className={`btn ${active === "followers" ? "active" : ""}`}
@@ -711,7 +707,6 @@ export default function Profile() {
                   <span className="label">Seguidores</span>
                 </button>
               </li>
-              {/* Pestaña Siguiendo */}
               <li>
                 <button
                   className={`btn ${active === "following" ? "active" : ""}`}
@@ -776,7 +771,6 @@ export default function Profile() {
               error={followersError}
             />
           )}
-          {/* NUEVO */}
           {active === "following" && (
             <FollowingPanel
               following={following}
@@ -845,12 +839,13 @@ function normalizeFavoriteRoute(
     points: normalizedPoints,
   };
 }
+
 // ============= Seguidores =============
 type Follower = {
   id: string;
   name: string;
   username: string;
-  // Añado también el avatar
+  email?: string;
   avatarUrl?: string | null;
 };
 
@@ -858,6 +853,7 @@ type FollowerAPI = {
   id: string;
   username: string;
   name?: string | null;
+  email?: string | null;
   avatar_url?: string | null;
 };
 
@@ -872,6 +868,7 @@ function normalizeFollower(payload: FollowerAPI): Follower {
     id: payload.id,
     username: payload.username,
     name: payload.name ?? payload.username,
+    email: payload.email ?? "",
     avatarUrl: payload.avatar_url ?? null,
   };
 }
@@ -900,13 +897,10 @@ type PersonalDataProps = {
   saving: boolean;
   onAvatarFile: (file: File | null) => void;
   avatarError: string;
-  // Para los seguidores
   followers: Follower[];
   onGoToFollowers: () => void;
-  // Para los seguidos
   following: Follower[];
   onGoToFollowing: () => void;
-  // Para las rutas favoritas
   onGoToFavorites: () => void;
   onGoToCreated: () => void;
 };
@@ -918,7 +912,6 @@ function PersonalData({
   stats,
   isEditing,
   draftExtras,
-  //onChangeDraft,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -975,9 +968,7 @@ function PersonalData({
       </div>
       {error && <div className="alert error">{error}</div>}
 
-      {/* NUEVO layout*/}
       <div className="profile-top">
-        {/* Avatar primero, bajo el título */}
         <div className="avatar-block">
           <div className="avatar-frame">
             {viewExtras.avatarUrl ? (
@@ -1027,9 +1018,7 @@ function PersonalData({
           )}
         </div>
 
-        {/* Columna derecha: nombre, email, teléfono, unidades */}
         <div className="profile-top-main">
-          {/* Nombre de usuario + email al lado (en desktop) */}
           <div className="info-grid info-grid--main">
             <InfoRow
               label="Nombre de usuario"
@@ -1043,66 +1032,10 @@ function PersonalData({
             />
           </div>
 
-          {/* Debajo, teléfono y unidades  (yo lo quitaría)*/}
-          <div className="profile-widgets">
-            {/*
-            <div className="extra-block">
-              <span className="extra-label">Teléfono (opcional)</span>
-              {isEditing ? (
-                <input
-                  className="input"
-                  type="tel"
-                  placeholder="+34 600 000 000"
-                  value={draftExtras.phone}
-                  onChange={(event) =>
-                    onChangeDraft({ phone: event.target.value })
-                  }
-                />
-              ) : (
-                <p className="data-highlight">
-                  {viewExtras.phone || "Sin número"}
-                </p>
-              )}
-            </div>
-            */}
-            {/*
-            <div className="extra-block">
-              <span className="extra-label">Unidades preferidas</span>
-              {isEditing ? (
-                <div
-                  className="unit-options"
-                  role="radiogroup"
-                  aria-label="Elegir unidades"
-                >
-                  {(["km", "mi"] as Units[]).map((unit) => (
-                    <label
-                      key={unit}
-                      className={`unit-chip ${
-                        draftExtras.units === unit ? "selected" : ""
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="units"
-                        value={unit}
-                        checked={draftExtras.units === unit}
-                        onChange={() => onChangeDraft({ units: unit })}
-                      />
-                      {unit === "km" ? "Kilómetros" : "Millas"}
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <span className="badge">
-                  {viewExtras.units === "km" ? "Kilómetros" : "Millas"}
-                </span>
-              )}
-            </div>
-            */}
-          </div>
+          <div className="profile-widgets">{/* extras ocultos */}</div>
         </div>
       </div>
-      {/* 1) Seguidores, solo arriba */}
+
       <div className="stats-summary">
         <button type="button" className="stats-card" onClick={onGoToFollowers}>
           <span className="stat-value">{followers.length}</span>
@@ -1110,14 +1043,12 @@ function PersonalData({
             {followers.length === 1 ? "Seguidor" : "Seguidores"}
           </span>
         </button>
-        {/* 1) Siguiendo, justo al lado */}
         <button type="button" className="stats-card" onClick={onGoToFollowing}>
           <span className="stat-value">{following.length}</span>
           <span className="stat-label">Siguiendo</span>
         </button>
       </div>
 
-      {/* 2) Bajo seguidores, todo lo relacionado con rutas */}
       <div className="stats-summary">
         <button type="button" className="stats-card" onClick={onGoToCreated}>
           <span className="stats-card-title">Rutas creadas</span>
@@ -1198,7 +1129,7 @@ function FavoritesPanel({
   const hasFavorites = favorites.length > 0;
 
   const favoriteItems = favorites.map((route) => (
-    <div className="route-row">
+    <div className="route-row" key={route.id}>
       <div className="route-row-main">
         <div className="route-row-title">{route.name}</div>
         <div className="route-row-meta">
@@ -1291,7 +1222,7 @@ function CreatedRoutesPanel({
   const hasRoutes = routes.length > 0;
 
   const createdItems = routes.map((route) => (
-    <div className="route-row">
+    <div className="route-row" key={route.id}>
       <div className="route-row-main">
         <div className="route-row-title">{route.name}</div>
         <div className="route-row-meta">
@@ -1346,6 +1277,7 @@ type FollowersPanelProps = {
 
 function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
   const navigate = useNavigate();
+
   if (status === "loading" && followers.length === 0) {
     return (
       <div className="card fill">
@@ -1383,17 +1315,14 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
   }
 
   const followerItems = followers.map((follower) => (
-    <div className="follower-row" key={follower.id}>
-      <div className="followers-avatar">
-        <img
-          src={follower.avatarUrl || defaultAvatar}
-          alt={`Avatar de ${follower.username}`}
-        />
-      </div>
-      <div className="followers-info">
-        <div className="followers-username">@{follower.username}</div>
-        <div className="followers-name">{follower.name}</div>
-      </div>
+    <div className="user-row" key={follower.id}>
+      <UserPreviewCard
+        id={follower.id}
+        username={follower.username}
+        email={follower.email ?? ""}
+        name={follower.name}
+        avatar_url={follower.avatarUrl ?? defaultAvatar}
+      />
     </div>
   ));
 
@@ -1407,7 +1336,7 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
           id: follower.id,
           username: follower.username,
           name: follower.name,
-          email: "",
+          email: follower.email ?? "",
           avatar_url: follower.avatarUrl ?? null,
         },
       },
@@ -1478,17 +1407,14 @@ function FollowingPanel({ following, status, error }: FollowingPanelProps) {
   }
 
   const followingItems = following.map((user) => (
-    <div className="follower-row" key={user.id}>
-      <div className="followers-avatar">
-        <img
-          src={user.avatarUrl || defaultAvatar}
-          alt={`Avatar de ${user.username}`}
-        />
-      </div>
-      <div className="followers-info">
-        <div className="followers-username">@{user.username}</div>
-        <div className="followers-name">{user.name}</div>
-      </div>
+    <div className="user-row" key={user.id}>
+      <UserPreviewCard
+        id={user.id}
+        username={user.username}
+        email={user.email ?? ""}
+        name={user.name}
+        avatar_url={user.avatarUrl ?? defaultAvatar}
+      />
     </div>
   ));
 
@@ -1496,14 +1422,13 @@ function FollowingPanel({ following, status, error }: FollowingPanelProps) {
     const user = following[index];
     if (!user) return;
 
-    // Igual que hicimos con Followers: mandamos al Home con state
     navigate("/", {
       state: {
         openUserFromFollowers: {
           id: user.id,
           username: user.username,
           name: user.name,
-          email: "",
+          email: user.email ?? "",
           avatar_url: user.avatarUrl ?? null,
         },
       },

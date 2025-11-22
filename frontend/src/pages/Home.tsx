@@ -15,6 +15,7 @@ import "../styles/Home.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
+import AnimatedList from "../components/AnimatedList";
 
 type RouteItem = {
   id: string;
@@ -391,30 +392,46 @@ export default function Home() {
                   {routes.length === 0 ? (
                     <p>No hay rutas disponibles</p>
                   ) : (
-                    <div className="route-list">
-                      {routes
-                        .filter(
-                          (r) =>
-                            selectedCategory === "todos" ||
-                            r.category === selectedCategory
-                        )
-                        .map((r) => (
+                    (() => {
+                      const filteredRoutes = routes.filter(
+                        (r) =>
+                          selectedCategory === "todos" ||
+                          r.category === selectedCategory
+                      );
+
+                      if (filteredRoutes.length === 0) {
+                        return <p>No hay rutas en esta categoría.</p>;
+                      }
+
+                      const routeItems = filteredRoutes.map((r) => (
+                        <div className="route-row" key={r.id}>
                           <RoutePreviewCard
-                            key={r.id}
                             id={r.id}
                             name={r.name}
                             category={r.category as Category}
                             points={r.points}
                             initialSaved={favoriteIds.has(String(r.id))}
-                            onClick={() =>
-                              requireAuth(() => {
-                                setSelectedRoute(r);
-                                setSelectedRoutePoints(r.points);
-                              })
-                            }
                           />
-                        ))}
-                    </div>
+                        </div>
+                      ));
+
+                      return (
+                        <AnimatedList
+                          items={routeItems}
+                          className="routes-animated-list"
+                          itemClassName="routes-animated-item"
+                          showGradients
+                          onItemSelect={(index) =>
+                            requireAuth(() => {
+                              const route = filteredRoutes[index];
+                              if (!route) return;
+                              setSelectedRoute(route);
+                              setSelectedRoutePoints(route.points);
+                            })
+                          }
+                        />
+                      );
+                    })()
                   )}
                 </>
               ) : (
@@ -439,19 +456,33 @@ export default function Home() {
                         : "No hay usuarios."}
                     </p>
                   ) : (
-                    <div className="user-list">
-                      {users.map((u) => (
-                        <UserPreviewCard
-                          key={u.id}
-                          id={u.id}
-                          username={u.username}
-                          email={u.email}
-                          name={u.name}
-                          avatar_url={u.avatar_url}
-                          onClick={() => handleOpenUser(u)}
+                    (() => {
+                      const userItems = users.map((u) => (
+                        <div className="user-row" key={u.id}>
+                          <UserPreviewCard
+                            id={u.id}
+                            username={u.username}
+                            email={u.email}
+                            name={u.name}
+                            avatar_url={u.avatar_url}
+                          />
+                        </div>
+                      ));
+
+                      return (
+                        <AnimatedList
+                          items={userItems}
+                          className="users-animated-list"
+                          itemClassName="users-animated-item"
+                          showGradients
+                          onItemSelect={(index) => {
+                            const u = users[index];
+                            if (!u) return;
+                            handleOpenUser(u);
+                          }}
                         />
-                      ))}
-                    </div>
+                      );
+                    })()
                   )}
                 </>
               )}
