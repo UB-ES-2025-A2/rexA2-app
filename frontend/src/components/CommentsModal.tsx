@@ -97,17 +97,8 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
     }
 
     // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
-
-    // Añadir al estado local sin recargar
-    const newComment = {
-      id: String(Date.now()),
-      author: "Tú",
-      avatar: "",
-      timestamp: new Date().toLocaleString(),
-      content: text,
-    };
-    setComments((prev) => [newComment, ...prev]);
+    console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
+    // Vaciar el cuadro de texto tras publicar
     setReplyText('');
   };
 
