@@ -5,6 +5,7 @@ import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
 import DeleteRouteModal from "./DeleteRouteModal";
+import DeleteButton from "./DeleteButton";
 import { useAuth } from "../../context/AuthContext";
 import { fetchWithAuth } from "../../services/api";
 
@@ -130,13 +131,9 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               />
             </div>
             {canDelete && (
-              <button
+              <DeleteButton
                 onClick={() => setDeleteModalOpen(true)}
-                className="route-details-card__delete-btn"
-                title="Eliminar ruta"
-              >
-                🗑️ Eliminar
-              </button>
+              />
             )}
           </div>
         </section>
