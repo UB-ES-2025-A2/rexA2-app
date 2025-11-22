@@ -475,6 +475,12 @@
   transition: border-color 0.2s;
 }
 
+.comment-error {
+  margin: 6px 0 0;
+  color: #dc2626;
+  font-size: 0.9em;
+}
+
 .comment-input:focus {
   outline: none;
   border-color: #667eea;
