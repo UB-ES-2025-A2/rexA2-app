@@ -7,7 +7,16 @@ type Props = {
   routeId: string;
 };
 
-const EXAMPLE_COMMENTS = [
+type Comment = {
+  id: string;
+  author: string;
+  avatar: string;
+  timestamp: string;
+  content: string;
+  timestampValue?: number;
+};
+
+const EXAMPLE_COMMENTS: Comment[] = [
   {
     id: '1',
     author: 'Juan García',
@@ -81,7 +90,12 @@ const EXAMPLE_COMMENTS = [
 ];
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
-  const [comments] = useState(EXAMPLE_COMMENTS);
+  const [comments] = useState(
+    EXAMPLE_COMMENTS.map((c, idx) => ({
+      ...c,
+      timestampValue: Date.now() - idx * 1000,
+    }))
+  );
   const [replyText, setReplyText] = useState('');
 
   const handleSubmitReply = (e: React.FormEvent) => {
@@ -114,7 +128,11 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
 
           {/* Comments List */}
           <div className="comments-list">
-            {comments.map((comment) => (
+            {[...comments]
+              .sort(
+                (a, b) => (b.timestampValue ?? 0) - (a.timestampValue ?? 0)
+              )
+              .map((comment) => (
               <div key={comment.id} className="comment-card">
                 <div className="comment-avatar">{comment.avatar}</div>
                 <div className="comment-info">
