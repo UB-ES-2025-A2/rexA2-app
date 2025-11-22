@@ -7,6 +7,7 @@ import CommentsModal from "../CommentsModal";
 import DeleteRouteModal from "./DeleteRouteModal";
 import DeleteButton from "./DeleteButton";
 import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
 
 interface RouteDetailsCardProps {
@@ -37,6 +38,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   isOwnRoute = false,
 }) => {
   const { token } = useAuth();
+  const { showAlert } = useAlert();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
@@ -58,14 +60,14 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           setRouteData(data);
         }
       } catch (err) {
-        console.error("Error loading route:", err);
+        showAlert("Error al cargar la ruta", "error");
       } finally {
         setLoading(false);
       }
     };
 
     loadRoute();
-  }, [routeId, token]);
+  }, [routeId, token, showAlert]);
 
   const handleDeleteConfirm = async () => {
     if (onDelete) {
