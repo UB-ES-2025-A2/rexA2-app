@@ -1,118 +1,3 @@
-:root {
-  --bg: #eef2f9;
-  --card: #ffffff;
-  --panel: #ffffffcc;
-  --text: #111827;
-  --muted: #6b7280;
-  --brand: #3b82f6;
-  --brand-2: #7c3aed;
-  --ring: #93c5fd55;
-  --error: #ef4444;
-  --close-from: #dbe3ff;
-  --close-to: #a78bfa;
-  --close-border: #e5e7eb;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-  background: radial-gradient(1200px 600px at 10% -10%, #f8fafc 0%, var(--bg) 70%) fixed;
-  color: var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-}
-
-button {
-  font: inherit;
-}
-
-/* Home skeleton */
-.home__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffffcc;
-  backdrop-filter: blur(8px);
-  position: sticky;
-  top: 0;
-  z-index: 2000;
-}
-
-.brand {
-  font-weight: 700;
-  letter-spacing: 0.2px;
-  color: #111827;
-}
-
-.icon-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 999px;
-  border: 1px solid #e5e7eb;
-  background: #ffffff;
-  color: #111827;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-}
-
-.icon-btn:hover {
-  background: #f3f4f6;
-}
-
-.home__content {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 18px;
-  padding: 18px;
-  position: relative;
-}
-
-.home__left-skeleton,
-.home__map-skeleton {
-  height: 70vh;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  background: var(--card);
-  position: relative;
-  min-height: 500px;
-}
-
-.home__map-skeleton {
-  background: linear-gradient(120deg, #f1f5f9 25%, transparent 25% 35%, #f1f5f9 35% 45%, transparent 45% 55%, #f1f5f9 55% 65%, transparent 65%),
-    var(--card);
-}
-
-.fab {
-  position: absolute;
-  right: 26px;
-  bottom: 26px;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
-  border: none;
-  box-shadow: 0 10px 24px rgba(2, 6, 23, 0.18);
-  cursor: pointer;
-  font-size: 22px;
-  transition: transform 0.15s ease;
-}
-
-.fab:hover {
-  transform: translateY(-2px);
-}
-
 /* Modal */
 .modal__backdrop {
   position: fixed;
@@ -153,7 +38,11 @@ button {
   content: "";
   position: absolute;
   inset: -20%;
-  background: radial-gradient(600px 300px at 80% -10%, #93c5fd33, transparent 60%),
+  background: radial-gradient(
+      600px 300px at 80% -10%,
+      #93c5fd33,
+      transparent 60%
+    ),
     radial-gradient(400px 200px at -10% 120%, #c4b5fd33, transparent 60%);
   filter: blur(24px);
   z-index: -1;
@@ -518,7 +407,8 @@ input::-webkit-credentials-auto-fill-button {
 
 .modal__close.close-x:hover {
   transform: scale(1.06);
-  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.08), 0 10px 28px rgba(0, 0, 0, 0.12);
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.08),
+    0 10px 28px rgba(0, 0, 0, 0.12);
   filter: drop-shadow(0 0 0.25rem rgba(158, 173, 255, 0.35));
 }
 
@@ -531,7 +421,7 @@ input::-webkit-credentials-auto-fill-button {
   --x-stroke: 2px;
 }
 
-.modal__close.close-x>span {
+.modal__close.close-x > span {
   width: var(--x-size);
   height: var(--x-size);
   display: block;
@@ -539,8 +429,8 @@ input::-webkit-credentials-auto-fill-button {
   margin: 0 auto;
 }
 
-.modal__close.close-x>span::before,
-.modal__close.close-x>span::after {
+.modal__close.close-x > span::before,
+.modal__close.close-x > span::after {
   content: "";
   position: absolute;
   left: 50%;
@@ -552,11 +442,11 @@ input::-webkit-credentials-auto-fill-button {
   transform-origin: center;
 }
 
-.modal__close.close-x>span::before {
+.modal__close.close-x > span::before {
   transform: translate(-50%, -50%) rotate(45deg);
 }
 
-.modal__close.close-x>span::after {
+.modal__close.close-x > span::after {
   transform: translate(-50%, -50%) rotate(-45deg);
 }
 
@@ -565,12 +455,12 @@ input::-webkit-credentials-auto-fill-button {
     width: 32px;
     height: 32px;
   }
-  .modal__close.close-x>span {
+  .modal__close.close-x > span {
     width: 18px;
     height: 18px;
   }
-  .modal__close.close-x>span::before,
-  .modal__close.close-x>span::after {
+  .modal__close.close-x > span::before,
+  .modal__close.close-x > span::after {
     height: 20px;
   }
 }
