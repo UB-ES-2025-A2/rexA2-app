@@ -144,6 +144,8 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 placeholder="Escribe un comentario..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                rows={3}
+                aria-label="Escribe un comentario"
               />
               <div className="comment-actions-bar">
                 <button
