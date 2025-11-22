@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
 
 type Props = {
   open: boolean;
@@ -81,7 +81,7 @@ const EXAMPLE_COMMENTS = [
 ];
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
-  const [comments] = useState(EXAMPLE_COMMENTS);
+  const [comments, setComments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
 
   const handleSubmitReply = (e: React.FormEvent) => {
@@ -90,6 +90,16 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
 
     // TODO: Enviar comentario al backend
     console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+
+    // Añadir al estado local sin recargar
+    const newComment = {
+      id: String(Date.now()),
+      author: "Tú",
+      avatar: "",
+      timestamp: new Date().toLocaleString(),
+      content: text,
+    };
+    setComments((prev) => [newComment, ...prev]);
     setReplyText('');
   };
 
