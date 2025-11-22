@@ -42,17 +42,14 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadRoute = async () => {
       if (!token || !routeId) {
-        setLoading(false);
         return;
       }
 
       try {
-        setLoading(true);
         const res = await fetchWithAuth(`/routes/${routeId}`);
 
         if (res.ok) {
@@ -60,9 +57,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           setRouteData(data);
         }
       } catch (err) {
+        console.error("Error loading route:", err);
         showAlert("Error al cargar la ruta", "error");
-      } finally {
-        setLoading(false);
       }
     };
 
