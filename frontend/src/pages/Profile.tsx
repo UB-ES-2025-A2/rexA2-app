@@ -308,7 +308,7 @@ export default function Profile() {
       try {
         // Type guard: aquí profile está garantizado que no es null
         if (!profile?.id) return; // Validación extra para satisfacer TypeScript
-        
+
         const profileId: string = profile.id;
         const res = await fetch(
           `${API_BASE}/users/${profileId}/followers?skip=0&limit=50`,
@@ -377,7 +377,7 @@ export default function Profile() {
       try {
         // Type guard: aquí profile está garantizado que no es null
         if (!profile?.id) return; // Validación extra para satisfacer TypeScript
-        
+
         const profileId: string = profile.id;
         const res = await fetch(
           `${API_BASE}/users/${profileId}/following?skip=0&limit=50`,
@@ -544,8 +544,12 @@ export default function Profile() {
   };
 
   const handleDeleteCreatedRoute = async (routeId: string) => {
-    if (!accessToken) { return; }
-    if (!API_BASE) { return; }
+    if (!accessToken) {
+      return;
+    }
+    if (!API_BASE) {
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/routes/${routeId}`, {
         method: "DELETE",
@@ -560,12 +564,9 @@ export default function Profile() {
       setCreatedRoutes((prev) => prev.filter((route) => route.id !== routeId));
       setSelectedCreatedRoute(null);
     } catch (err) {
-      alert(
-        err instanceof Error ? err.message : "Error al eliminar la ruta."
-      );
+      alert(err instanceof Error ? err.message : "Error al eliminar la ruta.");
     }
   };
-      
 
   return (
     <div className="profile-root">
@@ -576,9 +577,7 @@ export default function Profile() {
               aria-label="Ir al inicio"
               onClick={() => navigate("/")}
               className="btn-home"
-            >
-              🏠
-            </button>
+            ></button>
             <div className="header-title">
               <span className="eyebrow"></span>
               <h1>Perfil</h1>
@@ -679,9 +678,7 @@ export default function Profile() {
                   className={`btn ${active === "profile" ? "active" : ""}`}
                   onClick={() => setActive("profile")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    👤
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Perfil</span>
                 </button>
               </li>
@@ -690,9 +687,7 @@ export default function Profile() {
                   className={`btn ${active === "favorites" ? "active" : ""}`}
                   onClick={() => setActive("favorites")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    ⭐
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Favoritas</span>
                 </button>
               </li>
@@ -701,9 +696,7 @@ export default function Profile() {
                   className={`btn ${active === "created" ? "active" : ""}`}
                   onClick={() => setActive("created")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    🛣️
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Mis rutas</span>
                 </button>
               </li>
@@ -714,9 +707,7 @@ export default function Profile() {
                   className={`btn ${active === "followers" ? "active" : ""}`}
                   onClick={() => setActive("followers")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    👥
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Seguidores</span>
                 </button>
               </li>
@@ -726,9 +717,7 @@ export default function Profile() {
                   className={`btn ${active === "following" ? "active" : ""}`}
                   onClick={() => setActive("following")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    ➡️
-                  </span>
+                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Siguiendo</span>
                 </button>
               </li>
