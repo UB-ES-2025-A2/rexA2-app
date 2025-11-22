@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
+import { useAuth } from "../context/AuthContext";
 
 type Props = {
   open: boolean;
@@ -81,6 +82,7 @@ const EXAMPLE_COMMENTS = [
 ];
 
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
+  const { token } = useAuth();
   const [comments] = useState(EXAMPLE_COMMENTS);
   const [replyText, setReplyText] = useState('');
   const [error, setError] = useState<string | null>(null);
