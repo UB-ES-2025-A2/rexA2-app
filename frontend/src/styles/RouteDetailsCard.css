@@ -136,3 +136,25 @@
   fill: #2196f3;
 }
 
+.route-details-card__delete-btn {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
+}
+
+.route-details-card__delete-btn:hover:not(:disabled) {
+  background-color: #cc0000;
+}
+
+.route-details-card__delete-btn:disabled {
+  background-color: #999;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+

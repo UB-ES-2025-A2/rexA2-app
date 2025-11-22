@@ -81,12 +81,13 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     
     is_public = bool(route.get("visibility"))
-    is_owner = route.get("owner_id") == current_user["_id"]
+    is_owner = str(route.get("owner_id")) == str(current_user["_id"])
 
     if not is_public and not is_owner:
         raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
     
     route["_id"] = str(route["_id"])
+    route["is_owner"] = is_owner  # ← NUEVO
     return route
 
 @router.get("/by-name/{name}", response_model=RoutePublic)
@@ -107,7 +108,10 @@ async def delete_route(route_id: str, current_user: dict = Depends(get_current_u
     '''
     Elimina una ruta por su ID si pertenece al usuario autenticado
     '''
-    ok = await route_crud.delete_route(route_id, current_user["_id"])
+    print(f"[DELETE] Route ID: {route_id}")
+    print(f"[DELETE] User ID: {current_user.get('_id')} (type: {type(current_user.get('_id'))})")
+    
+    ok = await route_crud.delete_route(route_id, str(current_user["_id"]))
     if not ok:
         raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
     return None

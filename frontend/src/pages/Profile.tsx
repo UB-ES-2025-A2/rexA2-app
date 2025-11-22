@@ -536,6 +536,30 @@ export default function Profile() {
     });
   };
 
+  const handleDeleteCreatedRoute = async (routeId: string) => {
+    if (!accessToken) { return; }
+    if (!API_BASE) { return; }
+    try {
+      const res = await fetch(`${API_BASE}/routes/${routeId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || "No se pudo eliminar la ruta.");
+      }
+      setCreatedRoutes((prev) => prev.filter((route) => route.id !== routeId));
+      setSelectedCreatedRoute(null);
+    } catch (err) {
+      alert(
+        err instanceof Error ? err.message : "Error al eliminar la ruta."
+      );
+    }
+  };
+      
+
   return (
     <div className="profile-root">
       <header className="header">
@@ -638,6 +662,8 @@ export default function Profile() {
                 (route) => route.id === selectedCreatedRoute.id
               )}
               onSavedChange={handleCreatedSavedChange}
+              onDelete={handleDeleteCreatedRoute}
+              isOwnRoute={true}
             />
           ) : (
             <ul className="menu">
@@ -723,9 +749,6 @@ export default function Profile() {
               followers={followers}
               // Para poder acceder desde el panel
               onGoToFollowers={() => setActive("followers")}
-              // Para los seguidos
-              following={following}
-              onGoToFollowing={() => setActive("followers")}
               onGoToFavorites={() => setActive("favorites")}
               onGoToCreated={() => setActive("created")}
             />
