@@ -99,7 +99,7 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
     }))
   );
   const [replyText, setReplyText] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,10 +110,12 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
       return;
     }
 
+    setSubmitting(true);
     // TODO: Enviar comentario al backend
     console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
     // Vaciar el cuadro de texto tras publicar
     setReplyText('');
+    setSubmitting(false);
   };
 
   // TODO: Implementar like de comentarios
@@ -178,9 +180,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 <button
                   type="submit"
                   className="comment-submit-btn"
-                  disabled={!replyText.trim()}
+                  disabled={!replyText.trim() || submitting}
                 >
-                  Enviar
+                  {submitting ? "Enviando..." : "Enviar"}
                 </button>
               </div>
             </form>
