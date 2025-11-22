@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import '../styles/Comments.css';
+import React, { useState } from "react";
+import "../styles/Comments.css";
 
 type Props = {
   open: boolean;
@@ -89,6 +89,8 @@ const EXAMPLE_COMMENTS: Comment[] = [
   },
 ];
 
+const API = import.meta.env.VITE_API_URL || window.location.origin;
+
 const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
   const [comments] = useState(
     EXAMPLE_COMMENTS.map((c, idx) => ({
@@ -97,13 +99,20 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
     }))
   );
   const [replyText, setReplyText] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmitReply = (e: React.FormEvent) => {
+  const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
+    const text = replyText.trim();
+    if (!text) return;
+    if (!token) {
+      showAlert("Debes iniciar sesión para comentar");
+      return;
+    }
 
     // TODO: Enviar comentario al backend
-    console.log('Nuevo comentario:', replyText, 'Para ruta:', routeId);
+    console.log('Nuevo comentario:', replyText.trim(), 'Para ruta:', routeId);
+    // Vaciar el cuadro de texto tras publicar
     setReplyText('');
   };
 
@@ -162,7 +171,9 @@ const CommentsModal: React.FC<Props> = ({ open, onClose, routeId }) => {
                 placeholder="Escribe un comentario..."
                 value={replyText}
                 onChange={(e) => setReplyText(e.target.value)}
+                aria-label="Escribe un comentario"
               />
+              {error ? <p className="comment-error">{error}</p> : null}
               <div className="comment-actions-bar">
                 <button
                   type="submit"
