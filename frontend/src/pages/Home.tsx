@@ -27,6 +27,13 @@ type RouteItem = {
   points: Array<[number, number]>;
   visibility: boolean;
   is_owner?: boolean;
+  ownerName?: string;
+  ownerUsername?: string;
+  username?: string;
+  email?: string;
+  ownerId?: string | number;
+  userId?: string | number;
+  user?: { id?: string | number; username?: string; name?: string; email?: string };
 };
 
 type SelectedUser = {
@@ -166,10 +173,45 @@ export default function Home() {
         const formatted: RouteItem[] = data.map((route: any) => ({
           id: route.id,
           name: route.name,
-          description: route.description || "Sin descripción",
-          category: route.category || "sin categoría",
+          description: route.description || "Sin descripci?n",
+          category: route.category || "sin categor?a",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,
+          ownerName:
+            route.owner_name ||
+            route.ownerName ||
+            route.user?.name ||
+            route.username ||
+            "",
+          ownerUsername:
+            route.owner_username ||
+            route.ownerUsername ||
+            route.user?.username ||
+            route.username ||
+            "",
+          ownerId:
+            route.owner_id ||
+            route.user_id ||
+            route.user?.id ||
+            route.ownerId ||
+            route.userId ||
+            null,
+          userId: route.user_id || route.userId || route.user?.id || null,
+          email: route.user?.email || route.email,
+          user: route.user
+            ? {
+                username: route.user.username,
+                name: route.user.name,
+                email: route.user.email,
+              }
+            : route.username || route.ownerName || route.ownerUsername
+            ? {
+                username: route.username,
+                name: route.ownerName,
+                email: route.email,
+              }
+            : undefined,
+          username: route.username,
         }));
 
         setRoutes(formatted);
@@ -309,6 +351,7 @@ export default function Home() {
             routes={routes}
             onRouteSelect={handleRouteSelect}
             onApplyFilters={handleApplyFilters}
+            onUserSelect={handleOpenUser}
           />
         )}
 
@@ -484,17 +527,6 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <div className="user-search-container">
-                    <input
-                      type="text"
-                      autoComplete="off"
-                      className="input"
-                      placeholder="Buscar usuario..."
-                      value={userQuery}
-                      onChange={(e) => setUserQuery(e.target.value)}
-                    />
-                  </div>
-
                   {usersLoading ? (
                     <p>Cargando usuarios... </p>
                   ) : users.length === 0 ? (

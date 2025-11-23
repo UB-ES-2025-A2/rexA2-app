@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import "../../styles/RouteSearchBar.css";
 
 interface Route {
@@ -11,24 +11,44 @@ interface Route {
   is_owner?: boolean;
   ownerName?: string;
   ownerUsername?: string;
+  username?: string;
+  email?: string;
+  user?: { username?: string; name?: string; email?: string };
 }
+
+type SearchScope = "routes" | "users";
+
+type FoundUser = {
+  id: string;
+  username: string;
+  name?: string;
+  email?: string;
+  avatar_url?: string | null;
+};
 
 interface RouteSearchBarProps {
   routes: Route[];
   onRouteSelect: (route: Route) => void;
   onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
+  onUserSelect?: (user: FoundUser) => void;
 }
+
+const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   routes,
   onRouteSelect,
   onApplyFilters,
+  onUserSelect,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchScope, setSearchScope] = useState<SearchScope>("routes");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [pointsFilter, setPointsFilter] = useState<string>("all");
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
+  const [users, setUsers] = useState<FoundUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   const categories = useMemo(() => {
     const cats = new Set(routes.map((r) => r.category));
@@ -42,6 +62,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
       const owner =
         route.ownerUsername ||
         route.ownerName ||
+        route.username ||
+        route.user?.username ||
+        route.user?.email ||
         route.description ||
         route.name;
       const matchesSearch =
@@ -65,8 +88,54 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
     });
   }, [routes, searchQuery, selectedCategory, pointsFilter]);
 
+  useEffect(() => {
+    if (!searchQuery.trim() || searchScope !== "users") {
+      setUsers([]);
+      setUsersLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      setUsersLoading(true);
+      try {
+        const res = await fetch(
+          `${API}/users/search?q=${encodeURIComponent(searchQuery.trim())}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error("Error cargando usuarios");
+        const data = await res.json();
+        setUsers(
+          (Array.isArray(data) ? data : []).map((u: any) => ({
+            id: String(u.id),
+            username: u.username,
+            name: u.name,
+            email: u.email,
+            avatar_url: u.avatar_url,
+          }))
+        );
+      } catch (err) {
+        if ((err as any).name === "AbortError") return;
+        setUsers([]);
+      } finally {
+        setUsersLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [searchQuery, searchScope]);
+
   const handleRouteClick = (route: Route) => {
     onRouteSelect(route);
+    setSearchQuery("");
+  };
+
+  const handleUserClick = (user: FoundUser) => {
+    if (!onUserSelect) return;
+    onUserSelect(user);
     setSearchQuery("");
   };
 
@@ -104,6 +173,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const hasActiveFilters =
     selectedCategory !== "all" || pointsFilter !== "all";
 
+  const totalResults =
+    searchScope === "routes" ? filteredRoutes.length : users.length;
+
   return (
     <div className="route-search-bar">
       <div className="search-container">
@@ -115,7 +187,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
             <input
               type="text"
               name="text"
-              placeholder="Buscar ruta o usuario..."
+              placeholder="Buscar rutas y usuarios..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input-field"
@@ -257,26 +329,45 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
               <div className="search-results">
                 <header className="result-header simple">
                   <div className="result-title">
-                    Resultados{" "}
-                    {filteredRoutes.length > 0 &&
-                      `(${filteredRoutes.length})`}
+                    Resultados {totalResults > 0 ? `(${totalResults})` : ""}
                   </div>
                   {hasAppliedFilters && (
                     <span className="result-filters-pill">Filtros activos</span>
                   )}
+                  <div className="scope-toggle" role="group">
+                    {(["routes", "users"] as SearchScope[]).map((scope) => (
+                      <label
+                        key={scope}
+                        className={`scope-pill ${
+                          searchScope === scope ? "active" : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="search-scope"
+                          value={scope}
+                          checked={searchScope === scope}
+                          onChange={() => setSearchScope(scope)}
+                        />
+                        {scope === "routes" ? "Rutas" : "Usuarios"}
+                      </label>
+                    ))}
+                  </div>
                 </header>
 
                 <div className="result-content-header two-cols">
                   <div style={{ "--i": 1 } as React.CSSProperties}>
-                    Ruta
+                    {searchScope === "users" ? "Usuario" : "Ruta"}
                   </div>
                   <div style={{ "--i": 2 } as React.CSSProperties}>
-                    Usuario
+                    {searchScope === "users" ? "Email" : "Usuario"}
                   </div>
                 </div>
 
                 <div className="result-content">
-                  {filteredRoutes.length === 0 ? (
+                  {usersLoading ? (
+                    <div className="no-results">Buscando...</div>
+                  ) : searchScope === "routes" && filteredRoutes.length === 0 ? (
                     <div className="no-results">
                       <svg
                         className="no-results-icon"
@@ -297,23 +388,75 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                           : "No se encontraron rutas"}
                       </p>
                     </div>
-                  ) : (
-                    filteredRoutes.slice(0, 8).map((route, index) => (
-                      <button
-                        key={route.id}
-                        className="result-item"
-                        onClick={() => handleRouteClick(route)}
-                        style={{ "--i": index + 1 } as React.CSSProperties}
+                  ) : searchScope === "users" && users.length === 0 ? (
+                    <div className="no-results">
+                      <svg
+                        className="no-results-icon"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="48"
+                        height="48"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
                       >
-                        <div>{route.name}</div>
-                        <div>
-                          {route.ownerName ||
-                            route.ownerUsername ||
-                            "Usuario desconocido"}
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.35-4.35" />
+                      </svg>
+                      <p>
+                        {"No se encontraron usuarios"}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {(() => {
+                    if (searchScope === "routes") {
+                      return filteredRoutes.length > 0 ? (
+                        filteredRoutes.slice(0, 8).map((route, index) => (
+                          <button
+                            key={`route-${route.id}`}
+                            className="result-item"
+                            onClick={() => handleRouteClick(route)}
+                            style={{ "--i": index + 1 } as React.CSSProperties}
+                          >
+                            <div>{route.name}</div>
+                            <div>
+                              {route.ownerUsername ||
+                                route.ownerName ||
+                                route.username ||
+                                route.user?.username ||
+                                route.user?.name ||
+                                route.user?.email ||
+                                "Usuario desconocido"}
+                            </div>
+                          </button>
+                        ))
+                      ) : usersLoading ? null : (
+                        <div className="no-results">
+                          <p>No hay resultados</p>
                         </div>
-                      </button>
-                    ))
-                  )}
+                      );
+                    }
+
+                    // Usuarios
+                    return users.length > 0 ? (
+                      users.slice(0, 8).map((user, index) => (
+                        <button
+                          key={`user-${user.id}`}
+                          className="result-item"
+                          onClick={() => handleUserClick(user)}
+                          style={{ "--i": index + 1 } as React.CSSProperties}
+                        >
+                          <div>{user.username}</div>
+                          <div>{user.email || user.name || ""}</div>
+                        </button>
+                      ))
+                    ) : usersLoading ? null : (
+                      <div className="no-results">
+                        <p>No hay resultados</p>
+                      </div>
+                    );
+                  })()}
                   <div className="lava" />
                 </div>
               </div>

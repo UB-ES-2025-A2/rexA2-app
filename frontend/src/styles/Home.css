@@ -219,13 +219,6 @@ button {
   transform: translateY(-2px);
 }
 
-.user-search-container {
-  padding: 16px 10px;
-  margin: 0;
-  flex-shrink: 0;
-  border-bottom: 2px solid var(--close-border);
-}
-
 .route-list,
 .user-list {
   flex: 1;
@@ -481,10 +474,6 @@ button {
     height: 26px;
   }
 
-  .user-search-container {
-    padding: 12px 8px;
-  }
-
   .route-list > *,
   .user-list > * {
     padding: 0 8px;
@@ -561,10 +550,6 @@ button {
   .glider {
     width: 50px;
     height: 24px;
-  }
-
-  .user-search-container {
-    padding: 10px 6px;
   }
 
   .route-list > *,
