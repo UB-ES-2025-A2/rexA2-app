@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from bson import ObjectId
+from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
 from ..client import get_db
 
@@ -14,6 +15,13 @@ def _users():
 
 def _oid(_id: str) -> ObjectId:
     return ObjectId(_id)
+
+
+def _safe_oid(_id: str) -> Optional[ObjectId]:
+    try:
+        return ObjectId(_id)
+    except (InvalidId, Exception):
+        return None
 
 async def follow(follower_id: str, followee_id: str) -> Dict[str, Any]:
     if follower_id == followee_id:
@@ -74,12 +82,33 @@ async def is_following(follower_id: str, followee_id: str) -> bool:
     return doc is not None
 
 async def count_followers(user_id: str) -> int:
+    """
+    Devuelve el número de seguidores. Acepta string ObjectId y, en caso de que
+    los datos se hayan almacenado como string, también cuenta esa variante.
+    """
     col = _col()
-    return await col.count_documents({"followee_id": _oid(user_id)})
+    oid = _safe_oid(user_id)
+    filters = []
+    if oid:
+        filters.append({"followee_id": oid})
+    filters.append({"followee_id": user_id})  # por si estuviera como string plano
+
+    if len(filters) == 1:
+        return await col.count_documents(filters[0])
+    return await col.count_documents({"$or": filters})
+
 
 async def count_following(user_id: str) -> int:
     col = _col()
-    return await col.count_documents({"follower_id": _oid(user_id)})
+    oid = _safe_oid(user_id)
+    filters = []
+    if oid:
+        filters.append({"follower_id": oid})
+    filters.append({"follower_id": user_id})
+
+    if len(filters) == 1:
+        return await col.count_documents(filters[0])
+    return await col.count_documents({"$or": filters})
 
 async def list_followers(user_id: str, *, skip: int=0, limit: int=20) -> Dict[str, Any]:
     col = _col()
