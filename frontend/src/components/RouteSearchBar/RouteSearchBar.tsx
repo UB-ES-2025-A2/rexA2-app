@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from "react";
 import "../../styles/RouteSearchBar.css";
-import type { Category } from "../types";
 
 interface Route {
   id: string;
@@ -10,6 +9,8 @@ interface Route {
   points: Array<[number, number]>;
   visibility: boolean;
   is_owner?: boolean;
+  ownerName?: string;
+  ownerUsername?: string;
 }
 
 interface RouteSearchBarProps {
@@ -18,15 +19,12 @@ interface RouteSearchBarProps {
   onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
 }
 
-type FilterTab = "all" | "category" | "points";
-
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   routes,
   onRouteSelect,
   onApplyFilters,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [pointsFilter, setPointsFilter] = useState<string>("all");
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -38,10 +36,18 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   }, [routes]);
 
   const filteredRoutes = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
     return routes.filter((route) => {
+      const owner =
+        route.ownerUsername ||
+        route.ownerName ||
+        route.description ||
+        route.name;
       const matchesSearch =
-        searchQuery === "" ||
-        route.name.toLowerCase().includes(searchQuery.toLowerCase());
+        normalizedQuery === "" ||
+        route.name.toLowerCase().includes(normalizedQuery) ||
+        owner.toLowerCase().includes(normalizedQuery);
 
       const matchesCategory =
         selectedCategory === "all" || route.category === selectedCategory;
@@ -65,15 +71,12 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   };
 
   const handleFilterClick = () => {
-    if (!searchQuery) {
-      setShowFilterModal(!showFilterModal);
-    }
+    setShowFilterModal(!showFilterModal);
   };
 
   const handleApplyFilters = () => {
     setHasAppliedFilters(true);
     setShowFilterModal(false);
-    // Llamar al callback para aplicar filtros a la lista principal
     if (onApplyFilters) {
       onApplyFilters({
         category: selectedCategory,
@@ -85,9 +88,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const handleResetFilters = () => {
     setSelectedCategory("all");
     setPointsFilter("all");
-    setActiveTab("all");
     setHasAppliedFilters(false);
-    // Notificar que se han limpiado los filtros
     if (onApplyFilters) {
       onApplyFilters({
         category: "all",
@@ -114,7 +115,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
             <input
               type="text"
               name="text"
-              placeholder="Buscar ruta..."
+              placeholder="Buscar ruta o usuario..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="search-input-field"
@@ -173,8 +174,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
               {hasActiveFilters && <div className="filter-badge" />}
             </button>
 
-            {/* Modal de filtros globales (sin búsqueda) */}
-            {showFilterModal && !searchQuery && (
+            {showFilterModal && (
               <div
                 className="filter-modal-overlay"
                 onClick={handleCloseModal}
@@ -206,13 +206,13 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   </div>
 
                   <div className="filter-section">
-                    <label className="filter-label">Categoría</label>
+                    <label className="filter-label">Categoria</label>
                     <select
                       value={selectedCategory}
                       onChange={(e) => setSelectedCategory(e.target.value)}
                       className="filter-select-modal"
                     >
-                      <option value="all">Todas las categorías</option>
+                      <option value="all">Todas las categorias</option>
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -222,7 +222,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   </div>
 
                   <div className="filter-section">
-                    <label className="filter-label">Número de puntos</label>
+                    <label className="filter-label">Numero de puntos</label>
                     <select
                       value={pointsFilter}
                       onChange={(e) => setPointsFilter(e.target.value)}
@@ -255,86 +255,23 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
             {searchQuery && (
               <div className="search-results">
-                <header className="result-header">
-                  <div style={{ "--i": 1 } as React.CSSProperties}>
-                    <input
-                      type="radio"
-                      id="all"
-                      name="tab"
-                      checked={activeTab === "all"}
-                      onChange={() => setActiveTab("all")}
-                    />
-                    <label htmlFor="all" data-label="Todas">
-                      <span>Todas</span>
-                    </label>
+                <header className="result-header simple">
+                  <div className="result-title">
+                    Resultados{" "}
+                    {filteredRoutes.length > 0 &&
+                      `(${filteredRoutes.length})`}
                   </div>
-                  <div style={{ "--i": 2 } as React.CSSProperties}>
-                    <input
-                      type="radio"
-                      id="category"
-                      name="tab"
-                      checked={activeTab === "category"}
-                      onChange={() => setActiveTab("category")}
-                    />
-                    <label htmlFor="category" data-label="Categoría">
-                      <span>Categoría</span>
-                    </label>
-                  </div>
-                  <div style={{ "--i": 3 } as React.CSSProperties}>
-                    <input
-                      type="radio"
-                      id="points"
-                      name="tab"
-                      checked={activeTab === "points"}
-                      onChange={() => setActiveTab("points")}
-                    />
-                    <label htmlFor="points" data-label="Puntos">
-                      <span>Puntos</span>
-                    </label>
-                  </div>
+                  {hasAppliedFilters && (
+                    <span className="result-filters-pill">Filtros activos</span>
+                  )}
                 </header>
 
-                {activeTab === "category" && (
-                  <div className="filter-dropdown">
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="filter-select"
-                    >
-                      <option value="all">Todas las categorías</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {activeTab === "points" && (
-                  <div className="filter-dropdown">
-                    <select
-                      value={pointsFilter}
-                      onChange={(e) => setPointsFilter(e.target.value)}
-                      className="filter-select"
-                    >
-                      <option value="all">Todos los puntos</option>
-                      <option value="few">Pocas (1-5 puntos)</option>
-                      <option value="medium">Media (6-15 puntos)</option>
-                      <option value="many">Muchas (+15 puntos)</option>
-                    </select>
-                  </div>
-                )}
-
-                <div className="result-content-header">
+                <div className="result-content-header two-cols">
                   <div style={{ "--i": 1 } as React.CSSProperties}>
-                    Nombre
+                    Ruta
                   </div>
                   <div style={{ "--i": 2 } as React.CSSProperties}>
-                    Categoría
-                  </div>
-                  <div style={{ "--i": 3 } as React.CSSProperties}>
-                    Puntos
+                    Usuario
                   </div>
                 </div>
 
@@ -369,8 +306,11 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         style={{ "--i": index + 1 } as React.CSSProperties}
                       >
                         <div>{route.name}</div>
-                        <div>{route.category}</div>
-                        <div>📍 {route.points.length}</div>
+                        <div>
+                          {route.ownerName ||
+                            route.ownerUsername ||
+                            "Usuario desconocido"}
+                        </div>
                       </button>
                     ))
                   )}

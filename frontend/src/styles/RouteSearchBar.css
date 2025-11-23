@@ -370,6 +370,31 @@
   padding: 8px 6px;
 }
 
+.result-header.simple {
+  justify-content: space-between;
+  padding: 10px 12px;
+}
+
+.result-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.result-filters-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .result-header::before {
   content: "";
   position: absolute;
@@ -393,6 +418,15 @@
   align-items: center;
   justify-content: center;
   position: relative;
+}
+
+.result-header.simple > div {
+  animation: none;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  color: #0f172a;
+  font-size: 12px;
 }
 
 .result-header > div input[type="radio"] {
@@ -549,6 +583,14 @@
 .result-content-header > div {
   flex: 1;
   color: #64748b;
+}
+
+.result-content-header.two-cols {
+  gap: 12px;
+}
+
+.result-content-header.two-cols > div {
+  flex: 1;
 }
 
 .result-content {

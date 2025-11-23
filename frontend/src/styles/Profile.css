@@ -290,15 +290,6 @@ body.profile-body-host {
   font-weight: 700;
 }
 
-.icon {
-  inline-size: 1.1em;
-  height: 1.1em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
 /* =========================================
   CONTENIDO PRINCIPAL
   ========================================= */
