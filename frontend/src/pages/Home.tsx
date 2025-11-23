@@ -11,6 +11,7 @@ import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 import { useAlert } from "../context/AlertContext";
 import CommentsModal from "../components/CommentsModal";
+import RouteSearchBar from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -34,6 +35,11 @@ type SelectedUser = {
   name: string;
   email: string;
   avatar_url?: string | null;
+};
+
+type AppliedFilters = {
+  category: string;
+  pointsFilter: string;
 };
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
@@ -79,6 +85,12 @@ export default function Home() {
 
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
+  // Estados para filtros aplicados
+  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+    category: "all",
+    pointsFilter: "all",
+  });
+
   const openAuth = (m: "login" | "signup" = "login") => {
     setMode(m);
     setAuthOpen(true);
@@ -99,6 +111,34 @@ export default function Home() {
     onResetPoints: () => setDrawPoints([]),
     onClose: handleCloseRouteCard,
   });
+
+  // Función para filtrar rutas según los filtros aplicados y categoría seleccionada
+  const getFilteredRoutes = () => {
+    let filtered = routes;
+
+    // Aplicar filtros de búsqueda global
+    if (appliedFilters.category !== "all") {
+      filtered = filtered.filter((r) => r.category === appliedFilters.category);
+    }
+
+    if (appliedFilters.pointsFilter !== "all") {
+      filtered = filtered.filter((r) => {
+        const pointCount = r.points.length;
+        if (appliedFilters.pointsFilter === "few") return pointCount <= 5;
+        if (appliedFilters.pointsFilter === "medium")
+          return pointCount > 5 && pointCount <= 15;
+        if (appliedFilters.pointsFilter === "many") return pointCount > 15;
+        return true;
+      });
+    }
+
+    // Aplicar filtro de categoría seleccionada en el dropdown (si existe)
+    if (selectedCategory !== "todos") {
+      filtered = filtered.filter((r) => r.category === selectedCategory);
+    }
+
+    return filtered;
+  };
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -249,10 +289,28 @@ export default function Home() {
     });
   };
 
+  const handleRouteSelect = (route: RouteItem) => {
+    setSelectedRoute(route);
+    setSelectedRoutePoints(route.points);
+  };
+
+  const handleApplyFilters = (filters: AppliedFilters) => {
+    setAppliedFilters(filters);
+  };
+
   return (
     <div className="home">
       <header className="home__header">
         <div className="brand">REX</div>
+
+        {/* Buscador de rutas */}
+        {!routeCardOpen && !selectedRoute && !selectedUser && (
+          <RouteSearchBar
+            routes={routes}
+            onRouteSelect={handleRouteSelect}
+            onApplyFilters={handleApplyFilters}
+          />
+        )}
 
         <div className="profile-menu-container">
           <button
@@ -378,72 +436,51 @@ export default function Home() {
 
               {searchMode === "routes" ? (
                 <>
-                  <div className="category-filter">
-                    <label className="category-label">
-                      Filtrar por categoría
-                    </label>
-                    <select
-                      className="category-select"
-                      value={selectedCategory}
-                      onChange={(e) =>
-                        setSelectedCategory(
-                          e.target.value as Category | "todos"
-                        )
-                      }
-                    >
-                      <option value="todos">Todas</option>
-                      {availableCategories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
                   {routes.length === 0 ? (
                     <p>No hay rutas disponibles</p>
-                  ) : (
-                    (() => {
-                      const filteredRoutes = routes.filter(
-                        (r) =>
-                          selectedCategory === "todos" ||
-                          r.category === selectedCategory
-                      );
+                  ) : (() => {
+                    const filteredRoutes = getFilteredRoutes();
 
-                      if (filteredRoutes.length === 0) {
-                        return <p>No hay rutas en esta categoría.</p>;
-                      }
-
-                      const routeItems = filteredRoutes.map((r) => (
-                        <div className="route-row" key={r.id}>
-                          <RoutePreviewCard
-                            id={r.id}
-                            name={r.name}
-                            category={r.category as Category}
-                            points={r.points}
-                            initialSaved={favoriteIds.has(String(r.id))}
-                          />
-                        </div>
-                      ));
-
+                    if (filteredRoutes.length === 0) {
                       return (
-                        <AnimatedList
-                          items={routeItems}
-                          className="routes-animated-list"
-                          itemClassName="routes-animated-item"
-                          showGradients
-                          onItemSelect={(index) =>
-                            requireAuth(() => {
-                              const route = filteredRoutes[index];
-                              if (!route) return;
-                              setSelectedRoute(route);
-                              setSelectedRoutePoints(route.points);
-                            })
-                          }
-                        />
+                        <p>
+                          {appliedFilters.category !== "all" ||
+                          appliedFilters.pointsFilter !== "all"
+                            ? "No hay rutas que coincidan con los filtros."
+                            : "No hay rutas en esta categoría."}
+                        </p>
                       );
-                    })()
-                  )}
+                    }
+
+                    const routeItems = filteredRoutes.map((r) => (
+                      <div className="route-row" key={r.id}>
+                        <RoutePreviewCard
+                          id={r.id}
+                          name={r.name}
+                          category={r.category as Category}
+                          points={r.points}
+                          initialSaved={favoriteIds.has(String(r.id))}
+                        />
+                      </div>
+                    ));
+
+                    return (
+                      <AnimatedList
+                        items={routeItems}
+                        className="routes-animated-list"
+                        itemClassName="routes-animated-item"
+                        showGradients
+                        onItemSelect={(index) =>
+                          requireAuth(() => {
+                            const route = filteredRoutes[index];
+                            if (!route) return;
+                            setSelectedRoute(route);
+                            setSelectedRoutePoints(route.points);
+                          })
+                        }
+                      />
+                    );
+                  })()}
                 </>
               ) : (
                 <>

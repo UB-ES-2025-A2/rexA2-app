@@ -676,7 +676,6 @@ export default function Profile() {
                   className={`btn ${active === "profile" ? "active" : ""}`}
                   onClick={() => setActive("profile")}
                 >
-                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Perfil</span>
                 </button>
               </li>
@@ -685,7 +684,6 @@ export default function Profile() {
                   className={`btn ${active === "favorites" ? "active" : ""}`}
                   onClick={() => setActive("favorites")}
                 >
-                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Favoritas</span>
                 </button>
               </li>
@@ -694,7 +692,6 @@ export default function Profile() {
                   className={`btn ${active === "created" ? "active" : ""}`}
                   onClick={() => setActive("created")}
                 >
-                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Mis rutas</span>
                 </button>
               </li>
@@ -703,7 +700,6 @@ export default function Profile() {
                   className={`btn ${active === "followers" ? "active" : ""}`}
                   onClick={() => setActive("followers")}
                 >
-                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Seguidores</span>
                 </button>
               </li>
@@ -712,7 +708,6 @@ export default function Profile() {
                   className={`btn ${active === "following" ? "active" : ""}`}
                   onClick={() => setActive("following")}
                 >
-                  <span className="icon" aria-hidden="true"></span>
                   <span className="label">Siguiendo</span>
                 </button>
               </li>
