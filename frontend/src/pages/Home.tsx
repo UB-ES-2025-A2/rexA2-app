@@ -177,6 +177,8 @@ export default function Home() {
           category: route.category || "sin categor?a",
           points: route.points.map((p: any) => [p.longitude, p.latitude]),
           visibility: route.visibility ?? false,
+          owner_id: route.owner_id,
+          user_id: route.user_id,
           ownerName:
             route.owner_name ||
             route.ownerName ||
@@ -200,12 +202,14 @@ export default function Home() {
           email: route.user?.email || route.email,
           user: route.user
             ? {
+                id: route.user._id || route.user.id,
                 username: route.user.username,
                 name: route.user.name,
                 email: route.user.email,
               }
             : route.username || route.ownerName || route.ownerUsername
             ? {
+                id: route.user_id || route.owner_id,
                 username: route.username,
                 name: route.ownerName,
                 email: route.email,

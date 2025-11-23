@@ -65,8 +65,21 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
     Lista todas las rutas públicas
     '''
     routes = await route_crud.get_all_routes(public_only)
+
+    # Mapear owner_id -> username/email para que el front muestre el autor
+    owner_ids = {str(r.get("owner_id")) for r in routes if r.get("owner_id")}
+    owner_usernames: dict[str, str | None] = {}
+    for oid in owner_ids:
+        user_doc = await user_crud.get_user_by_id(oid)
+        if user_doc:
+            owner_usernames[oid] = user_doc.get("username") or user_doc.get("email")
+        else:
+            owner_usernames[oid] = None
+
     for route in routes:
         route["_id"] = str(route["_id"])
+        if route.get("owner_id"):
+            route["owner_username"] = owner_usernames.get(str(route["owner_id"]))
     return routes
 
 @router.get("/me", response_model=list[RoutePublic])

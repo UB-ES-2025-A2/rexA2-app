@@ -13,7 +13,11 @@ interface Route {
   ownerUsername?: string;
   username?: string;
   email?: string;
-  user?: { username?: string; name?: string; email?: string };
+  owner_id?: string | number;
+  user_id?: string | number;
+  ownerId?: string | number;
+  userId?: string | number;
+  user?: { id?: string | number; username?: string; name?: string; email?: string };
 }
 
 type SearchScope = "routes" | "users";
@@ -23,6 +27,7 @@ type FoundUser = {
   username: string;
   name?: string;
   email?: string;
+  followers?: number;
   avatar_url?: string | null;
 };
 
@@ -111,6 +116,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
             username: u.username,
             name: u.name,
             email: u.email,
+            followers: u.followers ?? u.followers_count ?? 0,
             avatar_url: u.avatar_url,
           }))
         );
@@ -360,7 +366,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                     {searchScope === "users" ? "Usuario" : "Ruta"}
                   </div>
                   <div style={{ "--i": 2 } as React.CSSProperties}>
-                    {searchScope === "users" ? "Email" : "Usuario"}
+                    {searchScope === "users" ? "Seguidores" : "Usuario"}
                   </div>
                 </div>
 
@@ -411,51 +417,41 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
                   {(() => {
                     if (searchScope === "routes") {
-                      return filteredRoutes.length > 0 ? (
-                        filteredRoutes.slice(0, 8).map((route, index) => (
-                          <button
-                            key={`route-${route.id}`}
-                            className="result-item"
-                            onClick={() => handleRouteClick(route)}
-                            style={{ "--i": index + 1 } as React.CSSProperties}
-                          >
-                            <div>{route.name}</div>
-                            <div>
-                              {route.ownerUsername ||
-                                route.ownerName ||
-                                route.username ||
-                                route.user?.username ||
-                                route.user?.name ||
-                                route.user?.email ||
-                                "Usuario desconocido"}
-                            </div>
-                          </button>
-                        ))
-                      ) : usersLoading ? null : (
-                        <div className="no-results">
-                          <p>No hay resultados</p>
-                        </div>
-                      );
+                      if (filteredRoutes.length === 0) return null;
+                      return filteredRoutes.slice(0, 8).map((route, index) => (
+                        <button
+                          key={`route-${route.id}`}
+                          className="result-item"
+                          onClick={() => handleRouteClick(route)}
+                          style={{ "--i": index + 1 } as React.CSSProperties}
+                        >
+                          <div>{route.name}</div>
+                          <div>
+                            {route.ownerUsername ||
+                              route.ownerName ||
+                              route.username ||
+                              route.user?.username ||
+                              route.user?.name ||
+                              route.user?.email ||
+                              "Usuario desconocido"}
+                          </div>
+                        </button>
+                      ));
                     }
 
                     // Usuarios
-                    return users.length > 0 ? (
-                      users.slice(0, 8).map((user, index) => (
-                        <button
-                          key={`user-${user.id}`}
-                          className="result-item"
-                          onClick={() => handleUserClick(user)}
-                          style={{ "--i": index + 1 } as React.CSSProperties}
-                        >
-                          <div>{user.username}</div>
-                          <div>{user.email || user.name || ""}</div>
-                        </button>
-                      ))
-                    ) : usersLoading ? null : (
-                      <div className="no-results">
-                        <p>No hay resultados</p>
-                      </div>
-                    );
+                    if (users.length === 0) return null;
+                    return users.slice(0, 8).map((user, index) => (
+                      <button
+                        key={`user-${user.id}`}
+                        className="result-item"
+                        onClick={() => handleUserClick(user)}
+                        style={{ "--i": index + 1 } as React.CSSProperties}
+                      >
+                        <div>{user.username}</div>
+                        <div>{user.followers ?? 0}</div>
+                      </button>
+                    ));
                   })()}
                   <div className="lava" />
                 </div>
