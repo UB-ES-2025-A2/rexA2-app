@@ -33,6 +33,9 @@ type RouteItem = {
   email?: string;
   ownerId?: string | number;
   userId?: string | number;
+  city?: string;
+  createdAt?: string;
+  popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
 };
 
@@ -65,16 +68,12 @@ export default function Home() {
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<
     Array<[number, number]>
   >([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">(
-    "todos"
-  );
   const navigate = useNavigate();
   const location = useLocation();
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<string>>(
-    []
-  );
+  const [routesLoading, setRoutesLoading] = useState(false);
+  const [routesError, setRoutesError] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
@@ -85,10 +84,12 @@ export default function Home() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
-  const [userQuery, setUserQuery] = useState("");
+  const [routeSearchQuery, setRouteSearchQuery] = useState("");
+  const [userSearchQuery, setUserSearchQuery] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
 
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
@@ -123,6 +124,8 @@ export default function Home() {
   const getFilteredRoutes = () => {
     let filtered = routes;
 
+    const normalizedSearch = routeSearchQuery.trim().toLowerCase();
+
     // Aplicar filtros de búsqueda global
     if (appliedFilters.category !== "all") {
       filtered = filtered.filter((r) => r.category === appliedFilters.category);
@@ -139,9 +142,32 @@ export default function Home() {
       });
     }
 
-    // Aplicar filtro de categoría seleccionada en el dropdown (si existe)
-    if (selectedCategory !== "todos") {
-      filtered = filtered.filter((r) => r.category === selectedCategory);
+    if (normalizedSearch) {
+      filtered = filtered.filter((r) => {
+        const createdAtText = r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString("es-ES")
+          : "";
+        const searchBucket = [
+          r.name,
+          r.description,
+          r.category,
+          r.ownerName,
+          r.ownerUsername,
+          r.username,
+          r.email,
+          r.user?.username,
+          r.user?.name,
+          r.user?.email,
+          createdAtText,
+          r.popularity != null ? String(r.popularity) : null,
+        ]
+          .filter(Boolean)
+          .map((value) => String(value).toLowerCase());
+
+        return searchBucket.some((value) =>
+          value.includes(normalizedSearch)
+        );
+      });
     }
 
     return filtered;
@@ -149,6 +175,8 @@ export default function Home() {
 
   useEffect(() => {
     const fetchAll = async () => {
+      setRoutesLoading(true);
+      setRoutesError(null);
       try {
         let favSet = new Set<string>();
         if (token) {
@@ -179,6 +207,19 @@ export default function Home() {
           visibility: route.visibility ?? false,
           owner_id: route.owner_id,
           user_id: route.user_id,
+          city:
+            route.city ||
+            route.city_name ||
+            route.cityName ||
+            route.location?.city ||
+            "",
+          createdAt: route.created_at || route.createdAt || route.creation_date,
+          popularity:
+            route.popularity ??
+            route.relevance ??
+            route.popularity_score ??
+            route.popularityScore ??
+            null,
           ownerName:
             route.owner_name ||
             route.ownerName ||
@@ -219,38 +260,46 @@ export default function Home() {
         }));
 
         setRoutes(formatted);
-        setAvailableCategories(
-          Array.from(new Set(formatted.map((r) => r.category)))
-        );
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
+        setRoutesError("No se han podido cargar los resultados");
+        showAlert("No se han podido cargar los resultados", "error");
+        setRoutes([]);
+      } finally {
+        setRoutesLoading(false);
       }
     };
 
     fetchAll();
-  }, [token]);
+  }, [token, showAlert]);
 
   useEffect(() => {
-    if (searchMode !== "users") return;
+    if (searchMode !== "users") {
+      setUsersLoading(false);
+      setUsersError(null);
+      return;
+    }
 
-    const q = userQuery.trim() || "all";
+    const q = userSearchQuery.trim() || "all";
 
     const timeout = setTimeout(async () => {
       setUsersLoading(true);
+      setUsersError(null);
       try {
         const res = await fetch(
           `${API}/users/search?q=${encodeURIComponent(q)}`
         );
         if (!res.ok) throw new Error("Error cargando usuarios");
         const data = await res.json();
-        console.log(data);
         setUsers(data);
       } catch (err) {
         const msg =
           err instanceof Error
             ? err.message
             : "No se han podido cargar los resultados";
+        const friendlyMsg = "No se han podido cargar los resultados";
         showAlert(msg, "error");
+        setUsersError(friendlyMsg);
         setUsers([]);
       } finally {
         setUsersLoading(false);
@@ -258,7 +307,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [searchMode, userQuery, showAlert]);
+  }, [searchMode, userSearchQuery, showAlert]);
 
   const toggleProfileMenu = () => setProfileMenuOpen((v) => !v);
 
@@ -335,14 +384,16 @@ export default function Home() {
     });
   };
 
-  const handleRouteSelect = (route: RouteItem) => {
-    setSelectedRoute(route);
-    setSelectedRoutePoints(route.points);
-  };
-
   const handleApplyFilters = (filters: AppliedFilters) => {
     setAppliedFilters(filters);
   };
+
+  const renderEmptyState = (title: string, subtitle?: string) => (
+    <p className="empty-message">
+      {title}
+      {subtitle ? <span className="empty-subtext">{subtitle}</span> : null}
+    </p>
+  );
 
   return (
     <div className="home">
@@ -353,9 +404,15 @@ export default function Home() {
         {!routeCardOpen && !selectedRoute && !selectedUser && (
           <RouteSearchBar
             routes={routes}
-            onRouteSelect={handleRouteSelect}
+            mode={searchMode}
+            query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
+            onQueryChange={(q) =>
+              searchMode === "routes"
+                ? setRouteSearchQuery(q)
+                : setUserSearchQuery(q)
+            }
             onApplyFilters={handleApplyFilters}
-            onUserSelect={handleOpenUser}
+            isLoading={searchMode === "users" ? usersLoading : routesLoading}
           />
         )}
 
@@ -483,19 +540,29 @@ export default function Home() {
 
               {searchMode === "routes" ? (
                 <>
-                  {routes.length === 0 ? (
-                    <p>No hay rutas disponibles</p>
+                  {routesLoading ? (
+                    renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
+                  ) : routesError ? (
+                    renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
+                  ) : routes.length === 0 ? (
+                    renderEmptyState("No hay rutas disponibles")
                   ) : (() => {
                     const filteredRoutes = getFilteredRoutes();
 
                     if (filteredRoutes.length === 0) {
+                      const hasFilters =
+                        appliedFilters.category !== "all" ||
+                        appliedFilters.pointsFilter !== "all";
+                      const hasSearch = Boolean(routeSearchQuery.trim());
                       return (
-                        <p>
-                          {appliedFilters.category !== "all" ||
-                          appliedFilters.pointsFilter !== "all"
-                            ? "No hay rutas que coincidan con los filtros."
-                            : "No hay rutas en esta categoría."}
-                        </p>
+                        renderEmptyState(
+                          hasFilters || hasSearch
+                            ? "Sin coincidencias"
+                            : "No hay rutas disponibles",
+                          hasFilters || hasSearch
+                            ? "Prueba ajustar la búsqueda o los filtros"
+                            : undefined
+                        )
                       );
                     }
 
@@ -532,13 +599,16 @@ export default function Home() {
               ) : (
                 <>
                   {usersLoading ? (
-                    <p>Cargando usuarios... </p>
+                    renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
+                  ) : usersError ? (
+                    renderEmptyState(usersError, "Inténtalo de nuevo en unos segundos")
                   ) : users.length === 0 ? (
-                    <p>
-                      {userQuery.trim()
-                        ? "Sin coincidencias"
-                        : "No hay usuarios."}
-                    </p>
+                    renderEmptyState(
+                      userSearchQuery.trim() ? "Sin coincidencias" : "No hay usuarios.",
+                      userSearchQuery.trim()
+                        ? "Prueba con otro nombre o email"
+                        : "Todavía no hay usuarios para mostrar"
+                    )
                   ) : (
                     (() => {
                       const userItems = users.map((u) => (
