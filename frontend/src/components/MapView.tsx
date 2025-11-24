@@ -130,10 +130,10 @@ export default function MapView({
           "line-cap": "round",
         },
         paint: {
-          "line-color": "#6366f1",
+          "line-color": "#4f46e5",
           "line-width": 12,
           "line-blur": 8,
-          "line-opacity": 0.4,
+          "line-opacity": 0.6,
         },
         filter: ["==", "$type", "LineString"],
       });
@@ -152,9 +152,9 @@ export default function MapView({
             "interpolate",
             ["linear"],
             ["line-progress"],
-            0, "#6366f1",
-            0.5, "#8b5cf6",
-            1, "#a855f7"
+            0, "#1e40af",    // Azul oscuro intenso
+            0.5, "#4f46e5",  
+            1, "#c026d3"     // Magenta oscuro 
           ],
           "line-width": 5,
         },
@@ -171,7 +171,7 @@ export default function MapView({
           "line-cap": "round",
         },
         paint: {
-          "line-color": "#ffffff",
+          "line-color": "#e879f9",
           "line-width": 3,
           "line-opacity": 0,
         },
@@ -185,9 +185,9 @@ export default function MapView({
         source: "highlight-route",
         paint: {
           "circle-radius": 12,
-          "circle-color": "#6366f1",
+          "circle-color": "#4f46e5",
           "circle-opacity": 0.3,
-          "circle-blur": 0.5,
+          "circle-blur": 0.8,
         },
         filter: ["==", "$type", "Point"],
       });
@@ -201,7 +201,7 @@ export default function MapView({
           "circle-radius": 6,
           "circle-color": "#ffffff",
           "circle-stroke-width": 3,
-          "circle-stroke-color": "#6366f1",
+          "circle-stroke-color": "#4f46e5",
         },
         filter: ["==", "$type", "Point"],
       });
@@ -272,7 +272,7 @@ export default function MapView({
     
       (source as mapboxgl.GeoJSONSource).setData(geojson);
     
-      if (routedPoints.length > 0) {
+      if (routedPoints.length > 0 && map) {
         const bounds = new mapboxgl.LngLatBounds();
         routedPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
         map.fitBounds(bounds, { padding: 60 });

@@ -65,16 +65,12 @@ export default function Home() {
   const [selectedRoutePoints, setSelectedRoutePoints] = useState<
     Array<[number, number]>
   >([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | "todos">(
-    "todos"
-  );
+  
   const navigate = useNavigate();
   const location = useLocation();
 
   const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [availableCategories, setAvailableCategories] = useState<Array<string>>(
-    []
-  );
+  // const [availableCategories, setAvailableCategories] = useState<Array<string>>([]);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
@@ -85,7 +81,7 @@ export default function Home() {
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
-  const [userQuery, setUserQuery] = useState("");
+  const [userQuery, _setUserQuery] = useState("");
 
   const [users, setUsers] = useState<any[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -140,9 +136,10 @@ export default function Home() {
     }
 
     // Aplicar filtro de categoría seleccionada en el dropdown (si existe)
+    /*
     if (selectedCategory !== "todos") {
       filtered = filtered.filter((r) => r.category === selectedCategory);
-    }
+    }*/
 
     return filtered;
   };
@@ -219,9 +216,7 @@ export default function Home() {
         }));
 
         setRoutes(formatted);
-        setAvailableCategories(
-          Array.from(new Set(formatted.map((r) => r.category)))
-        );
+        //setAvailableCategories(Array.from(new Set(formatted.map((r) => r.category))));
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
       }
