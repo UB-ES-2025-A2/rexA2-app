@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
@@ -264,9 +264,9 @@ export default function Home() {
     }
   }, [user, token]);
 
-  const handleMapClick = (lng: number, lat: number) => {
+  const handleMapClick = useCallback((lng: number, lat: number) => {
     setDrawPoints((prev) => [...prev, [lng, lat]]);
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -338,6 +338,18 @@ export default function Home() {
   const handleApplyFilters = (filters: AppliedFilters) => {
     setAppliedFilters(filters);
   };
+  // --- LÓGICA AÑADIDA PARA CONTROLAR QUÉ PUNTOS SE VEN ---
+  let visiblePoints = selectedRoutePoints;
+  
+  if (routeCardOpen) {
+    // Si estamos creando ruta, miramos si es modo buscar o dibujar
+    const { mode: createMode, searchPoints } = routeCtrl.viewProps;
+    if (createMode === "search") {
+      visiblePoints = searchPoints;
+    } else {
+      visiblePoints = drawPoints;
+    }
+  }
 
   return (
     <div className="home">
@@ -582,12 +594,12 @@ export default function Home() {
           ) : (
             <>
               <MapView
-                className="home__map-skeleton"
+                // className="home__map-skeleton"
                 center={mapCenter}
                 zoom={mapZoom}
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
-                highlightPoints={selectedRoutePoints}
+                highlightPoints={visiblePoints}
               />
 
               <button

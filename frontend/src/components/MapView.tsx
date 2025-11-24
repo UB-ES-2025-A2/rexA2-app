@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl, { Map, Marker } from "mapbox-gl";
 import type { Feature, FeatureCollection, Point, LineString } from "geojson";
 
@@ -56,6 +56,17 @@ export default function MapView({
   const markerRefs = useRef<Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Función para forzar resize de manera confiable
+  const forceMapResize = useCallback(() => {
+    if (mapRef.current) {
+      // Múltiples intentos de resize para asegurar sincronización
+      mapRef.current.resize();
+      requestAnimationFrame(() => {
+        mapRef.current?.resize();
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -65,12 +76,19 @@ export default function MapView({
       style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom,
+      // IMPORTANTE: Asegurar que el mapa se renderiza correctamente
+      preserveDrawingBuffer: true,
+      trackResize: true,
     });
 
     mapRef.current = map;
 
     map.on("load", () => {
-      setTimeout(() => map.resize(), 200);
+      // Resize escalonado para asegurar que el mapa está completamente listo
+      setTimeout(() => map.resize(), 50);
+      setTimeout(() => map.resize(), 150);
+      setTimeout(() => map.resize(), 300);
+      setTimeout(() => map.resize(), 500);
 
       const trafficLayers = [
         "traffic-lines-incidents-day",
@@ -93,33 +111,7 @@ export default function MapView({
           features: [],
         } as FeatureCollection,
       });
-      /*
-      map.addLayer({
-        id: "highlight-line",
-        type: "line",
-        source: "highlight-route",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round",
-        },
-        paint: {
-          "line-color": "#3b82f6",
-          "line-width": 4,
-        },
-      });
 
-      map.addLayer({
-        id: "highlight-points",
-        type: "circle",
-        source: "highlight-route",
-        paint: {
-          "circle-radius": 5,
-          "circle-color": "#1d4ed8",
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#fff",
-        },
-        filter: ["==", "$type", "Point"],
-      });*/
       // Capa base de la línea (sombra/glow)
       map.addLayer({
         id: "highlight-line-glow",
@@ -148,13 +140,13 @@ export default function MapView({
           "line-cap": "round",
         },
         paint: {
-          "line-color": [
+          "line-gradient": [
             "interpolate",
             ["linear"],
             ["line-progress"],
-            0, "#1e40af",    // Azul oscuro intenso
+            0, "#1e40af",
             0.5, "#4f46e5",  
-            1, "#c026d3"     // Magenta oscuro 
+            1, "#c026d3"
           ],
           "line-width": 5,
         },
@@ -210,19 +202,47 @@ export default function MapView({
     });
 
     if (allowPickPoint && onPickPoint) {
-      map.on("click", (e) => {
-        onPickPoint(e.lngLat.lng, e.lngLat.lat);
-      });
+      const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
+        // SOLUCIÓN CRÍTICA: Obtener las coordenadas usando el método project/unproject
+        // para asegurar que estamos obteniendo las coordenadas reales del píxel clicado
+        const point = e.point; // Coordenadas de píxel
+        const lngLat = map.unproject(point); // Convertir a coordenadas geográficas
+        
+        console.log("Click event:", {
+          original: { lng: e.lngLat.lng, lat: e.lngLat.lat },
+          unprojected: { lng: lngLat.lng, lat: lngLat.lat },
+          pixel: { x: point.x, y: point.y }
+        });
+        
+        // Usar las coordenadas unprojected que son más precisas
+        onPickPoint(lngLat.lng, lngLat.lat);
+      };
+
+      map.on("click", handleMapClick);
     }
 
+    // ResizeObserver más robusto
     const ro = new ResizeObserver(() => {
-      map.resize();
+      // Debounce el resize para evitar llamadas excesivas
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+      
+      resizeTimeoutRef.current = setTimeout(() => {
+        map.resize();
+      }, 100);
     });
-    ro.observe(containerRef.current);
+    
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
+    }
 
     return () => {
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
       }
       ro.disconnect();
       markerRefs.current.forEach((m) => m.remove());
@@ -230,7 +250,7 @@ export default function MapView({
       mapRef.current = null;
       setMapLoaded(false);
     };
-  }, [allowPickPoint, onPickPoint]);
+  }, [allowPickPoint, onPickPoint, forceMapResize]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -273,21 +293,18 @@ export default function MapView({
       (source as mapboxgl.GeoJSONSource).setData(geojson);
     
       if (routedPoints.length > 0 && map) {
-        const bounds = new mapboxgl.LngLatBounds();
-        routedPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-        map.fitBounds(bounds, { padding: 60 });
         startAnimations(map);
       } else {
-        // Detener animaciones si no hay ruta ← AÑADE ESTO
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current);
           animationFrameRef.current = null;
         }
+      }
     }
-  }
 
     updateRoute();
   }, [highlightPoints, mapLoaded]);
+
   const startAnimations = (map: Map) => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
@@ -298,13 +315,11 @@ export default function MapView({
     const animate = () => {
       phase += 0.01;
 
-      // Animación de pulso en la línea blanca
       const pulseOpacity = Math.abs(Math.sin(phase * 2)) * 0.8;
       if (map.getLayer("highlight-line-pulse")) {
         map.setPaintProperty("highlight-line-pulse", "line-opacity", pulseOpacity);
       }
 
-      // Animación de pulso en los puntos
       const glowRadius = 12 + Math.sin(phase * 3) * 4;
       const glowOpacity = 0.2 + Math.abs(Math.sin(phase * 2)) * 0.3;
       if (map.getLayer("highlight-points-glow")) {
@@ -318,5 +333,53 @@ export default function MapView({
     animate();
   };
 
-  return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
+  // Forzar resize cuando cambian las propiedades críticas
+  useEffect(() => {
+    // Esperar a que termine la animación CSS antes de hacer resize
+    const timer = setTimeout(() => {
+      forceMapResize();
+    }, 350); // Esperar un poco más que la transición CSS (300ms)
+
+    return () => clearTimeout(timer);
+  }, [allowPickPoint, className, forceMapResize]);
+
+  // Forzar resize cuando cambia el número de puntos destacados
+  useEffect(() => {
+    if (mapRef.current && mapLoaded) {
+      // Pequeño delay para asegurar que el DOM se actualizó
+      setTimeout(() => {
+        forceMapResize();
+      }, 100);
+    }
+  }, [highlightPoints.length, mapLoaded, forceMapResize]);
+
+  // Listener adicional para asegurar que el resize se ejecuta después de transiciones
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleTransitionEnd = () => {
+      forceMapResize();
+    };
+
+    container.addEventListener('transitionend', handleTransitionEnd);
+    
+    return () => {
+      container.removeEventListener('transitionend', handleTransitionEnd);
+    };
+  }, [forceMapResize]);
+
+  return (
+    <div 
+      ref={containerRef} 
+      className={className} 
+      style={{ 
+        width: "100%", 
+        height: "100%",
+        position: "relative",
+        // Asegurar que no hay transformaciones que interfieran
+        transform: "none",
+      }} 
+    />
+  );
 }

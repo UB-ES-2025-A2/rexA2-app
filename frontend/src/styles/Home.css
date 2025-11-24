@@ -70,7 +70,7 @@ button {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px var(--ring);
   background-color: var(--panel);
-  transform: translateY(-2px);
+  /*transform: translateY(-2px);*/
 }
 
 .home__content {
@@ -300,27 +300,41 @@ button {
   color: white;
   border-color: var(--primary);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-  transform: scale(1.08);
+  /*transform: scale(1.08);*/
+  filter: brightness(1.1);
 }
 
+/* Contenedor del mapa (El borde exterior) */
 .home__map-skeleton {
   position: relative;
   background: var(--card);
   border-radius: 24px;
   border: 2px solid var(--close-border);
   box-shadow: 0 8px 24px rgba(99, 102, 241, 0.1);
+  /* Flex para controlar al hijo */
+  display: flex; 
+  flex-direction: column;
+  /* Importante para que no se colapse */
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  /* Elimina transformaciones que confunden al ratón */
+  transform: none; 
 }
 
+/* El mapa en sí (El hijo directo) */
 .home__map-skeleton > div {
-  width: 100%;
-  height: 100%;
+  /* ESTO ES LO QUE FALTABA: Obliga al mapa a llenar el hueco */
+  flex: 1; 
+  width: 100% !important;
+  height: 100% !important;
+  
+  /* ESTO ARREGLA LAS COORDENADAS: Crea un contexto de posición nuevo */
+  position: relative !important; 
+  
   border-radius: 24px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .fab {
@@ -345,8 +359,10 @@ button {
 }
 
 .fab:hover {
-  transform: translateY(-4px) scale(1.08);
+  /* CAMBIADO: Reducir transform para evitar interferencias */
+  transform: translateY(-2px);
   box-shadow: 0 12px 32px rgba(99, 102, 241, 0.4);
+  filter: brightness(1.1);
 }
 
 .fab:active {
