@@ -44,6 +44,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
+  const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
     const loadRoute = async () => {
@@ -74,8 +75,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   };
 
   const handleCommentClick = () => {
-    setCommentsOpen(true);
-    onShowComments?.();
+    if (useExternalComments) {
+      onShowComments?.();
+    } else {
+      setCommentsOpen(true);
+    }
   };
 
   const canDelete = isOwnRoute || routeData?.is_owner;
@@ -144,11 +148,13 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         </section>
       </div>
 
-      <CommentsModal
-        open={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-        routeId={routeId}
-      />
+      {!useExternalComments && (
+        <CommentsModal
+          open={commentsOpen}
+          onClose={() => setCommentsOpen(false)}
+          routeId={routeId}
+        />
+      )}
 
       <DeleteRouteModal
         open={deleteModalOpen}

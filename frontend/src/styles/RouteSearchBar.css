@@ -198,6 +198,10 @@
   opacity: 0;
 }
 
+.icon svg.loading.active {
+  opacity: 1;
+}
+
 .icon svg.loading > g {
   transform-origin: center;
   animation: spinner 1s linear infinite;
@@ -208,11 +212,7 @@
   opacity: 1;
 }
 
-.search-input-field:not(:placeholder-shown) ~ .icon svg.loading {
-  opacity: 1;
-}
-
-.search-input-field:not(:placeholder-shown) ~ .icon svg.magnifier {
+.icon svg.magnifier.hidden {
   opacity: 0;
 }
 
