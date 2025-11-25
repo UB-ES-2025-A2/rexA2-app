@@ -665,12 +665,13 @@ export default function Home() {
           ) : (
             <>
               <MapView
-                className="home__map-skeleton"
+                className="home__map-canvas"
                 center={mapCenter}
                 zoom={mapZoom}
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
                 highlightPoints={visiblePoints}
+                fitOnHighlight={!routeCardOpen}
               />
 
               <button

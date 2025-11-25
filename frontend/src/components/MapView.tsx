@@ -14,6 +14,7 @@ type Props = {
   allowPickPoint?: boolean;
   onPickPoint?: (lng: number, lat: number) => void;
   highlightPoints?: Array<[number, number]>;
+  fitOnHighlight?: boolean;
 };
 
 async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
@@ -50,6 +51,7 @@ export default function MapView({
   allowPickPoint = false,
   onPickPoint,
   highlightPoints = [],
+  fitOnHighlight = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -314,7 +316,12 @@ export default function MapView({
     }
 
     updateRoute();
-  }, [highlightPoints, mapLoaded]);
+    if (fitOnHighlight && highlightPoints.length > 0) {
+      const bounds = new mapboxgl.LngLatBounds();
+      highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+      map.fitBounds(bounds, { padding: 60, maxZoom: 14 });
+    }
+  }, [highlightPoints, mapLoaded, fitOnHighlight]);
 
   const startAnimations = (map: Map) => {
     if (animationFrameRef.current) {
