@@ -2,6 +2,7 @@ import pytest
 from pydantic import ValidationError
 from backend.db.schemas.route import Point, RouteCreate, RoutePublic
 from datetime import datetime, timezone
+from backend.db.schemas.route import CommentCreate
 
 # Helper: crea un point válido
 def _p(lat, lng):
@@ -140,3 +141,19 @@ def test_comment_create_requires_content():
         CommentCreate(content="   ")
     ok = CommentCreate(content="Hola", parent_id=None)
     assert ok.content == "Hola"
+
+# ========== US-18: CommentCreate (añadir comentarios) ==========
+
+def test_comment_create_accepts_non_empty_content():
+    payload = {"content": " Hola mundo "}
+    comment = CommentCreate(**payload)
+    # No tiene por qué trimar, solo importa que no rompa
+    assert comment.content == " Hola mundo "
+
+
+def test_comment_create_rejects_empty_content():
+    with pytest.raises(ValidationError):
+        CommentCreate(content="")
+
+    with pytest.raises(ValidationError):
+        CommentCreate(content="   ")
