@@ -467,6 +467,11 @@ async def test_create_route_invalid_rating_returns_422(ac):
     res = await ac.post("/routes", json=payload)
     assert res.status_code == 422
 
+@pytest.mark.anyio
+async def test_delete_route_calls_crud_with_correct_ids(ac, monkeypatch):
+    """
+    El endpoint DELETE /routes/{route_id} debe llamar a route_crud.delete_route
+    con el ID de la ruta y el ID del usuario autenticado.
 
 # ========== US-10: Filtrar rutas (backend: filtro public_only) ==========
 
@@ -527,6 +532,19 @@ async def test_list_routes_public_only_false_returns_all_routes(ac, monkeypatch)
 
     called = {}
 
+    async def fake_delete_route(route_id: str, user_id: str) -> bool:
+        called["route_id"] = route_id
+        called["user_id"] = user_id
+        return True  # simulamos borrado OK
+
+    monkeypatch.setattr(route_crud, "delete_route", fake_delete_route, raising=True)
+
+    # En tests/conftest.py, fake_current_user devuelve _id="user123"
+    res = await ac.delete("/routes/ROUTE123")
+    assert res.status_code == 204
+
+    assert called["route_id"] == "ROUTE123"
+    assert called["user_id"] == "user123"
     async def fake_get_all_routes(public_only: bool = False):
         called["public_only"] = public_only
         return [
