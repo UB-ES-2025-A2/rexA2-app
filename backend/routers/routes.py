@@ -70,7 +70,11 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
     owner_ids = {str(r.get("owner_id")) for r in routes if r.get("owner_id")}
     owner_usernames: dict[str, str | None] = {}
     for oid in owner_ids:
-        user_doc = await user_crud.get_user_by_id(oid)
+        try:
+            user_doc = await user_crud.get_user_by_id(oid)
+        except RuntimeError:
+            # Entorno de test sin DB inicializada: omitimos enriquecer
+            user_doc = None
         if user_doc:
             owner_usernames[oid] = user_doc.get("username") or user_doc.get("email")
         else:

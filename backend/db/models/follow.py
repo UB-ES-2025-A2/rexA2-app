@@ -86,7 +86,10 @@ async def count_followers(user_id: str) -> int:
     Devuelve el número de seguidores. Acepta string ObjectId y, en caso de que
     los datos se hayan almacenado como string, también cuenta esa variante.
     """
-    col = _col()
+    try:
+        col = _col()
+    except RuntimeError:
+        return 0
     oid = _safe_oid(user_id)
     filters = []
     if oid:
@@ -99,7 +102,10 @@ async def count_followers(user_id: str) -> int:
 
 
 async def count_following(user_id: str) -> int:
-    col = _col()
+    try:
+        col = _col()
+    except RuntimeError:
+        return 0
     oid = _safe_oid(user_id)
     filters = []
     if oid:

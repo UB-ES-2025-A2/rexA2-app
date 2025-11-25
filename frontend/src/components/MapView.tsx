@@ -19,18 +19,18 @@ type Props = {
 async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
   if (points.length < 2) return points;
 
-  const coords = points.map(p => `${p[0]},${p[1]}`).join(";");
-  
+  const coords = points.map((p) => `${p[0]},${p[1]}`).join(";");
+
   try {
     const response = await fetch(
       `https://api.mapbox.com/directions/v5/mapbox/walking/${coords}?access_token=${mapboxgl.accessToken}&geometries=geojson&overview=full`
     );
-    
+
     if (!response.ok) {
       console.warn("Directions API error:", response.status);
       return points;
     }
-    
+
     const data = await response.json();
     if (data.routes && data.routes[0]) {
       const coords = data.routes[0].geometry.coordinates;
@@ -39,7 +39,7 @@ async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[nu
   } catch (err) {
     console.warn("Error getting routed path:", err);
   }
-  
+
   return points;
 }
 
@@ -57,10 +57,9 @@ export default function MapView({
   const [mapLoaded, setMapLoaded] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Función para forzar resize de manera confiable
+
   const forceMapResize = useCallback(() => {
     if (mapRef.current) {
-      // Múltiples intentos de resize para asegurar sincronización
       mapRef.current.resize();
       requestAnimationFrame(() => {
         mapRef.current?.resize();
@@ -76,7 +75,6 @@ export default function MapView({
       style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom,
-      // IMPORTANTE: Asegurar que el mapa se renderiza correctamente
       preserveDrawingBuffer: true,
       trackResize: true,
     });
@@ -84,7 +82,6 @@ export default function MapView({
     mapRef.current = map;
 
     map.on("load", () => {
-      // Resize escalonado para asegurar que el mapa está completamente listo
       setTimeout(() => map.resize(), 50);
       setTimeout(() => map.resize(), 150);
       setTimeout(() => map.resize(), 300);
@@ -112,7 +109,6 @@ export default function MapView({
         } as FeatureCollection,
       });
 
-      // Capa base de la línea (sombra/glow)
       map.addLayer({
         id: "highlight-line-glow",
         type: "line",
@@ -130,7 +126,6 @@ export default function MapView({
         filter: ["==", "$type", "LineString"],
       });
 
-      // Línea principal con gradiente
       map.addLayer({
         id: "highlight-line",
         type: "line",
@@ -144,16 +139,18 @@ export default function MapView({
             "interpolate",
             ["linear"],
             ["line-progress"],
-            0, "#1e40af",
-            0.5, "#4f46e5",  
-            1, "#c026d3"
+            0,
+            "#1e40af",
+            0.5,
+            "#4f46e5",
+            1,
+            "#c026d3",
           ],
           "line-width": 5,
         },
         filter: ["==", "$type", "LineString"],
       });
 
-      // Capa animada que viaja por la línea
       map.addLayer({
         id: "highlight-line-pulse",
         type: "line",
@@ -170,7 +167,6 @@ export default function MapView({
         filter: ["==", "$type", "LineString"],
       });
 
-      // Puntos - glow exterior
       map.addLayer({
         id: "highlight-points-glow",
         type: "circle",
@@ -184,7 +180,6 @@ export default function MapView({
         filter: ["==", "$type", "Point"],
       });
 
-      // Puntos principales
       map.addLayer({
         id: "highlight-points",
         type: "circle",
@@ -198,41 +193,37 @@ export default function MapView({
         filter: ["==", "$type", "Point"],
       });
 
+      map.addLayer({
+        id: "highlight-point-labels",
+        type: "symbol",
+        source: "highlight-route",
+        layout: {
+          "text-field": ["get", "order"],
+          "text-size": 12,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, 1.1],
+        },
+        paint: {
+          "text-color": "#1d4ed8",
+          "text-halo-color": "#fff",
+          "text-halo-width": 1.2,
+        },
+        filter: ["==", "$type", "Point"],
+      });
+
       setMapLoaded(true);
     });
 
-    if (allowPickPoint && onPickPoint) {
-      const handleMapClick = (e: mapboxgl.MapMouseEvent) => {
-        // SOLUCIÓN CRÍTICA: Obtener las coordenadas usando el método project/unproject
-        // para asegurar que estamos obteniendo las coordenadas reales del píxel clicado
-        const point = e.point; // Coordenadas de píxel
-        const lngLat = map.unproject(point); // Convertir a coordenadas geográficas
-        
-        console.log("Click event:", {
-          original: { lng: e.lngLat.lng, lat: e.lngLat.lat },
-          unprojected: { lng: lngLat.lng, lat: lngLat.lat },
-          pixel: { x: point.x, y: point.y }
-        });
-        
-        // Usar las coordenadas unprojected que son más precisas
-        onPickPoint(lngLat.lng, lngLat.lat);
-      };
-
-      map.on("click", handleMapClick);
-    }
-
-    // ResizeObserver más robusto
     const ro = new ResizeObserver(() => {
-      // Debounce el resize para evitar llamadas excesivas
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
-      
+
       resizeTimeoutRef.current = setTimeout(() => {
         map.resize();
       }, 100);
     });
-    
+
     if (containerRef.current) {
       ro.observe(containerRef.current);
     }
@@ -250,14 +241,35 @@ export default function MapView({
       mapRef.current = null;
       setMapLoaded(false);
     };
-  }, [allowPickPoint, onPickPoint, forceMapResize]);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !onPickPoint) return;
+
+    const handleClick = (e: mapboxgl.MapMouseEvent) => {
+      if (!allowPickPoint) return;
+      onPickPoint(e.lngLat.lng, e.lngLat.lat);
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [allowPickPoint, onPickPoint, mapLoaded]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
-  
+    map.resize();
+  }, [allowPickPoint, mapLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
     const source = map.getSource("highlight-route");
-  
+
     if (!source || !("setData" in source)) {
       console.warn("El source 'highlight-route' no está disponible");
       return;
@@ -265,40 +277,39 @@ export default function MapView({
 
     async function updateRoute() {
       const routedPoints = await getRoutedPath(highlightPoints);
-      
+
       const geojson: GeoJSON.FeatureCollection = {
         type: "FeatureCollection",
-        features: routedPoints.length > 0
-          ? [
-              {
-                type: "Feature",
-                geometry: {
-                  type: "LineString",
-                  coordinates: routedPoints,
-                },
-                properties: {},
-              } as Feature<LineString>,
-              ...highlightPoints.map<Feature<Point>>((coord) => ({
-                type: "Feature",
-                geometry: {
-                  type: "Point",
-                  coordinates: coord,
-                },
-                properties: {},
-              })),
-            ]
-          : [],
+        features:
+          routedPoints.length > 0
+            ? [
+                {
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: routedPoints,
+                  },
+                  properties: {},
+                } as Feature<LineString>,
+                ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: coord,
+                  },
+                  properties: { order: idx + 1 },
+                })),
+              ]
+            : [],
       };
-    
+
       (source as mapboxgl.GeoJSONSource).setData(geojson);
-    
+
       if (routedPoints.length > 0 && map) {
         startAnimations(map);
-      } else {
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current);
-          animationFrameRef.current = null;
-        }
+      } else if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
     }
 
@@ -333,27 +344,22 @@ export default function MapView({
     animate();
   };
 
-  // Forzar resize cuando cambian las propiedades críticas
   useEffect(() => {
-    // Esperar a que termine la animación CSS antes de hacer resize
     const timer = setTimeout(() => {
       forceMapResize();
-    }, 350); // Esperar un poco más que la transición CSS (300ms)
+    }, 350);
 
     return () => clearTimeout(timer);
   }, [allowPickPoint, className, forceMapResize]);
 
-  // Forzar resize cuando cambia el número de puntos destacados
   useEffect(() => {
     if (mapRef.current && mapLoaded) {
-      // Pequeño delay para asegurar que el DOM se actualizó
       setTimeout(() => {
         forceMapResize();
       }, 100);
     }
   }, [highlightPoints.length, mapLoaded, forceMapResize]);
 
-  // Listener adicional para asegurar que el resize se ejecuta después de transiciones
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -362,24 +368,23 @@ export default function MapView({
       forceMapResize();
     };
 
-    container.addEventListener('transitionend', handleTransitionEnd);
-    
+    container.addEventListener("transitionend", handleTransitionEnd);
+
     return () => {
-      container.removeEventListener('transitionend', handleTransitionEnd);
+      container.removeEventListener("transitionend", handleTransitionEnd);
     };
   }, [forceMapResize]);
 
   return (
-    <div 
-      ref={containerRef} 
-      className={className} 
-      style={{ 
-        width: "100%", 
+    <div
+      ref={containerRef}
+      className={className ? `map-view ${className}` : "map-view"}
+      style={{
+        width: "100%",
         height: "100%",
         position: "relative",
-        // Asegurar que no hay transformaciones que interfieran
         transform: "none",
-      }} 
+      }}
     />
   );
 }

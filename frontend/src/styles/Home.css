@@ -102,8 +102,12 @@ button {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: hidden;
+}
+
+.home__left-skeleton .route-card-panel {
+  height: 100%;
 }
 
 .comments-full {
@@ -256,6 +260,22 @@ button {
   color: var(--muted);
   flex-shrink: 0;
   font-weight: 600;
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+  margin: 18px 10px 10px;
+  line-height: 1.4;
+}
+
+.empty-subtext {
+  display: block;
+  font-weight: 600;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 .home__header {

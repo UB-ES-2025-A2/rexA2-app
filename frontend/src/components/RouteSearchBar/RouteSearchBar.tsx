@@ -22,135 +22,37 @@ interface Route {
 
 type SearchScope = "routes" | "users";
 
-type FoundUser = {
-  id: string;
-  username: string;
-  name?: string;
-  email?: string;
-  followers?: number;
-  avatar_url?: string | null;
-};
-
 interface RouteSearchBarProps {
   routes: Route[];
-  onRouteSelect: (route: Route) => void;
+  mode: SearchScope;
+  query: string;
+  onQueryChange: (query: string) => void;
   onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
-  onUserSelect?: (user: FoundUser) => void;
+  isLoading?: boolean;
 }
-
-const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   routes,
-  onRouteSelect,
+  mode,
+  query,
+  onQueryChange,
   onApplyFilters,
-  onUserSelect,
+  isLoading = false,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchScope, setSearchScope] = useState<SearchScope>("routes");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [pointsFilter, setPointsFilter] = useState<string>("all");
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
-  const [users, setUsers] = useState<FoundUser[]>([]);
-  const [usersLoading, setUsersLoading] = useState(false);
 
   const categories = useMemo(() => {
     const cats = new Set(routes.map((r) => r.category));
     return Array.from(cats).sort();
   }, [routes]);
 
-  const filteredRoutes = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-
-    return routes.filter((route) => {
-      const owner =
-        route.ownerUsername ||
-        route.ownerName ||
-        route.username ||
-        route.user?.username ||
-        route.user?.email ||
-        route.description ||
-        route.name;
-      const matchesSearch =
-        normalizedQuery === "" ||
-        route.name.toLowerCase().includes(normalizedQuery) ||
-        owner.toLowerCase().includes(normalizedQuery);
-
-      const matchesCategory =
-        selectedCategory === "all" || route.category === selectedCategory;
-
-      const pointCount = route.points.length;
-      let matchesPoints = true;
-      if (pointsFilter !== "all") {
-        if (pointsFilter === "few") matchesPoints = pointCount <= 5;
-        if (pointsFilter === "medium")
-          matchesPoints = pointCount > 5 && pointCount <= 15;
-        if (pointsFilter === "many") matchesPoints = pointCount > 15;
-      }
-
-      return matchesSearch && matchesCategory && matchesPoints;
-    });
-  }, [routes, searchQuery, selectedCategory, pointsFilter]);
-
-  useEffect(() => {
-    if (!searchQuery.trim() || searchScope !== "users") {
-      setUsers([]);
-      setUsersLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeout = setTimeout(async () => {
-      setUsersLoading(true);
-      try {
-        const res = await fetch(
-          `${API}/users/search?q=${encodeURIComponent(searchQuery.trim())}`,
-          { signal: controller.signal }
-        );
-        if (!res.ok) throw new Error("Error cargando usuarios");
-        const data = await res.json();
-        setUsers(
-          (Array.isArray(data) ? data : []).map((u: any) => ({
-            id: String(u.id),
-            username: u.username,
-            name: u.name,
-            email: u.email,
-            followers: u.followers ?? u.followers_count ?? 0,
-            avatar_url: u.avatar_url,
-          }))
-        );
-      } catch (err) {
-        if ((err as any).name === "AbortError") return;
-        setUsers([]);
-      } finally {
-        setUsersLoading(false);
-      }
-    }, 250);
-
-    return () => {
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [searchQuery, searchScope]);
-
-  const handleRouteClick = (route: Route) => {
-    onRouteSelect(route);
-    setSearchQuery("");
-  };
-
-  const handleUserClick = (user: FoundUser) => {
-    if (!onUserSelect) return;
-    onUserSelect(user);
-    setSearchQuery("");
-  };
-
   const handleFilterClick = () => {
     setShowFilterModal(!showFilterModal);
   };
 
   const handleApplyFilters = () => {
-    setHasAppliedFilters(true);
     setShowFilterModal(false);
     if (onApplyFilters) {
       onApplyFilters({
@@ -163,7 +65,6 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const handleResetFilters = () => {
     setSelectedCategory("all");
     setPointsFilter("all");
-    setHasAppliedFilters(false);
     if (onApplyFilters) {
       onApplyFilters({
         category: "all",
@@ -179,8 +80,16 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const hasActiveFilters =
     selectedCategory !== "all" || pointsFilter !== "all";
 
-  const totalResults =
-    searchScope === "routes" ? filteredRoutes.length : users.length;
+  useEffect(() => {
+    if (mode !== "routes") {
+      setShowFilterModal(false);
+    }
+  }, [mode]);
+
+  const placeholder =
+    mode === "users"
+      ? "Buscar usuarios por nombre, username o email..."
+      : "Buscar rutas por nombre, creador o descripción...";
 
   return (
     <div className="route-search-bar">
@@ -193,9 +102,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
             <input
               type="text"
               name="text"
-              placeholder="Buscar rutas y usuarios..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={placeholder}
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
               className="search-input-field"
             />
             <div className="reflection" />
@@ -206,7 +115,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                 height="1em"
                 width="1em"
                 xmlns="http://www.w3.org/2000/svg"
-                className="loading"
+                className={`loading ${isLoading ? "active" : ""}`}
               >
                 <g fillRule="evenodd" fill="none">
                   <g strokeWidth={3} transform="translate(1 1)">
@@ -222,37 +131,39 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                 height="1em"
                 fill="currentColor"
                 xmlns="http://www.w3.org/2000/svg"
-                className="magnifier"
+                className={`magnifier ${isLoading ? "hidden" : ""}`}
               >
                 <path d="M484.1,454.796l-110.5-110.6c29.8-36.3,47.6-82.8,47.6-133.4c0-116.3-94.3-210.6-210.6-210.6S0,94.496,0,210.796   s94.3,210.6,210.6,210.6c50.8,0,97.4-18,133.8-48l110.5,110.5c12.9,11.8,25,4.2,29.2,0C492.5,475.596,492.5,463.096,484.1,454.796z    M41.1,210.796c0-93.6,75.9-169.5,169.5-169.5s169.6,75.9,169.6,169.5s-75.9,169.5-169.5,169.5S41.1,304.396,41.1,210.796z" />
               </svg>
             </div>
-            <button
-              className={`filter ${hasActiveFilters ? "active" : ""}`}
-              title="Filtros"
-              onClick={handleFilterClick}
-            >
-              <span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="1em"
-                  height="1em"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-              {hasActiveFilters && <div className="filter-badge" />}
-            </button>
+            {mode === "routes" && (
+              <button
+                className={`filter ${hasActiveFilters ? "active" : ""}`}
+                title="Filtros"
+                onClick={handleFilterClick}
+              >
+                <span>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="1em"
+                    height="1em"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <path
+                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                      strokeLinejoin="round"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                {hasActiveFilters && <div className="filter-badge" />}
+              </button>
+            )}
 
-            {showFilterModal && (
+            {showFilterModal && mode === "routes" && (
               <div
                 className="filter-modal-overlay"
                 onClick={handleCloseModal}
@@ -331,132 +242,6 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
               </div>
             )}
 
-            {searchQuery && (
-              <div className="search-results">
-                <header className="result-header simple">
-                  <div className="result-title">
-                    Resultados {totalResults > 0 ? `(${totalResults})` : ""}
-                  </div>
-                  {hasAppliedFilters && (
-                    <span className="result-filters-pill">Filtros activos</span>
-                  )}
-                  <div className="scope-toggle" role="group">
-                    {(["routes", "users"] as SearchScope[]).map((scope) => (
-                      <label
-                        key={scope}
-                        className={`scope-pill ${
-                          searchScope === scope ? "active" : ""
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name="search-scope"
-                          value={scope}
-                          checked={searchScope === scope}
-                          onChange={() => setSearchScope(scope)}
-                        />
-                        {scope === "routes" ? "Rutas" : "Usuarios"}
-                      </label>
-                    ))}
-                  </div>
-                </header>
-
-                <div className="result-content-header two-cols">
-                  <div style={{ "--i": 1 } as React.CSSProperties}>
-                    {searchScope === "users" ? "Usuario" : "Ruta"}
-                  </div>
-                  <div style={{ "--i": 2 } as React.CSSProperties}>
-                    {searchScope === "users" ? "Seguidores" : "Usuario"}
-                  </div>
-                </div>
-
-                <div className="result-content">
-                  {usersLoading ? (
-                    <div className="no-results">Buscando...</div>
-                  ) : searchScope === "routes" && filteredRoutes.length === 0 ? (
-                    <div className="no-results">
-                      <svg
-                        className="no-results-icon"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="48"
-                        height="48"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                      </svg>
-                      <p>
-                        {hasAppliedFilters
-                          ? "No hay rutas que coincidan con los filtros"
-                          : "No se encontraron rutas"}
-                      </p>
-                    </div>
-                  ) : searchScope === "users" && users.length === 0 ? (
-                    <div className="no-results">
-                      <svg
-                        className="no-results-icon"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="48"
-                        height="48"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                      </svg>
-                      <p>
-                        {"No se encontraron usuarios"}
-                      </p>
-                    </div>
-                  ) : null}
-
-                  {(() => {
-                    if (searchScope === "routes") {
-                      if (filteredRoutes.length === 0) return null;
-                      return filteredRoutes.slice(0, 8).map((route, index) => (
-                        <button
-                          key={`route-${route.id}`}
-                          className="result-item"
-                          onClick={() => handleRouteClick(route)}
-                          style={{ "--i": index + 1 } as React.CSSProperties}
-                        >
-                          <div>{route.name}</div>
-                          <div>
-                            {route.ownerUsername ||
-                              route.ownerName ||
-                              route.username ||
-                              route.user?.username ||
-                              route.user?.name ||
-                              route.user?.email ||
-                              "Usuario desconocido"}
-                          </div>
-                        </button>
-                      ));
-                    }
-
-                    // Usuarios
-                    if (users.length === 0) return null;
-                    return users.slice(0, 8).map((user, index) => (
-                      <button
-                        key={`user-${user.id}`}
-                        className="result-item"
-                        onClick={() => handleUserClick(user)}
-                        style={{ "--i": index + 1 } as React.CSSProperties}
-                      >
-                        <div>{user.username}</div>
-                        <div>{user.followers ?? 0}</div>
-                      </button>
-                    ));
-                  })()}
-                  <div className="lava" />
-                </div>
-              </div>
-            )}
           </div>
           <div className="glow-outline" />
           <div className="glow-layer-bg" />
