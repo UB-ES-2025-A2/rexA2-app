@@ -466,3 +466,103 @@ async def test_create_route_invalid_rating_returns_422(ac):
 
     res = await ac.post("/routes", json=payload)
     assert res.status_code == 422
+
+
+# ========== US-10: Filtrar rutas (backend: filtro public_only) ==========
+
+import pytest
+from datetime import datetime, timezone
+
+
+@pytest.mark.anyio
+async def test_list_routes_default_public_only_true_calls_crud_with_true(ac, monkeypatch):
+    """
+    /routes sin parámetros -> debe llamar a get_all_routes(public_only=True)
+    y devolver la lista de rutas públicas.
+    """
+    from backend.db.models import route as route_crud
+
+    called = {}
+
+    async def fake_get_all_routes(public_only: bool = False):
+        called["public_only"] = public_only
+        return [
+            {
+                "_id": "1",
+                "owner_id": "u1",
+                "name": "Ruta pública 1",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": True,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 30,
+                "rating": 4.0,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            }
+        ]
+
+    monkeypatch.setattr(route_crud, "get_all_routes", fake_get_all_routes, raising=True)
+
+    res = await ac.get("/routes")
+    assert res.status_code == 200
+    assert called["public_only"] is True
+
+    body = res.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    # El response_model RoutePublic mapea "_id" -> "id"
+    assert body[0]["id"] == "1"
+    assert body[0]["name"] == "Ruta pública 1"
+    assert body[0]["visibility"] is True
+
+
+@pytest.mark.anyio
+async def test_list_routes_public_only_false_returns_all_routes(ac, monkeypatch):
+    """
+    /routes?public_only=false -> debe llamar a get_all_routes(public_only=False)
+    y devolver tanto públicas como privadas.
+    """
+    from backend.db.models import route as route_crud
+
+    called = {}
+
+    async def fake_get_all_routes(public_only: bool = False):
+        called["public_only"] = public_only
+        return [
+            {
+                "_id": "1",
+                "owner_id": "u1",
+                "name": "Pública",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": True,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 30,
+                "rating": 4.0,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            },
+            {
+                "_id": "2",
+                "owner_id": "u1",
+                "name": "Privada",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": False,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 45,
+                "rating": 3.5,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            },
+        ]
+
+    monkeypatch.setattr(route_crud, "get_all_routes", fake_get_all_routes, raising=True)
+
+    res = await ac.get("/routes?public_only=false")
+    assert res.status_code == 200
+    assert called["public_only"] is False
+
+    body = res.json()
+    assert {r["name"] for r in body} == {"Pública", "Privada"}
