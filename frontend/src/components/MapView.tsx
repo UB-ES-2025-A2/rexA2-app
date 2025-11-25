@@ -93,14 +93,26 @@ export default function MapView({
         filter: ["==", "$type", "Point"],
       });
 
+      map.addLayer({
+        id: "highlight-point-labels",
+        type: "symbol",
+        source: "highlight-route",
+        layout: {
+          "text-field": ["get", "order"],
+          "text-size": 12,
+          "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+          "text-offset": [0, 1.1],
+        },
+        paint: {
+          "text-color": "#1d4ed8",
+          "text-halo-color": "#fff",
+          "text-halo-width": 1.2,
+        },
+        filter: ["==", "$type", "Point"],
+      });
+
       setMapLoaded(true);
     });
-
-    if (allowPickPoint && onPickPoint) {
-      map.on("click", (e) => {
-        onPickPoint(e.lngLat.lng, e.lngLat.lat);
-      });
-    }
 
     const ro = new ResizeObserver(() => {
       map.resize();
@@ -114,7 +126,28 @@ export default function MapView({
       mapRef.current = null;
       setMapLoaded(false);
     };
-  }, [allowPickPoint, onPickPoint]);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded || !onPickPoint) return;
+
+    const handleClick = (e: mapboxgl.MapMouseEvent) => {
+      if (!allowPickPoint) return;
+      onPickPoint(e.lngLat.lng, e.lngLat.lat);
+    };
+
+    map.on("click", handleClick);
+    return () => {
+      map.off("click", handleClick);
+    };
+  }, [allowPickPoint, onPickPoint, mapLoaded]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+    map.resize();
+  }, [allowPickPoint, mapLoaded]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -139,13 +172,13 @@ export default function MapView({
               },
               properties: {},
             } as Feature<LineString>,
-            ...highlightPoints.map<Feature<Point>>((coord) => ({
+            ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
               type: "Feature",
               geometry: {
                 type: "Point",
                 coordinates: coord,
               },
-              properties: {},
+              properties: { order: idx + 1 },
             })),
           ]
         : [],
@@ -153,14 +186,13 @@ export default function MapView({
   
     (source as mapboxgl.GeoJSONSource).setData(geojson);
   
-    if (highlightPoints.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-      map.fitBounds(bounds, { padding: 60 });
-    }
   }, [highlightPoints, mapLoaded]);
   
 
 
-  return <div ref={containerRef} className={className} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div className={`map-view ${className ?? ""}`}>
+      <div ref={containerRef} className="map-view__canvas" />
+    </div>
+  );
 }
