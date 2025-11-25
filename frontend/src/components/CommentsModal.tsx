@@ -66,7 +66,27 @@ const CommentsModal: React.FC<Props> = ({
         }
 
         const data = (await res.json()) as CommentThread[];
-        if (!cancelled) setComments(data);
+        if (!cancelled) {
+          // Ordenar comentarios por fecha descendente (más nuevo primero)
+          const sortedData = data.sort((a, b) => {
+            const dateA = new Date(a.created_at).getTime();
+            const dateB = new Date(b.created_at).getTime();
+            return dateB - dateA; // Descendente: más reciente primero
+          });
+          
+          // También ordenar las respuestas dentro de cada comentario
+          sortedData.forEach(comment => {
+            if (comment.replies && comment.replies.length > 0) {
+              comment.replies.sort((a, b) => {
+                const dateA = new Date(a.created_at).getTime();
+                const dateB = new Date(b.created_at).getTime();
+                return dateB - dateA;
+              });
+            }
+          });
+          
+          setComments(sortedData);
+        }
       } catch (err) {
         if (cancelled) return;
         showAlert(err instanceof Error ? err.message : "Error desconocido");
