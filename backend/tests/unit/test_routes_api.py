@@ -472,7 +472,7 @@ async def test_delete_route_calls_crud_with_correct_ids(ac, monkeypatch):
     """
     El endpoint DELETE /routes/{route_id} debe llamar a route_crud.delete_route
     con el ID de la ruta y el ID del usuario autenticado.
-
+"""
 # ========== US-10: Filtrar rutas (backend: filtro public_only) ==========
 
 import pytest
