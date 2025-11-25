@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
@@ -80,6 +80,7 @@ export default function Home() {
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
+  const userInitialCenterRef = useRef<[number, number] | null>(null);
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
@@ -319,9 +320,9 @@ export default function Home() {
     }
   }, [user, token]);
 
-  const handleMapClick = (lng: number, lat: number) => {
+  const handleMapClick = useCallback((lng: number, lat: number) => {
     setDrawPoints((prev) => [...prev, [lng, lat]]);
-  };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,11 +332,14 @@ export default function Home() {
       (pos) => {
         if (cancelled) return;
         const { latitude, longitude } = pos.coords;
-        setMapCenter([longitude, latitude]);
+        const center: [number, number] = [longitude, latitude];
+        userInitialCenterRef.current = center;
+        setMapCenter(center);
         setMapZoom(GEO_ZOOM);
       },
       () => {
         if (cancelled) return;
+        userInitialCenterRef.current = null;
         setMapCenter(DEFAULT_CENTER);
         setMapZoom(DEFAULT_ZOOM);
       },
@@ -388,6 +392,13 @@ export default function Home() {
   const handleApplyFilters = (filters: AppliedFilters) => {
     setAppliedFilters(filters);
   };
+
+  // Controlar qué puntos se ven en el mapa según el modo actual
+  let visiblePoints = selectedRoutePoints;
+  if (routeCardOpen) {
+    const { mode: createMode, searchPoints } = routeCtrl.viewProps;
+    visiblePoints = createMode === "search" ? searchPoints : drawPoints;
+  }
 
   const renderEmptyState = (title: string, subtitle?: string) => (
     <p className="empty-message">
@@ -485,6 +496,13 @@ export default function Home() {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);
                 setShowComments(false);
+                if (userInitialCenterRef.current) {
+                  setMapCenter(userInitialCenterRef.current);
+                  setMapZoom(GEO_ZOOM);
+                } else {
+                  setMapCenter(DEFAULT_CENTER);
+                  setMapZoom(DEFAULT_ZOOM);
+                }
               }}
               onShowComments={() => setShowComments(true)}
               onDelete={async (routeId) => {
@@ -658,12 +676,13 @@ export default function Home() {
           ) : (
             <>
               <MapView
-                className="home__map-skeleton"
+                className="home__map-canvas"
                 center={mapCenter}
                 zoom={mapZoom}
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
-                highlightPoints={routeCardOpen ? drawPoints : selectedRoutePoints}
+                highlightPoints={visiblePoints}
+                fitOnHighlight={!routeCardOpen}
               />
 
               <button

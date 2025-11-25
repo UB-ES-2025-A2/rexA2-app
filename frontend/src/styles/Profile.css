@@ -221,10 +221,10 @@ body.profile-body-host {
 .profile-layout {
   flex: 1;
   display: grid;
-  grid-template-columns: clamp(220px, 22vw, 320px) minmax(0, 1fr);
-  gap: var(--gap);
+  grid-template-columns: clamp(220px, 20vw, 300px) minmax(0, 1fr);
+  gap: clamp(16px, 2vw, 28px);
   width: 100%;
-  padding: clamp(18px, 3vw, 48px);
+  padding: clamp(18px, 3vw, 52px);
   box-sizing: border-box;
   min-height: 0;
   height: calc(100dvh - var(--header-h));
@@ -247,6 +247,15 @@ body.profile-body-host {
   overflow-y: auto;
   overflow-x: hidden;
   box-shadow: var(--shadow-md);
+}
+
+.sidebar .route-details-card {
+  flex: 1;
+  min-height: 0;
+}
+
+.sidebar .route-details-card .route-details-card__body {
+  overflow-y: auto;
 }
 
 .menu {
@@ -315,7 +324,7 @@ body.profile-body-host {
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: var(--radius);
-  padding: clamp(14px, 2vw, 28px);
+  padding: clamp(16px, 2.4vw, 30px);
   display: flex;
   flex-direction: column;
   gap: var(--gap);
@@ -516,6 +525,34 @@ body.profile-body-host {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: var(--gap);
   align-items: start;
+}
+
+/* Panel de rutas (favoritas/creadas) en modo detalle */
+.favorites-panel {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 1vw, 18px);
+  max-height: calc(100vh - var(--header-h) - 70px);
+  overflow: hidden;
+}
+
+.favorites-panel__header {
+  align-items: center;
+}
+
+.favorites-map-shell {
+  flex: 1;
+  min-height: 320px;
+  max-height: 65vh;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.favorites-map {
+  flex: 1;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .avatar-block {

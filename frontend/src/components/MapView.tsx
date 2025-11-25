@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl, { Map, Marker } from "mapbox-gl";
 import type { Feature, FeatureCollection, Point, LineString } from "geojson";
 
@@ -14,7 +14,35 @@ type Props = {
   allowPickPoint?: boolean;
   onPickPoint?: (lng: number, lat: number) => void;
   highlightPoints?: Array<[number, number]>;
+  fitOnHighlight?: boolean;
 };
+
+async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
+  if (points.length < 2) return points;
+
+  const coords = points.map((p) => `${p[0]},${p[1]}`).join(";");
+
+  try {
+    const response = await fetch(
+      `https://api.mapbox.com/directions/v5/mapbox/walking/${coords}?access_token=${mapboxgl.accessToken}&geometries=geojson&overview=full`
+    );
+
+    if (!response.ok) {
+      console.warn("Directions API error:", response.status);
+      return points;
+    }
+
+    const data = await response.json();
+    if (data.routes && data.routes[0]) {
+      const coords = data.routes[0].geometry.coordinates;
+      return coords as Array<[number, number]>;
+    }
+  } catch (err) {
+    console.warn("Error getting routed path:", err);
+  }
+
+  return points;
+}
 
 export default function MapView({
   className,
@@ -23,11 +51,25 @@ export default function MapView({
   allowPickPoint = false,
   onPickPoint,
   highlightPoints = [],
+  fitOnHighlight = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const animationFrameRef = useRef<number | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevViewportRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const lastSyncedPropsRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+
+  const forceMapResize = useCallback(() => {
+    if (mapRef.current) {
+      mapRef.current.resize();
+      requestAnimationFrame(() => {
+        mapRef.current?.resize();
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -37,13 +79,17 @@ export default function MapView({
       style: "mapbox://styles/mapbox/streets-v12",
       center,
       zoom,
+      preserveDrawingBuffer: true,
+      trackResize: true,
     });
 
     mapRef.current = map;
 
     map.on("load", () => {
-      setTimeout(() => map.resize(), 200);
-
+      setTimeout(() => map.resize(), 50);
+      setTimeout(() => map.resize(), 150);
+      setTimeout(() => map.resize(), 300);
+      setTimeout(() => map.resize(), 500);
 
       const trafficLayers = [
         "traffic-lines-incidents-day",
@@ -60,10 +106,28 @@ export default function MapView({
 
       map.addSource("highlight-route", {
         type: "geojson",
+        lineMetrics: true,
         data: {
           type: "FeatureCollection",
           features: [],
         } as FeatureCollection,
+      });
+
+      map.addLayer({
+        id: "highlight-line-glow",
+        type: "line",
+        source: "highlight-route",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#4f46e5",
+          "line-width": 12,
+          "line-blur": 8,
+          "line-opacity": 0.6,
+        },
+        filter: ["==", "$type", "LineString"],
       });
 
       map.addLayer({
@@ -75,9 +139,49 @@ export default function MapView({
           "line-cap": "round",
         },
         paint: {
-          "line-color": "#3b82f6",
-          "line-width": 4,
+          "line-gradient": [
+            "interpolate",
+            ["linear"],
+            ["line-progress"],
+            0,
+            "#1e40af",
+            0.5,
+            "#4f46e5",
+            1,
+            "#c026d3",
+          ],
+          "line-width": 5,
         },
+        filter: ["==", "$type", "LineString"],
+      });
+
+      map.addLayer({
+        id: "highlight-line-pulse",
+        type: "line",
+        source: "highlight-route",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round",
+        },
+        paint: {
+          "line-color": "#e879f9",
+          "line-width": 3,
+          "line-opacity": 0,
+        },
+        filter: ["==", "$type", "LineString"],
+      });
+
+      map.addLayer({
+        id: "highlight-points-glow",
+        type: "circle",
+        source: "highlight-route",
+        paint: {
+          "circle-radius": 12,
+          "circle-color": "#4f46e5",
+          "circle-opacity": 0.3,
+          "circle-blur": 0.8,
+        },
+        filter: ["==", "$type", "Point"],
       });
 
       map.addLayer({
@@ -85,10 +189,10 @@ export default function MapView({
         type: "circle",
         source: "highlight-route",
         paint: {
-          "circle-radius": 5,
-          "circle-color": "#1d4ed8",
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#fff",
+          "circle-radius": 6,
+          "circle-color": "#ffffff",
+          "circle-stroke-width": 3,
+          "circle-stroke-color": "#4f46e5",
         },
         filter: ["==", "$type", "Point"],
       });
@@ -115,11 +219,26 @@ export default function MapView({
     });
 
     const ro = new ResizeObserver(() => {
-      map.resize();
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+
+      resizeTimeoutRef.current = setTimeout(() => {
+        map.resize();
+      }, 100);
     });
-    ro.observe(containerRef.current);
+
+    if (containerRef.current) {
+      ro.observe(containerRef.current);
+    }
 
     return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
       ro.disconnect();
       markerRefs.current.forEach((m) => m.remove());
       map.remove();
@@ -152,47 +271,166 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
-  
+    const mapInstance = map;
+
     const source = map.getSource("highlight-route");
-  
+
     if (!source || !("setData" in source)) {
-      console.warn("El source 'highlight-route' no está disponible o no es GeoJSONSource");
+      console.warn("El source 'highlight-route' no está disponible");
       return;
     }
-  
-    const geojson: GeoJSON.FeatureCollection = {
-      type: "FeatureCollection",
-      features: highlightPoints.length > 0
-        ? [
-            {
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: highlightPoints,
-              },
-              properties: {},
-            } as Feature<LineString>,
-            ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: coord,
-              },
-              properties: { order: idx + 1 },
-            })),
-          ]
-        : [],
-    };
-  
-    (source as mapboxgl.GeoJSONSource).setData(geojson);
-  
-  }, [highlightPoints, mapLoaded]);
-  
 
+    async function updateRoute() {
+      const routedPoints = await getRoutedPath(highlightPoints);
+
+      const geojson: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features:
+          routedPoints.length > 0
+            ? [
+                {
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: routedPoints,
+                  },
+                  properties: {},
+                } as Feature<LineString>,
+                ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
+                  type: "Feature",
+                  geometry: {
+                    type: "Point",
+                    coordinates: coord,
+                  },
+                  properties: { order: idx + 1 },
+                })),
+              ]
+            : [],
+      };
+
+      (source as mapboxgl.GeoJSONSource).setData(geojson);
+
+      if (fitOnHighlight) {
+        if (highlightPoints.length > 0) {
+          if (!prevViewportRef.current) {
+            const currentCenter = mapInstance.getCenter();
+            prevViewportRef.current = { center: [currentCenter.lng, currentCenter.lat], zoom: mapInstance.getZoom() };
+          }
+          const bounds = new mapboxgl.LngLatBounds();
+          highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+          mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 14 });
+        } else if (prevViewportRef.current) {
+          mapInstance.easeTo({
+            center: prevViewportRef.current.center,
+            zoom: prevViewportRef.current.zoom,
+            duration: 400,
+          });
+          prevViewportRef.current = null;
+        }
+      }
+
+      if (routedPoints.length > 0) {
+        startAnimations(mapInstance);
+      } else if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    }
+
+    updateRoute();
+  }, [highlightPoints, mapLoaded, fitOnHighlight]);
+
+  // Sincroniza el centro/zoom con las props (ej. geolocalización) cuando no estamos encajando una ruta
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    // No sobreescribir cuando estamos enfocando una ruta
+    if (fitOnHighlight && highlightPoints.length > 0) return;
+
+    const prev = lastSyncedPropsRef.current;
+    const changed =
+      !prev ||
+      prev.center[0] !== center[0] ||
+      prev.center[1] !== center[1] ||
+      prev.zoom !== (zoom ?? prev.zoom);
+
+    if (!changed) return;
+
+    lastSyncedPropsRef.current = { center, zoom: zoom ?? map.getZoom() };
+    prevViewportRef.current = null;
+    map.easeTo({ center, zoom, duration: 400 });
+  }, [center, zoom, mapLoaded, fitOnHighlight, highlightPoints.length]);
+
+  const startAnimations = (map: Map) => {
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+
+    let phase = 0;
+
+    const animate = () => {
+      phase += 0.01;
+
+      const pulseOpacity = Math.abs(Math.sin(phase * 2)) * 0.8;
+      if (map.getLayer("highlight-line-pulse")) {
+        map.setPaintProperty("highlight-line-pulse", "line-opacity", pulseOpacity);
+      }
+
+      const glowRadius = 12 + Math.sin(phase * 3) * 4;
+      const glowOpacity = 0.2 + Math.abs(Math.sin(phase * 2)) * 0.3;
+      if (map.getLayer("highlight-points-glow")) {
+        map.setPaintProperty("highlight-points-glow", "circle-radius", glowRadius);
+        map.setPaintProperty("highlight-points-glow", "circle-opacity", glowOpacity);
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      forceMapResize();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [allowPickPoint, className, forceMapResize]);
+
+  useEffect(() => {
+    if (mapRef.current && mapLoaded) {
+      setTimeout(() => {
+        forceMapResize();
+      }, 100);
+    }
+  }, [highlightPoints.length, mapLoaded, forceMapResize]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleTransitionEnd = () => {
+      forceMapResize();
+    };
+
+    container.addEventListener("transitionend", handleTransitionEnd);
+
+    return () => {
+      container.removeEventListener("transitionend", handleTransitionEnd);
+    };
+  }, [forceMapResize]);
 
   return (
-    <div className={`map-view ${className ?? ""}`}>
-      <div ref={containerRef} className="map-view__canvas" />
-    </div>
+    <div
+      ref={containerRef}
+      className={className ? `map-view ${className}` : "map-view"}
+      style={{
+        width: "100%",
+        height: "100%",
+        position: "relative",
+        transform: "none",
+      }}
+    />
   );
 }
