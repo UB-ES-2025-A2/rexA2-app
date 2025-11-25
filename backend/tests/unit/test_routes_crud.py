@@ -241,3 +241,30 @@ async def test_add_comment_and_reply(fake_db):
     updated = await route_crud.get_route_by_id(route_id)
     assert len(updated["comments"][0]["replies"]) == 1
     assert updated["comments"][0]["replies"][0]["content"] == "Hola"
+
+
+# ========== US-11: CRUD get_public_route_by_name ==========
+
+@pytest.mark.anyio
+async def test_get_public_route_by_name_returns_only_public(fake_db):
+    """
+    Si hay rutas con el mismo nombre pero visibilidades distintas,
+    get_public_route_by_name debe devolver sólo la pública.
+    """
+    # Una ruta pública y otra privada con el mismo nombre
+    await route_crud.create_route("u1", _route(name="R1", vis=True))
+    await route_crud.create_route("u1", _route(name="R1", vis=False))
+
+    found = await route_crud.get_public_route_by_name("R1")
+    assert found is not None
+    assert found["name"] == "R1"
+    assert found["visibility"] is True
+
+
+@pytest.mark.anyio
+async def test_get_public_route_by_name_not_found_returns_none(fake_db):
+    """
+    Si no existe ninguna ruta pública con ese nombre, debe devolver None.
+    """
+    found = await route_crud.get_public_route_by_name("NoExiste")
+    assert found is None
