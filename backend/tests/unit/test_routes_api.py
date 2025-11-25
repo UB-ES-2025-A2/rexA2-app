@@ -1,6 +1,7 @@
 # tests/unit/test_routes_api.py
 
 import pytest
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from httpx import AsyncClient, ASGITransport
 from backend.routers.routes import router as routes_router
@@ -584,3 +585,171 @@ async def test_list_routes_public_only_false_returns_all_routes(ac, monkeypatch)
 
     body = res.json()
     assert {r["name"] for r in body} == {"Pública", "Privada"}
+
+# ========== US-18: Añadir comentarios (POST /routes/{route_id}/comments) ==========
+
+@pytest.mark.anyio
+async def test_add_comment_ok_returns_201_and_calls_crud(ac, monkeypatch):
+    """
+    Caso feliz: se añade un comentario simple (sin parent_id).
+    Debe devolver 201 y el comentario creado, y llamar a route_crud.add_comment
+    con los parámetros correctos.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    # _ensure_route_access devuelve una ruta que el usuario puede ver
+    async def fake_ensure_route_access(route_id, current_user):
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    called = {}
+
+    async def fake_add_comment(
+        route_id: str,
+        user_id: str,
+        username: str,
+        content: str,
+        parent_id: str | None,
+        avatar_url: str | None,
+    ):
+        called["route_id"] = route_id
+        called["user_id"] = user_id
+        called["username"] = username
+        called["content"] = content
+        called["parent_id"] = parent_id
+        called["avatar_url"] = avatar_url
+        # lo que devolvería realmente el CRUD
+        return {
+            "id": "c1",
+            "user_id": user_id,
+            "username": username,
+            "content": content,
+            "parent_id": parent_id,
+            "avatar_url": avatar_url,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "Buenísima ruta"},
+    )
+    assert res.status_code == 201
+    body = res.json()
+
+    # Comprobamos el retorno
+    assert body["id"] == "c1"
+    assert body["content"] == "Buenísima ruta"
+
+    # En tests/conftest.py el fake_current_user tiene _id="user123"
+    assert called["route_id"] == "route123"
+    assert called["user_id"] == "user123"
+    assert called["content"] == "Buenísima ruta"
+    # username vendrá de current_user: username, name o email; aquí sólo validamos que no esté vacío
+    assert called["username"] is not None
+
+
+@pytest.mark.anyio
+async def test_add_comment_empty_content_returns_422(ac, monkeypatch):
+    """
+    CommentCreate no permite contenido vacío -> FastAPI responde 422.
+    No hace falta que se llame a _ensure_route_access ni a add_comment.
+    """
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "   "},
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_add_comment_with_nonexistent_parent_in_route_returns_404(ac, monkeypatch):
+    """
+    Si parent_id no está en la lista de comentarios de la ruta,
+    el endpoint debe devolver 404 'Comentario padre no encontrado'
+    sin llegar a llamar a route_crud.add_comment.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    async def fake_ensure_route_access(route_id, current_user):
+        # comments sin ningún id que coincida con parent_id
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [
+                {"id": "c1", "content": "hola"},
+            ],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    def fake_add_comment(*args, **kwargs):
+        pytest.fail("add_comment no debería llamarse si el parent_id no existe")
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "respuesta", "parent_id": "no-existe"},
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
+
+
+@pytest.mark.anyio
+async def test_add_comment_parent_missing_in_crud_returns_404(ac, monkeypatch):
+    """
+    Si _ensure_route_access encuentra el comentario padre pero luego
+    route_crud.add_comment devuelve None (por parent_id inválido),
+    el endpoint también debe responder 404.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    async def fake_ensure_route_access(route_id, current_user):
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [
+                {"id": "parent123", "content": "original"},
+            ],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    async def fake_add_comment(
+        route_id: str,
+        user_id: str,
+        username: str,
+        content: str,
+        parent_id: str | None,
+        avatar_url: str | None,
+    ):
+        assert parent_id == "parent123"
+        return None  # simula fallo en el CRUD
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "respuesta", "parent_id": "parent123"},
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
