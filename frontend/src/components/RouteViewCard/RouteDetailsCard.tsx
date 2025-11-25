@@ -1,13 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
 import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
-// import { useAlert } from "../../context/AlertContext";
-// import { useAuth } from "../../context/AuthContext";
-
-// const API = (import.meta.env.VITE_API_URL as string) || window.location.origin;
+import DeleteRouteModal from "./DeleteRouteModal";
+import DeleteButton from "./DeleteButton";
+import { useAuth } from "../../context/AuthContext";
+import { useAlert } from "../../context/AlertContext";
+import { fetchWithAuth } from "../../services/api";
 
 interface RouteDetailsCardProps {
   name: string;
@@ -19,6 +20,9 @@ interface RouteDetailsCardProps {
   routeId: string;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
+  onShowComments?: () => void;
+  onDelete?: (routeId: string) => Promise<void>;
+  isOwnRoute?: boolean;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -31,12 +35,54 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   routeId,
   initialSaved = false,
   onSavedChange,
+  onShowComments,
+  onDelete,
+  isOwnRoute = false,
 }) => {
+  const { token } = useAuth();
+  const { showAlert } = useAlert();
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [routeData, setRouteData] = useState<any>(null);
+  const useExternalComments = Boolean(onShowComments);
 
-  const handleCommentsClick = () => {
-    setCommentsOpen(true);
+  useEffect(() => {
+    const loadRoute = async () => {
+      if (!token || !routeId) {
+        return;
+      }
+
+      try {
+        const res = await fetchWithAuth(`/routes/${routeId}`);
+
+        if (res.ok) {
+          const data = await res.json();
+          setRouteData(data);
+        }
+      } catch (err) {
+        console.error("Error loading route:", err);
+        showAlert("Error al cargar la ruta", "error");
+      }
+    };
+
+    loadRoute();
+  }, [routeId, token, showAlert]);
+
+  const handleDeleteConfirm = async () => {
+    if (onDelete) {
+      await onDelete(routeId);
+    }
   };
+
+  const handleCommentClick = () => {
+    if (useExternalComments) {
+      onShowComments?.();
+    } else {
+      setCommentsOpen(true);
+    }
+  };
+
+  const canDelete = isOwnRoute || routeData?.is_owner;
 
   return (
     <>
@@ -82,22 +128,39 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               justifyContent: "space-between",
               alignItems: "center",
               gap: "12px",
+              flexWrap: "wrap",
             }}
           >
-            <CommentButton onClick={handleCommentsClick} />
-            <FavoriteButton
-              routeId={routeId}
-              initialSaved={initialSaved}
-              onSavedChange={onSavedChange}
-            />
+            <div style={{ display: "flex", gap: "12px" }}>
+              <CommentButton onClick={handleCommentClick} />
+              <FavoriteButton
+                routeId={routeId}
+                initialSaved={initialSaved}
+                onSavedChange={onSavedChange}
+              />
+            </div>
+            {canDelete && (
+              <DeleteButton
+                onClick={() => setDeleteModalOpen(true)}
+              />
+            )}
           </div>
         </section>
       </div>
 
-      <CommentsModal
-        open={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-        routeId={routeId}
+      {!useExternalComments && (
+        <CommentsModal
+          open={commentsOpen}
+          onClose={() => setCommentsOpen(false)}
+          routeId={routeId}
+        />
+      )}
+
+      <DeleteRouteModal
+        open={deleteModalOpen}
+        routeName={name}
+        onConfirm={handleDeleteConfirm}
+        onCancel={() => setDeleteModalOpen(false)}
       />
     </>
   );

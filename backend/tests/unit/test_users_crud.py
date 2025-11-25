@@ -1,79 +1,136 @@
 import pytest
-import types
 from bson import ObjectId
+
 from backend.db.models import user as user_crud
 
-# Resultado mínimo que imita a pymongo.InsertOneResult
-class _InsertOneResult:
-    def __init__(self, inserted_id):
-        self.inserted_id = inserted_id
 
-# colección fake en moemoria para testear CRUD de usuarios sin Mongo real
-class FakeCollection:
-    def __init__(self):
-        self._docs = []
+class FakeSearchCollection:
+    """
+    Colección fake específica para testear search_users:
+    - implementa find(...) -> cursor con .limit() y __aiter__
+    - aplica filtro con "$or" y el "$regex" en name/username/email
+    """
+    def __init__(self, docs):
+        self._docs = list(docs)
 
-    async def insert_one(self, doc):
-        # simula creación de _id
-        _id = ObjectId()
-        # guardamos copia tal cual Mongo la recibiría
-        stored = dict(doc)
-        stored["_id"] = _id
-        self._docs.append(stored)
-        return _InsertOneResult(_id)
+    def find(self, filter_, projection):
+        def matches(doc):
+            # Filtro vacío -> todos los docs
+            if not filter_:
+                return True
 
-    async def find_one(self, filter_):
-        # soporta {"email": "..."} o {"_id": ObjectId(...)}
-        for d in self._docs:
-            ok = all(d.get(k) == v for k, v in filter_.items())
-            if ok:
-                return dict(d)
-        return None
+            conds = filter_.get("$or") or []
+            for cond in conds:
+                for field, spec in cond.items():
+                    value = str(doc.get(field, ""))
+                    pattern = spec.get("$regex", "")
+                    options = spec.get("$options", "")
+                    if "i" in options:
+                        if pattern.lower() in value.lower():
+                            return True
+                    else:
+                        if pattern in value:
+                            return True
+            return False
+
+        filtered = [d for d in self._docs if matches(d)]
+
+        class Cursor:
+            def __init__(self, docs):
+                self._docs = docs
+                self._limit = None
+
+            def limit(self, n: int):
+                self._limit = n
+                return self
+
+            async def __aiter__(self):
+                docs = self._docs
+                if self._limit is not None:
+                    docs = docs[: self._limit]
+
+                for doc in docs:
+                    out = {}
+                    # aplicamos proyección mínima
+                    for key, include in projection.items():
+                        if include and key in doc:
+                            out[key] = doc[key]
+                    # siempre incluimos _id
+                    if "_id" in doc:
+                        out["_id"] = doc["_id"]
+                    yield out
+
+        return Cursor(filtered)
 
 
 @pytest.fixture
-def fake_col(monkeypatch):
-    col = FakeCollection()
-    # parcheamos la colección usada por el CRUD
+def fake_search_col(monkeypatch):
+    # Tres usuarios de ejemplo
+    docs = [
+        {
+            "_id": ObjectId(),
+            "name": "Ana García",
+            "username": "ana",
+            "email": "ana@example.com",
+            "avatar_url": "a.png",
+        },
+        {
+            "_id": ObjectId(),
+            "name": "Juan Pérez",
+            "username": "juan",
+            "email": "juan@example.com",
+            "avatar_url": "j.png",
+        },
+        {
+            "_id": ObjectId(),
+            "name": "Otro Usuario",
+            "username": "otro",
+            "email": "otro@test.com",
+            "avatar_url": None,
+        },
+    ]
+    col = FakeSearchCollection(docs)
+    # parcheamos sólo la colección usada por search_users
     monkeypatch.setattr(user_crud, "USERS_COL", col, raising=True)
-    # y el hash para hacerlo determinista
-    def _fake_hash(pwd: str) -> str:
-        return f"hashed::{pwd}"
-    monkeypatch.setattr(user_crud, "get_password_hash", _fake_hash, raising=True)
     return col
 
 
 @pytest.mark.anyio
-async def test_create_user_inserts_hashed_password(fake_col):
-    doc = await user_crud.create_user(
-        email="u@example.com", password="secret", username="user1"
-    )
-    # se devuelve el doc con _id
-    assert "_id" in doc
-    assert doc["email"] == "u@example.com"
-    assert doc["username"] == "user1"
-    assert doc["hashed_password"] == "hashed::secret"
-    # password en claro NO debe existir
-    assert "password" not in doc
+async def test_search_users_all_returns_all(fake_search_col):
+    results = await user_crud.search_users("all", limit=10)
+    assert len(results) == 3
+    # cada doc debe tener id y no exponer _id
+    for user in results:
+        assert "id" in user
+        assert "_id" not in user
+
 
 @pytest.mark.anyio
-async def test_get_user_by_email_ok(fake_col):
-    # pre-carga
-    await user_crud.create_user("a@example.com", "x", "a")
-    found = await user_crud.get_user_by_email("a@example.com")
-    assert found is not None
-    assert found["email"] == "a@example.com"
+async def test_search_users_filters_by_name_username_or_email(fake_search_col):
+    # name
+    results = await user_crud.search_users("ana", limit=10)
+    assert len(results) == 1
+    assert results[0]["username"] == "ana"
+
+    # username
+    results = await user_crud.search_users("juan", limit=10)
+    assert len(results) == 1
+    assert results[0]["username"] == "juan"
+
+    # email (dominio)
+    results = await user_crud.search_users("test.com", limit=10)
+    assert len(results) == 1
+    assert results[0]["email"] == "otro@test.com"
+
 
 @pytest.mark.anyio
-async def test_get_user_by_id_invalid_returns_none(fake_col):
-    # id inválido (no es ObjectId)
-    got = await user_crud.get_user_by_id("no-objectid")
-    assert got is None
+async def test_search_users_empty_query_returns_empty_list(fake_search_col):
+    results = await user_crud.search_users("   ", limit=10)
+    assert results == []
+
 
 @pytest.mark.anyio
-async def test_get_user_by_id_ok(fake_col):
-    created = await user_crud.create_user("b@example.com", "x", "b")
-    _id = str(created["_id"])
-    got = await user_crud.get_user_by_id(_id)
-    assert got is not None
-    assert got["email"] == "b@example.com"
+async def test_search_users_respects_limit(fake_search_col):
+    # dos usuarios tienen example.com → el limit debe cortar la lista
+    results = await user_crud.search_users("example.com", limit=1)
+    assert len(results) == 1

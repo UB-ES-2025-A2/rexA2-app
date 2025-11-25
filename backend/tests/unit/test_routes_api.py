@@ -1,6 +1,7 @@
 # tests/unit/test_routes_api.py
 
 import pytest
+from datetime import datetime, timezone
 from fastapi import FastAPI
 from httpx import AsyncClient, ASGITransport
 from backend.routers.routes import router as routes_router
@@ -383,6 +384,62 @@ async def test_delete_route_204(ac, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_add_comment_ok(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "comments": [],
+        }
+
+    async def fake_add_comment(route_id: str, **kwargs):
+        return {
+            "id": "c1",
+            "user_id": kwargs["user_id"],
+            "username": kwargs["username"],
+            "avatar_url": kwargs.get("avatar_url"),
+            "content": kwargs["content"],
+            "created_at": "2025-01-01T00:00:00Z",
+            "parent_id": kwargs.get("parent_id"),
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post("/routes/abc/comments", json={"content": "Hola"})
+    assert res.status_code == 201
+    assert res.json()["content"] == "Hola"
+
+
+@pytest.mark.anyio
+async def test_add_comment_parent_not_found(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "comments": [],
+        }
+
+    async def fake_add_comment(route_id: str, **kwargs):
+        return None
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/abc/comments", json={"content": "Hola", "parent_id": "nope"}
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
+
+
+@pytest.mark.anyio
 async def test_create_route_invalid_duration_returns_422(ac):
     payload = {
         "name": "Ruta duración inválida",
@@ -410,3 +467,289 @@ async def test_create_route_invalid_rating_returns_422(ac):
 
     res = await ac.post("/routes", json=payload)
     assert res.status_code == 422
+
+@pytest.mark.anyio
+async def test_delete_route_calls_crud_with_correct_ids(ac, monkeypatch):
+    """
+    El endpoint DELETE /routes/{route_id} debe llamar a route_crud.delete_route
+    con el ID de la ruta y el ID del usuario autenticado.
+"""
+# ========== US-10: Filtrar rutas (backend: filtro public_only) ==========
+
+import pytest
+from datetime import datetime, timezone
+
+
+@pytest.mark.anyio
+async def test_list_routes_default_public_only_true_calls_crud_with_true(ac, monkeypatch):
+    """
+    /routes sin parámetros -> debe llamar a get_all_routes(public_only=True)
+    y devolver la lista de rutas públicas.
+    """
+    from backend.db.models import route as route_crud
+
+    called = {}
+
+    async def fake_get_all_routes(public_only: bool = False):
+        called["public_only"] = public_only
+        return [
+            {
+                "_id": "1",
+                "owner_id": "u1",
+                "name": "Ruta pública 1",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": True,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 30,
+                "rating": 4.0,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            }
+        ]
+
+    monkeypatch.setattr(route_crud, "get_all_routes", fake_get_all_routes, raising=True)
+
+    res = await ac.get("/routes")
+    assert res.status_code == 200
+    assert called["public_only"] is True
+
+    body = res.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    # El response_model RoutePublic mapea "_id" -> "id"
+    assert body[0]["id"] == "1"
+    assert body[0]["name"] == "Ruta pública 1"
+    assert body[0]["visibility"] is True
+
+
+@pytest.mark.anyio
+async def test_list_routes_public_only_false_returns_all_routes(ac, monkeypatch):
+    """
+    /routes?public_only=false -> debe llamar a get_all_routes(public_only=False)
+    y devolver tanto públicas como privadas.
+    """
+    from backend.db.models import route as route_crud
+
+    called = {}
+
+    async def fake_delete_route(route_id: str, user_id: str) -> bool:
+        called["route_id"] = route_id
+        called["user_id"] = user_id
+        return True  # simulamos borrado OK
+
+    monkeypatch.setattr(route_crud, "delete_route", fake_delete_route, raising=True)
+
+    # En tests/conftest.py, fake_current_user devuelve _id="user123"
+    res = await ac.delete("/routes/ROUTE123")
+    assert res.status_code == 204
+
+    assert called["route_id"] == "ROUTE123"
+    assert called["user_id"] == "user123"
+    async def fake_get_all_routes(public_only: bool = False):
+        called["public_only"] = public_only
+        return [
+            {
+                "_id": "1",
+                "owner_id": "u1",
+                "name": "Pública",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": True,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 30,
+                "rating": 4.0,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            },
+            {
+                "_id": "2",
+                "owner_id": "u1",
+                "name": "Privada",
+                "points": [{"latitude": 1, "longitude": 1}] * 3,
+                "visibility": False,
+                "description": "d",
+                "category": "c",
+                "duration_minutes": 45,
+                "rating": 3.5,
+                "created_at": datetime.now(timezone.utc),
+                "comments": [],
+            },
+        ]
+
+    monkeypatch.setattr(route_crud, "get_all_routes", fake_get_all_routes, raising=True)
+
+    res = await ac.get("/routes?public_only=false")
+    assert res.status_code == 200
+    assert called["public_only"] is False
+
+    body = res.json()
+    assert {r["name"] for r in body} == {"Pública", "Privada"}
+
+# ========== US-18: Añadir comentarios (POST /routes/{route_id}/comments) ==========
+
+@pytest.mark.anyio
+async def test_add_comment_ok_returns_201_and_calls_crud(ac, monkeypatch):
+    """
+    Caso feliz: se añade un comentario simple (sin parent_id).
+    Debe devolver 201 y el comentario creado, y llamar a route_crud.add_comment
+    con los parámetros correctos.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    # _ensure_route_access devuelve una ruta que el usuario puede ver
+    async def fake_ensure_route_access(route_id, current_user):
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    called = {}
+
+    async def fake_add_comment(
+        route_id: str,
+        user_id: str,
+        username: str,
+        content: str,
+        parent_id: str | None,
+        avatar_url: str | None,
+    ):
+        called["route_id"] = route_id
+        called["user_id"] = user_id
+        called["username"] = username
+        called["content"] = content
+        called["parent_id"] = parent_id
+        called["avatar_url"] = avatar_url
+        # lo que devolvería realmente el CRUD
+        return {
+            "id": "c1",
+            "user_id": user_id,
+            "username": username,
+            "content": content,
+            "parent_id": parent_id,
+            "avatar_url": avatar_url,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "Buenísima ruta"},
+    )
+    assert res.status_code == 201
+    body = res.json()
+
+    # Comprobamos el retorno
+    assert body["id"] == "c1"
+    assert body["content"] == "Buenísima ruta"
+
+    # En tests/conftest.py el fake_current_user tiene _id="user123"
+    assert called["route_id"] == "route123"
+    assert called["user_id"] == "user123"
+    assert called["content"] == "Buenísima ruta"
+    # username vendrá de current_user: username, name o email; aquí sólo validamos que no esté vacío
+    assert called["username"] is not None
+
+
+@pytest.mark.anyio
+async def test_add_comment_empty_content_returns_422(ac, monkeypatch):
+    """
+    CommentCreate no permite contenido vacío -> FastAPI responde 422.
+    No hace falta que se llame a _ensure_route_access ni a add_comment.
+    """
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "   "},
+    )
+    assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_add_comment_with_nonexistent_parent_in_route_returns_404(ac, monkeypatch):
+    """
+    Si parent_id no está en la lista de comentarios de la ruta,
+    el endpoint debe devolver 404 'Comentario padre no encontrado'
+    sin llegar a llamar a route_crud.add_comment.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    async def fake_ensure_route_access(route_id, current_user):
+        # comments sin ningún id que coincida con parent_id
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [
+                {"id": "c1", "content": "hola"},
+            ],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    def fake_add_comment(*args, **kwargs):
+        pytest.fail("add_comment no debería llamarse si el parent_id no existe")
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "respuesta", "parent_id": "no-existe"},
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
+
+
+@pytest.mark.anyio
+async def test_add_comment_parent_missing_in_crud_returns_404(ac, monkeypatch):
+    """
+    Si _ensure_route_access encuentra el comentario padre pero luego
+    route_crud.add_comment devuelve None (por parent_id inválido),
+    el endpoint también debe responder 404.
+    """
+    from backend.routers import routes as routes_mod
+    from backend.db.models import route as route_crud
+
+    async def fake_ensure_route_access(route_id, current_user):
+        return {
+            "_id": route_id,
+            "owner_id": str(current_user["_id"]),
+            "visibility": True,
+            "comments": [
+                {"id": "parent123", "content": "original"},
+            ],
+        }
+
+    monkeypatch.setattr(
+        routes_mod, "_ensure_route_access", fake_ensure_route_access, raising=True
+    )
+
+    async def fake_add_comment(
+        route_id: str,
+        user_id: str,
+        username: str,
+        content: str,
+        parent_id: str | None,
+        avatar_url: str | None,
+    ):
+        assert parent_id == "parent123"
+        return None  # simula fallo en el CRUD
+
+    monkeypatch.setattr(route_crud, "add_comment", fake_add_comment, raising=True)
+
+    res = await ac.post(
+        "/routes/route123/comments",
+        json={"content": "respuesta", "parent_id": "parent123"},
+    )
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Comentario padre no encontrado"
