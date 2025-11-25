@@ -102,8 +102,12 @@ button {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow-y: hidden;
+  overflow-y: auto;
   overflow-x: hidden;
+}
+
+.home__left-skeleton .route-card-panel {
+  height: 100%;
 }
 
 .comments-full {

@@ -110,6 +110,7 @@ export default function Home() {
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
     setDrawPoints([]);
+    setSelectedRoutePoints([]);
     setShowComments(false);
   }
 
@@ -662,7 +663,7 @@ export default function Home() {
                 zoom={mapZoom}
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
-                highlightPoints={selectedRoutePoints}
+                highlightPoints={routeCardOpen ? drawPoints : selectedRoutePoints}
               />
 
               <button
