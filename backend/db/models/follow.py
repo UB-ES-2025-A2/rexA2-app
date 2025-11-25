@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import List, Dict, Any, Optional
 from bson import ObjectId
 from bson.errors import InvalidId
@@ -36,7 +36,7 @@ async def follow(follower_id: str, followee_id: str) -> Dict[str, Any]:
     doc = {
         "follower_id": _oid(follower_id),
         "followee_id": _oid(followee_id),
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
     try:
