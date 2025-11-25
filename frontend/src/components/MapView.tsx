@@ -59,6 +59,8 @@ export default function MapView({
   const [mapLoaded, setMapLoaded] = useState(false);
   const animationFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevViewportRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const lastSyncedPropsRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
 
   const forceMapResize = useCallback(() => {
     if (mapRef.current) {
@@ -269,6 +271,7 @@ export default function MapView({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapLoaded) return;
+    const mapInstance = map;
 
     const source = map.getSource("highlight-route");
 
@@ -307,8 +310,27 @@ export default function MapView({
 
       (source as mapboxgl.GeoJSONSource).setData(geojson);
 
-      if (routedPoints.length > 0 && map) {
-        startAnimations(map);
+      if (fitOnHighlight) {
+        if (highlightPoints.length > 0) {
+          if (!prevViewportRef.current) {
+            const currentCenter = mapInstance.getCenter();
+            prevViewportRef.current = { center: [currentCenter.lng, currentCenter.lat], zoom: mapInstance.getZoom() };
+          }
+          const bounds = new mapboxgl.LngLatBounds();
+          highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
+          mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 14 });
+        } else if (prevViewportRef.current) {
+          mapInstance.easeTo({
+            center: prevViewportRef.current.center,
+            zoom: prevViewportRef.current.zoom,
+            duration: 400,
+          });
+          prevViewportRef.current = null;
+        }
+      }
+
+      if (routedPoints.length > 0) {
+        startAnimations(mapInstance);
       } else if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
         animationFrameRef.current = null;
@@ -316,12 +338,29 @@ export default function MapView({
     }
 
     updateRoute();
-    if (fitOnHighlight && highlightPoints.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      highlightPoints.forEach(([lng, lat]) => bounds.extend([lng, lat]));
-      map.fitBounds(bounds, { padding: 60, maxZoom: 14 });
-    }
   }, [highlightPoints, mapLoaded, fitOnHighlight]);
+
+  // Sincroniza el centro/zoom con las props (ej. geolocalización) cuando no estamos encajando una ruta
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    // No sobreescribir cuando estamos enfocando una ruta
+    if (fitOnHighlight && highlightPoints.length > 0) return;
+
+    const prev = lastSyncedPropsRef.current;
+    const changed =
+      !prev ||
+      prev.center[0] !== center[0] ||
+      prev.center[1] !== center[1] ||
+      prev.zoom !== (zoom ?? prev.zoom);
+
+    if (!changed) return;
+
+    lastSyncedPropsRef.current = { center, zoom: zoom ?? map.getZoom() };
+    prevViewportRef.current = null;
+    map.easeTo({ center, zoom, duration: 400 });
+  }, [center, zoom, mapLoaded, fitOnHighlight, highlightPoints.length]);
 
   const startAnimations = (map: Map) => {
     if (animationFrameRef.current) {
