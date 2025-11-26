@@ -9,6 +9,9 @@ build/
 .coverage
 .env
 *.db
+test-results/
+node_modules/
+fixtures/
 
 # IDE
 .vscode/
