@@ -54,8 +54,6 @@ describe("Modal", () => {
       </Modal>
     );
 
-    // El botón tiene aria-label="Close" y está dentro de un contenedor aria-hidden,
-    // así que usamos querySelector en lugar de getByRole.
     const closeButton = container.querySelector(
       'button[aria-label="Close"]'
     ) as HTMLButtonElement | null;

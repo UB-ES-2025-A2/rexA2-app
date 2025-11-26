@@ -93,7 +93,6 @@ describe("RouteSearchBar", () => {
 
     await user.type(input, "montaña");
 
-    // Se ha llamado al menos una vez
     expect(handleQueryChange).toHaveBeenCalled();
 
     const calls = handleQueryChange.mock.calls.map((c) => c[0]);
@@ -116,25 +115,19 @@ describe("RouteSearchBar", () => {
       />
     );
 
-    // Botón de filtros (tiene title="Filtros")
     const filterButton = screen.getByTitle("Filtros");
     await user.click(filterButton);
 
-    // Título del modal
     expect(screen.getByText("Explorar por filtros")).toBeInTheDocument();
 
-    // Hay 2 selects (categoría y número de puntos)
     const selects = screen.getAllByRole("combobox");
     const categorySelect = selects[0];
     const pointsSelect = selects[1];
 
-    // Seleccionamos categoría "playa"
     await user.selectOptions(categorySelect, "playa");
 
-    // Seleccionamos filtro de puntos "few" (pocas)
     await user.selectOptions(pointsSelect, "few");
 
-    // Botón "Explorar" aplica filtros
     const exploreButton = screen.getByRole("button", { name: "Explorar" });
     await user.click(exploreButton);
 

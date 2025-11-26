@@ -12,7 +12,6 @@ describe("DeleteButton", () => {
 
     render(<DeleteButton onClick={handleClick} />);
 
-    // Usa aria-label definido en el componente: "Eliminar ruta"
     const button = screen.getByRole("button", { name: "Eliminar ruta" });
 
     await user.click(button);
@@ -31,7 +30,6 @@ describe("DeleteButton", () => {
 
     await user.click(button);
 
-    // Al estar disabled, no debería ejecutarse el handler
     expect(handleClick).not.toHaveBeenCalled();
   });
 });

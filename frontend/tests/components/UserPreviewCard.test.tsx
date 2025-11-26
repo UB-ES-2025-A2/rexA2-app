@@ -33,7 +33,6 @@ describe("UserPreviewCard", () => {
       />
     );
 
-    // initial = primera letra de name || username
     const placeholder = screen.getByText("E");
     expect(placeholder).toBeInTheDocument();
   });

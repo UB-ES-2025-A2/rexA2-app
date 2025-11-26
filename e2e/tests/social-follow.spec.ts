@@ -1,4 +1,3 @@
-// e2e/tests/social-follow.spec.ts
 import { test, expect } from "@playwright/test";
 import { setupBackendMocks } from "./helpers/backendMocks";
 
@@ -73,7 +72,6 @@ test.describe("Social: seguir usuarios, seguidos y seguidores (US-15, 16, 17)", 
     await openFolloweeCard(page);
     await expect(page.locator(".usercard__follow-btn")).toHaveText(/Siguiendo/i);
 
-    // Dejamos de seguir para dejar el estado limpio
     const unfollowBtn = page.locator(".usercard__follow-btn");
     await unfollowBtn.click();
     await expect(unfollowBtn).toHaveText(/Seguir/i);

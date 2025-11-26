@@ -22,7 +22,6 @@ describe("PasswordField", () => {
     const input = screen.getByLabelText("Contraseña");
     expect(input).toHaveAttribute("type", "password");
 
-    // El label que envuelve el checkbox tiene aria-label dinámico
     const toggle = screen.getByLabelText("Mostrar contraseña");
 
     await user.click(toggle);

@@ -19,24 +19,19 @@ describe("DeleteRouteModal", () => {
       />
     );
 
-    // Hay un título y un botón con el texto "Eliminar ruta": comprobamos que al menos uno existe
     const titles = screen.getAllByText("Eliminar ruta");
     expect(titles.length).toBeGreaterThanOrEqual(1);
 
-    // Mensaje de confirmación con el nombre de la ruta
     expect(
       screen.getByText(/¿Estás seguro de que deseas eliminar la ruta/i)
     ).toBeInTheDocument();
     expect(screen.getByText(/"Ruta de prueba"/)).toBeInTheDocument();
 
-    // Texto de advertencia
     expect(
       screen.getByText("Esta acción no se puede deshacer.")
     ).toBeInTheDocument();
 
-    // Botones Cancelar y Eliminar ruta presentes (por texto)
     expect(screen.getByText("Cancelar")).toBeInTheDocument();
-    // Uno de los dos "Eliminar ruta" es el botón de acción
     expect(titles.some((el) => el.tagName === "BUTTON")).toBe(true);
   });
 
@@ -54,7 +49,6 @@ describe("DeleteRouteModal", () => {
       />
     );
 
-    // No usamos getByRole porque el contenedor tiene aria-hidden="true"
     const cancelButton = screen.getByText("Cancelar");
 
     await user.click(cancelButton);
