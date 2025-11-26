@@ -17,7 +17,6 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  // Arranca el frontend automáticamente antes de los tests
   webServer: {
     command: "npm run dev -- --host 0.0.0.0 --port 5173",
     port: 5173,

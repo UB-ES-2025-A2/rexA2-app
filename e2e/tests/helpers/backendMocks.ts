@@ -118,7 +118,6 @@ export async function setupBackendMocks(page: Page) {
 
     const authedUser = resolveUserFromAuth(route.request());
 
-    // ---------- Auth ----------
     if (pathname === "/auth/login" && method === "POST") {
       let payload: { email?: string; password?: string } = {};
       try {
@@ -153,19 +152,16 @@ export async function setupBackendMocks(page: Page) {
       return;
     }
 
-    // ---------- Favorites ----------
     if (pathname === "/favorites/me") {
       await route.fulfill(jsonResponse({ route_ids: [] }));
       return;
     }
 
-    // ---------- Routes list ----------
     if (pathname === "/routes" && method === "GET") {
       await route.fulfill(jsonResponse(routes));
       return;
     }
 
-    // ---------- Route detail ----------
     const routeDetailMatch = pathname.match(/^\/routes\/([^/]+)$/);
     if (routeDetailMatch) {
       const routeId = routeDetailMatch[1];
@@ -183,7 +179,6 @@ export async function setupBackendMocks(page: Page) {
       return;
     }
 
-    // ---------- Route comments ----------
     const commentsMatch = pathname.match(/^\/routes\/([^/]+)\/comments$/);
     if (commentsMatch) {
       const routeId = commentsMatch[1];
@@ -217,7 +212,6 @@ export async function setupBackendMocks(page: Page) {
       }
     }
 
-    // ---------- Users search ----------
     if (pathname === "/users/search") {
       const q = (searchParams.get("q") || "").toLowerCase();
       const includeFollowee = q === "all" || q === "" || FOLLOWEE_USER.username.includes(q);
@@ -236,7 +230,6 @@ export async function setupBackendMocks(page: Page) {
       return;
     }
 
-    // ---------- Follow state ----------
     const isFollowingMatch = pathname.match(/^\/users\/([^/]+)\/is-following$/);
     if (isFollowingMatch) {
       const userId = isFollowingMatch[1];
@@ -261,7 +254,6 @@ export async function setupBackendMocks(page: Page) {
       return;
     }
 
-    // ---------- User routes ----------
     const routesByUserMatch = pathname.match(/^\/routes\/user\/([^/]+)$/);
     if (routesByUserMatch) {
       const username = decodeURIComponent(routesByUserMatch[1]);
