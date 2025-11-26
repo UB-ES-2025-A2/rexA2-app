@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+import { setupBackendMocks } from "./helpers/backendMocks";
+
+test.beforeEach(async ({ page }) => {
+  await setupBackendMocks(page);
+});
 
 test.describe("Búsqueda y listado de rutas", () => {
   test("la home muestra la barra de búsqueda y algún estado de resultados", async ({

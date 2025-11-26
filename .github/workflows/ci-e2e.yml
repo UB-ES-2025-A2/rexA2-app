@@ -39,6 +39,10 @@ jobs:
             frontend/package-lock.json
             e2e/package-lock.json
 
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
       - name: Install e2e deps
         working-directory: e2e
         run: npm ci

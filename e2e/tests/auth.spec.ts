@@ -1,9 +1,14 @@
 // e2e/tests/auth.spec.ts
 import { test, expect } from "@playwright/test";
+import { setupBackendMocks } from "./helpers/backendMocks";
 
 const TEST_USER_EMAIL = "testuser@example.com";
-const TEST_USER_PASSWORD_OK = "password123";
-const TEST_USER_PASSWORD_BAD = "wrong-password";
+const TEST_USER_PASSWORD_OK = "Aa1!passw";
+const TEST_USER_PASSWORD_BAD = "Aa1!wrong";
+
+test.beforeEach(async ({ page }) => {
+  await setupBackendMocks(page);
+});
 
 test.describe("Autenticación (login)", () => {
   test("login correcto cierra el modal de autenticación", async ({ page }) => {
@@ -51,9 +56,9 @@ test.describe("Autenticación (login)", () => {
 
     await submitButton.click();
 
-    // Hay un <p role="alert"> cuando hay error en el formulario
-    const errorAlert = page.getByRole("alert");
-    await expect(errorAlert).toBeVisible();
+    // El formulario muestra un error textual
+    const errorAlert = page.locator(".auth__form-error");
+    await expect(errorAlert).toContainText(/error|credenciales/i);
 
     // El modal sigue abierto (no se ha hecho login)
     await expect(title).toBeVisible();
