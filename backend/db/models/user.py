@@ -1,14 +1,11 @@
-# backend/db/models/user.py
-
-from typing import Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal
 from bson import ObjectId
 from bson.errors import InvalidId
 from pymongo.errors import DuplicateKeyError
 
-from ..client import get_db                   # referencia a la DB (AsyncIOMotorDatabase)
+from ..client import get_db
 from ...core.security import get_password_hash
-
-# Permite “inyectar” la colección en tests si hiciera falta
+from . import follow as follow_crud
 USERS_COL = None
 
 def _users_col():
@@ -17,7 +14,7 @@ def _users_col():
     """
     if USERS_COL is not None:
         return USERS_COL
-    db = get_db()             # <- debe ser AsyncIOMotorDatabase
+    db = get_db()
     return db["users"]
 
 
@@ -51,19 +48,23 @@ async def create_user(
         "avatar_url": avatar_url,                   # None por defecto
         "is_active": True,
     }
-
-    # Si quieres evitar el 409 por carrera, puedes pre-chequear aquí:
-    # if await col.find_one({"email": email}, {"_id": 1}):
-    #     raise DuplicateKeyError("email dup", 11000, {})
-
     try:
         result = await col.insert_one(doc)
     except DuplicateKeyError:
-        # Repropaga para que el router traduzca a 409
         raise
 
     doc["_id"] = result.inserted_id
     return doc
+
+
+async def get_user_by_username(username: str) -> dict | None:
+    """
+    Busca un usuario por su username.
+    """
+    col = _users_col()
+    user = await col.find_one({"username": username})
+    return user
+
 
 
 async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
@@ -117,7 +118,9 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
     created = await _count_routes_created(user_id)
     completed = await _count_routes_completed(user_id)
     favorites = await _count_favorites(user_id)
-
+    
+    followers = await follow_crud.count_followers(user_id)
+    following = await follow_crud.count_following(user_id)
     return {
         "id": user_id,
         "username": user.get("username") or user.get("name") or "",
@@ -130,6 +133,8 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
             "routes_completed": completed,
             "routes_favorites": favorites,
         },
+        "followers": followers,
+        "following": following,
     }
 
 
@@ -205,3 +210,59 @@ async def count_routes_completed(user_id: str) -> int:
 
 async def count_favorites(user_id: str) -> int:
     return await _count_favorites(user_id)
+
+async def search_users(
+    query: str,
+    *,
+    limit: int = 20,
+) -> List[Dict[str, Any]]:
+    col = _users_col()
+    q = (query or "").strip()
+
+    if q.lower() == "all":
+        cursor = col.find(
+            {},
+            {
+                "name": 1,
+                "username": 1,
+                "email": 1,
+                "avatar_url": 1,
+            },
+        ).limit(limit)
+
+        results: List[Dict[str, Any]] = []
+        async for doc in cursor:
+            doc["id"] = str(doc["_id"])
+            doc.pop("_id", None)
+            results.append(doc)
+
+        return results
+
+    if not q:
+        return []
+
+    regex = {"$regex": q, "$options": "i"}
+
+    cursor = col.find(
+        {
+            "$or": [
+                {"name": regex},
+                {"username": regex},
+                {"email": regex},
+            ]
+        },
+        {
+            "name": 1,
+            "username": 1,
+            "email": 1,
+            "avatar_url": 1,
+        },
+    ).limit(limit)
+
+    results: List[Dict[str, Any]] = []
+    async for doc in cursor:
+        doc["id"] = str(doc["_id"])
+        doc.pop("_id", None)
+        results.append(doc)
+
+    return results

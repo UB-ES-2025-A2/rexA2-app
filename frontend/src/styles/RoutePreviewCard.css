@@ -1,59 +1,100 @@
+:root {
+  --surface: #ffffff;
+  --surface-soft: #f0f4ff;
+  --border: #e0e8f5;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --primary: #6366f1;
+  --primary-soft: #818cf8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px rgba(99, 102, 241, 0.1);
+  --shadow-lg: 0 10px 15px rgba(99, 102, 241, 0.12);
+}
+
+/* =========================================
+  ROUTE PREVIEW CARD - CONTENEDOR PRINCIPAL
+  ========================================= */
 .route-preview-card {
   position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: var(--card, #fff);
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  gap: 12px;
+  width: 100%;
   padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(2, 6, 23, 0.05);
+  background: linear-gradient(135deg, var(--surface-soft) 0%, #f7f9fc 100%);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .route-preview-card:hover {
-  background: var(--card-hover, #f8f8f8);
-  transform: translateY(-3px);
+  background: linear-gradient(135deg, #e8ecff 0%, #f2f5ff 100%);
+  transform: translateY(-2px);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-lg);
 }
 
-/* === Contenedor interno (textos a la izquierda) === */
+.route-preview-card:active {
+  transform: translateY(-1px);
+}
+
+/* =========================================
+  ROUTE PREVIEW CONTENT
+  ========================================= */
 .route-preview-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
 }
 
-/* === Textos === */
+/* =========================================
+  ROUTE PREVIEW TEXTS
+  ========================================= */
 .route-preview-texts {
   display: flex;
   flex-direction: column;
   gap: 6px;
   text-align: left;
+  flex: 1;
+  min-width: 0;
 }
 
 .route-preview-title {
-  font-weight: 600;
+  font-weight: 900;
   font-size: 16px;
   margin: 0;
+  color: var(--ink);
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .route-preview-category {
-  font-size: 14px;
-  color: var(--text-muted, #555);
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0;
+  word-break: break-word;
 }
 
 .route-preview-points {
-  font-size: 13px;
-  color: #888;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  margin: 0;
 }
 
-/* === Botón favorito === */
+/* =========================================
+  PREVIEW SAVE - BOTÓN FAVORITO
+  ========================================= */
 .preview-save {
   margin-left: auto;
-  margin-right: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,9 +103,12 @@
 
 .save-container {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   user-select: none;
+  padding: 4px;
 }
 
 .save-container input {
@@ -76,18 +120,21 @@
 }
 
 .save-icon {
-  height: 28px !important;
-  width: 28px !important;
-  fill: #666;
-  transition: all 0.3s ease;
+  height: 24px;
+  width: 24px;
+  fill: var(--muted);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
 }
 
 .save-icon:hover {
-  transform: scale(1.1) rotate(-10deg);
+  transform: scale(1.15) rotate(-12deg);
+  fill: #ff6b6b;
 }
 
 .save-container input:checked ~ .save-icon {
-  fill: #2196f3;
+  fill: #ff6b6b;
+  animation: pulse 0.4s ease;
 }
 
 .save-icon.is-loading {
@@ -97,6 +144,65 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* =========================================
+  RESPONSIVE
+  ========================================= */
+@media (max-width: 768px) {
+  .route-preview-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .route-preview-title {
+    font-size: 15px;
+  }
+
+  .route-preview-category,
+  .route-preview-points {
+    font-size: 11px;
+  }
+
+  .save-icon {
+    height: 22px;
+    width: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .route-preview-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .route-preview-title {
+    font-size: 14px;
+  }
+
+  .route-preview-category,
+  .route-preview-points {
+    font-size: 10px;
+  }
+
+  .save-icon {
+    height: 20px;
+    width: 20px;
+  }
 }

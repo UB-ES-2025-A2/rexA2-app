@@ -5,10 +5,17 @@ import { useAuth } from "../context/AuthContext";
 import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
+import AnimatedList from "../components/AnimatedList";
+import defaultAvatar from "../assets/profile_pic.png";
+import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 
-type TabKey = "profile" | "favorites" | "created";
+type TabKey = "profile" | "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
-type ProfileStats = { routes_created: number; routes_completed: number; routes_favorites: number };
+type ProfileStats = {
+  routes_created: number;
+  routes_completed: number;
+  routes_favorites: number;
+};
 type ProfileResponse = {
   id: string;
   username?: string;
@@ -53,39 +60,62 @@ type FavoriteRoute = {
   points: Array<[number, number]>;
 };
 
-const API_BASE =
-  (import.meta.env.VITE_API_URL?.trim() ||
-    (typeof window !== "undefined" ? window.location.origin : ""))
-    .replace(/\/$/, "");
+const API_BASE = (
+  import.meta.env.VITE_API_URL?.trim() ||
+  (typeof window !== "undefined" ? window.location.origin : "")
+).replace(/\/$/, "");
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
-const EMPTY_STATS: ProfileStats = { routes_created: 0, routes_completed: 0, routes_favorites: 0 };
+const EMPTY_STATS: ProfileStats = {
+  routes_created: 0,
+  routes_completed: 0,
+  routes_favorites: 0,
+};
 
 export default function Profile() {
   const [active, setActive] = useState<TabKey>("profile");
   const navigate = useNavigate();
   const { token, logout } = useAuth();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false); // <-- nuevo
-
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
-  const [profileStatus, setProfileStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [profileStatus, setProfileStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [profileError, setProfileError] = useState("");
 
-  const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() => createDraftFromProfile());
+  const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() =>
+    createDraftFromProfile()
+  );
+
+  const [followers, setFollowers] = useState<Follower[]>([]);
+  const [followersStatus, setFollowersStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
+  const [followersError, setFollowersError] = useState("");
+
   const [isEditing, setIsEditing] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
-  const [favoritesStatus, setFavoritesStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [favoritesStatus, setFavoritesStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [favoritesError, setFavoritesError] = useState("");
-  const [selectedFavorite, setSelectedFavorite] = useState<FavoriteRoute | null>(null);
+  const [selectedFavorite, setSelectedFavorite] =
+    useState<FavoriteRoute | null>(null);
   const [createdRoutes, setCreatedRoutes] = useState<FavoriteRoute[]>([]);
-  const [createdStatus, setCreatedStatus] = useState<"idle" | "loading" | "error">("loading");
+  const [createdStatus, setCreatedStatus] = useState<
+    "idle" | "loading" | "error"
+  >("loading");
   const [createdError, setCreatedError] = useState("");
-  const [selectedCreatedRoute, setSelectedCreatedRoute] = useState<FavoriteRoute | null>(null);
+  const [selectedCreatedRoute, setSelectedCreatedRoute] =
+    useState<FavoriteRoute | null>(null);
 
   const accessToken =
-    token || (typeof window !== "undefined" ? localStorage.getItem("access_token") || "" : "");
+    token ||
+    (typeof window !== "undefined"
+      ? localStorage.getItem("access_token") || ""
+      : "");
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -142,7 +172,9 @@ export default function Profile() {
       } catch (err) {
         if (controller.signal.aborted) return;
         setProfileStatus("error");
-        setProfileError(err instanceof Error ? err.message : "Error cargando el perfil.");
+        setProfileError(
+          err instanceof Error ? err.message : "Error cargando el perfil."
+        );
       }
     }
 
@@ -174,12 +206,16 @@ export default function Profile() {
           throw new Error(detail || "No se pudieron cargar tus rutas creadas.");
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setCreatedRoutes(data.map((route) => normalizeFavoriteRoute(route, ownerFallback)));
+        setCreatedRoutes(
+          data.map((route) => normalizeFavoriteRoute(route, ownerFallback))
+        );
         setCreatedStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
         setCreatedStatus("error");
-        setCreatedError(err instanceof Error ? err.message : "Error al cargar tus rutas.");
+        setCreatedError(
+          err instanceof Error ? err.message : "Error al cargar tus rutas."
+        );
       }
     }
 
@@ -207,7 +243,9 @@ export default function Profile() {
         });
         if (!res.ok) {
           const detail = await res.text().catch(() => "");
-          throw new Error(detail || "No se pudieron cargar las rutas favoritas.");
+          throw new Error(
+            detail || "No se pudieron cargar las rutas favoritas."
+          );
         }
         const data = (await res.json()) as FavoriteRouteApi[];
         setFavorites(data.map((route) => normalizeFavoriteRoute(route)));
@@ -215,7 +253,9 @@ export default function Profile() {
       } catch (err) {
         if (controller.signal.aborted) return;
         setFavoritesStatus("error");
-        setFavoritesError(err instanceof Error ? err.message : "Error al cargar las favoritas.");
+        setFavoritesError(
+          err instanceof Error ? err.message : "Error al cargar las favoritas."
+        );
       }
     }
 
@@ -246,6 +286,136 @@ export default function Profile() {
     }
   }, [createdRoutes, selectedCreatedRoute]);
 
+  useEffect(() => {
+    if (!accessToken || !profile?.id) {
+      setFollowers([]);
+      setFollowersStatus("idle");
+      setFollowersError("");
+      return;
+    }
+
+    if (!API_BASE) {
+      setFollowersStatus("error");
+      setFollowersError("Configura VITE_API_URL para cargar seguidores.");
+      return;
+    }
+
+    const controller = new AbortController();
+    setFollowersStatus("loading");
+    setFollowersError("");
+
+    async function fetchFollowers() {
+      try {
+        if (!profile?.id) return;
+
+        const profileId: string = profile.id;
+        const res = await fetch(
+          `${API_BASE}/users/${profileId}/followers?skip=0&limit=50`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+          }
+        );
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || "No se pudieron cargar los seguidores.");
+        }
+
+        const data = (await res.json()) as FollowerListAPI | FollowerAPI[];
+
+        const rawItems: FollowerAPI[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+        setFollowers(rawItems.map(normalizeFollower));
+        setFollowersStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setFollowersStatus("error");
+        setFollowersError(
+          err instanceof Error ? err.message : "Error al cargar los seguidores."
+        );
+      }
+    }
+
+    fetchFollowers();
+    return () => controller.abort();
+  }, [accessToken, profile]);
+
+  // ============= Siguiendo =============
+  const [following, setFollowing] = useState<Follower[]>([]);
+  const [followingStatus, setFollowingStatus] = useState<
+    "idle" | "loading" | "error"
+  >("idle");
+  const [followingError, setFollowingError] = useState("");
+  // =======================================
+  useEffect(() => {
+    if (!accessToken || !profile?.id) {
+      setFollowing([]);
+      setFollowingStatus("idle");
+      setFollowingError("");
+      return;
+    }
+
+    if (!API_BASE) {
+      setFollowingStatus("error");
+      setFollowingError(
+        "Configura VITE_API_URL para cargar la gente que sigues"
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    setFollowingStatus("loading");
+    setFollowingError("");
+
+    async function fetchFollowing() {
+      try {
+        if (!profile?.id) return;
+
+        const profileId: string = profile.id;
+        const res = await fetch(
+          `${API_BASE}/users/${profileId}/following?skip=0&limit=50`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: controller.signal,
+          }
+        );
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(
+            detail || "No se pudo cargar la lista de usuarios que sigues."
+          );
+        }
+        const data = (await res.json()) as FollowerListAPI | FollowerAPI[];
+
+        const rawItems: FollowerAPI[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
+
+        setFollowing(rawItems.map(normalizeFollower));
+        setFollowingStatus("idle");
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        setFollowingStatus("error");
+        setFollowingError(
+          err instanceof Error
+            ? err.message
+            : "Error al cargar la lista de usuarios a los que sigues."
+        );
+      }
+    }
+
+    fetchFollowing();
+    return () => controller.abort();
+  }, [accessToken, profile]);
+
   const handleDraftChange = (patch: Partial<ProfileDraft>) => {
     setDraftExtras((prev) => ({ ...prev, ...patch }));
   };
@@ -267,7 +437,10 @@ export default function Profile() {
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        setDraftExtras((prev) => ({ ...prev, avatarUrl: reader.result as string }));
+        setDraftExtras((prev) => ({
+          ...prev,
+          avatarUrl: reader.result as string,
+        }));
         setAvatarError("");
       }
     };
@@ -318,14 +491,17 @@ export default function Profile() {
       setProfile(updated);
       setIsEditing(false);
     } catch (err) {
-      setProfileError(err instanceof Error ? err.message : "Error al guardar el perfil.");
+      setProfileError(
+        err instanceof Error ? err.message : "Error al guardar el perfil."
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   const showFavoriteRoute = active === "favorites" && Boolean(selectedFavorite);
-  const showCreatedRoute = active === "created" && Boolean(selectedCreatedRoute);
+  const showCreatedRoute =
+    active === "created" && Boolean(selectedCreatedRoute);
 
   const handleSelectFavorite = (route: FavoriteRoute) => {
     setSelectedFavorite(route);
@@ -345,7 +521,9 @@ export default function Profile() {
 
   const handleFavoriteSavedChange = (saved: boolean) => {
     if (saved || !selectedFavorite) return;
-    setFavorites((prev) => prev.filter((route) => route.id !== selectedFavorite.id));
+    setFavorites((prev) =>
+      prev.filter((route) => route.id !== selectedFavorite.id)
+    );
     closeFavoriteView();
   };
 
@@ -363,72 +541,108 @@ export default function Profile() {
     });
   };
 
+  const handleDeleteCreatedRoute = async (routeId: string) => {
+    if (!accessToken) {
+      return;
+    }
+    if (!API_BASE) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/routes/${routeId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        throw new Error(detail || "No se pudo eliminar la ruta.");
+      }
+      setCreatedRoutes((prev) => prev.filter((route) => route.id !== routeId));
+      setSelectedCreatedRoute(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error al eliminar la ruta.");
+    }
+  };
+
   return (
     <div className="profile-root">
       <header className="header">
         <div className="header__inner">
           <div className="header-left">
-            <button aria-label="Ir al inicio" onClick={() => navigate("/")} className="btn-home">
-              🏠
-            </button>
+            <button
+              aria-label="Ir al inicio"
+              onClick={() => navigate("/")}
+              className="btn-home"
+            ></button>
             <div className="header-title">
-              <span className="eyebrow">Panel</span>
+              <span className="eyebrow"></span>
               <h1>Perfil</h1>
             </div>
           </div>
           <div className="profile-menu-container">
             <button
-                className="profile-menu-btn"
-                onClick={() => {
-                if (token) setProfileMenuOpen(v => !v);
-                else navigate("/"); // si no está logueado, llévalo a Home a iniciar sesión
-                }}
-                aria-label="Profile"
-                aria-haspopup={token ? "menu" : undefined}
-                aria-expanded={token ? profileMenuOpen : undefined}
+              className="profile-menu-btn"
+              onClick={() => {
+                if (token) setProfileMenuOpen((v) => !v);
+                else navigate("/");
+              }}
+              aria-label="Profile"
+              aria-haspopup={token ? "menu" : undefined}
+              aria-expanded={token ? profileMenuOpen : undefined}
             >
-                <span>👤</span>
+              <span>👤</span>
             </button>
 
             {token ? (
-                <div className={`profile-menu ${profileMenuOpen ? "open" : ""}`} role="menu" aria-label="Profile menu">
+              <div
+                className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+                role="menu"
+                aria-label="Profile menu"
+              >
                 <button
-                    className="profile-menu__item"
-                    role="menuitem"
-                    onClick={() => {
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
                     setProfileMenuOpen(false);
-                    navigate("/perfil");   // ya estás en perfil, pero así es consistente
-                    }}
+                    navigate("/perfil");
+                  }}
                 >
-                    Mi perfil
+                  Mi perfil
                 </button>
 
-
                 <button
-                    className="profile-menu__item"
-                    role="menuitem"
-                    onClick={() => {
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
                     logout();
                     setProfileMenuOpen(false);
                     navigate("/");
-                    }}
+                  }}
                 >
-                    Cerrar sesión
+                  Cerrar sesión
                 </button>
-                </div>
+              </div>
             ) : null}
-            </div>
+          </div>
         </div>
       </header>
-      
+
       <main className="profile-layout">
-        <aside className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""}`}>
+        <aside
+          className={`sidebar ${
+            showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
+          }`}
+        >
           {showFavoriteRoute && selectedFavorite ? (
             <RouteDetailsCard
               routeId={selectedFavorite.id}
               name={selectedFavorite.name}
               description={selectedFavorite.description || "Sin descripción"}
-              category={(selectedFavorite.category as Category) || "entretenimiento"}
+              category={
+                (selectedFavorite.category as Category) || "entretenimiento"
+              }
               points={selectedFavorite.points}
               isPrivate={!selectedFavorite.visibility}
               onClose={closeFavoriteView}
@@ -439,13 +653,21 @@ export default function Profile() {
             <RouteDetailsCard
               routeId={selectedCreatedRoute.id}
               name={selectedCreatedRoute.name}
-              description={selectedCreatedRoute.description || "Sin descripción"}
-              category={(selectedCreatedRoute.category as Category) || "entretenimiento"}
+              description={
+                selectedCreatedRoute.description || "Sin descripción"
+              }
+              category={
+                (selectedCreatedRoute.category as Category) || "entretenimiento"
+              }
               points={selectedCreatedRoute.points}
               isPrivate={!selectedCreatedRoute.visibility}
               onClose={closeCreatedView}
-              initialSaved={favorites.some((route) => route.id === selectedCreatedRoute.id)}
+              initialSaved={favorites.some(
+                (route) => route.id === selectedCreatedRoute.id
+              )}
               onSavedChange={handleCreatedSavedChange}
+              onDelete={handleDeleteCreatedRoute}
+              isOwnRoute={true}
             />
           ) : (
             <ul className="menu">
@@ -454,10 +676,7 @@ export default function Profile() {
                   className={`btn ${active === "profile" ? "active" : ""}`}
                   onClick={() => setActive("profile")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    👤
-                  </span>
-                  <span className="label">Datos personales</span>
+                  <span className="label">Perfil</span>
                 </button>
               </li>
               <li>
@@ -465,9 +684,6 @@ export default function Profile() {
                   className={`btn ${active === "favorites" ? "active" : ""}`}
                   onClick={() => setActive("favorites")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    ⭐
-                  </span>
                   <span className="label">Favoritas</span>
                 </button>
               </li>
@@ -476,16 +692,29 @@ export default function Profile() {
                   className={`btn ${active === "created" ? "active" : ""}`}
                   onClick={() => setActive("created")}
                 >
-                  <span className="icon" aria-hidden="true">
-                    🛣️
-                  </span>
                   <span className="label">Mis rutas</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  className={`btn ${active === "followers" ? "active" : ""}`}
+                  onClick={() => setActive("followers")}
+                >
+                  <span className="label">Seguidores</span>
+                </button>
+              </li>
+              <li>
+                <button
+                  className={`btn ${active === "following" ? "active" : ""}`}
+                  onClick={() => setActive("following")}
+                >
+                  <span className="label">Siguiendo</span>
                 </button>
               </li>
             </ul>
           )}
         </aside>
-        
+
         <section className="content">
           {active === "profile" && (
             <PersonalData
@@ -502,6 +731,12 @@ export default function Profile() {
               saving={isSaving}
               onAvatarFile={handleAvatarFile}
               avatarError={avatarError}
+              followers={followers}
+              onGoToFollowers={() => setActive("followers")}
+              following={following}
+              onGoToFollowing={() => setActive("following")}
+              onGoToFavorites={() => setActive("favorites")}
+              onGoToCreated={() => setActive("created")}
             />
           )}
           {active === "favorites" && (
@@ -524,8 +759,21 @@ export default function Profile() {
               onCloseRoute={closeCreatedView}
             />
           )}
+          {active === "followers" && (
+            <FollowersPanel
+              followers={followers}
+              status={followersStatus}
+              error={followersError}
+            />
+          )}
+          {active === "following" && (
+            <FollowingPanel
+              following={following}
+              status={followingStatus}
+              error={followingError}
+            />
+          )}
         </section>
-        
       </main>
     </div>
   );
@@ -555,18 +803,24 @@ function normalizeProfile(payload: ProfileResponse): ProfileData {
   };
 }
 
-function normalizeFavoriteRoute(route: FavoriteRouteApi, ownerFallback?: string): FavoriteRoute {
+function normalizeFavoriteRoute(
+  route: FavoriteRouteApi,
+  ownerFallback?: string
+): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
         .filter(
           (point): point is FavoriteRoutePoint =>
-            typeof point?.longitude === "number" && typeof point?.latitude === "number",
+            typeof point?.longitude === "number" &&
+            typeof point?.latitude === "number"
         )
         .map((point) => [point.longitude, point.latitude])
     : [];
 
   const createdAt =
-    typeof route.created_at === "string" ? route.created_at : new Date(route.created_at).toISOString();
+    typeof route.created_at === "string"
+      ? route.created_at
+      : new Date(route.created_at).toISOString();
 
   return {
     id: route.id ?? route._id ?? "",
@@ -581,10 +835,47 @@ function normalizeFavoriteRoute(route: FavoriteRouteApi, ownerFallback?: string)
   };
 }
 
+// ============= Seguidores =============
+type Follower = {
+  id: string;
+  name: string;
+  username: string;
+  email?: string;
+  avatarUrl?: string | null;
+};
+
+type FollowerAPI = {
+  id: string;
+  username: string;
+  name?: string | null;
+  email?: string | null;
+  avatar_url?: string | null;
+};
+
+type FollowerListAPI = {
+  items: FollowerAPI[];
+  total: number;
+};
+// =======================================
+
+function normalizeFollower(payload: FollowerAPI): Follower {
+  return {
+    id: payload.id,
+    username: payload.username,
+    name: payload.name ?? payload.username,
+    email: payload.email ?? "",
+    avatarUrl: payload.avatar_url ?? null,
+  };
+}
+
 function formatDateLabel(iso: string) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 type PersonalDataProps = {
@@ -601,6 +892,12 @@ type PersonalDataProps = {
   saving: boolean;
   onAvatarFile: (file: File | null) => void;
   avatarError: string;
+  followers: Follower[];
+  onGoToFollowers: () => void;
+  following: Follower[];
+  onGoToFollowing: () => void;
+  onGoToFavorites: () => void;
+  onGoToCreated: () => void;
 };
 
 function PersonalData({
@@ -610,13 +907,18 @@ function PersonalData({
   stats,
   isEditing,
   draftExtras,
-  onChangeDraft,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
   saving,
   onAvatarFile,
   avatarError,
+  followers,
+  onGoToFollowers,
+  following,
+  onGoToFollowing,
+  onGoToFavorites,
+  onGoToCreated,
 }: PersonalDataProps) {
   const viewExtras = isEditing ? draftExtras : createDraftFromProfile(profile);
   const username = profile?.username ?? "";
@@ -626,16 +928,24 @@ function PersonalData({
     <div className="card fill profile-panel">
       <div className="panel-header">
         <div>
-          <h2>Datos personales</h2>
-          <p>Información conectada con tu cuenta</p>
+          <h2>Perfil</h2>
         </div>
         <div className="panel-actions">
           {isEditing ? (
             <>
-              <button className="btn-ghost sm" type="button" onClick={onCancelEdit}>
+              <button
+                className="btn-ghost sm"
+                type="button"
+                onClick={onCancelEdit}
+              >
                 Cancelar
               </button>
-              <button className="btn-primary sm" type="button" onClick={onSaveEdit} disabled={saving}>
+              <button
+                className="btn-primary sm"
+                type="button"
+                onClick={onSaveEdit}
+                disabled={saving}
+              >
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             </>
@@ -651,19 +961,9 @@ function PersonalData({
           )}
         </div>
       </div>
-
       {error && <div className="alert error">{error}</div>}
 
-      <div className="info-grid">
-        <InfoRow
-          label="Nombre de usuario"
-          value={username || "Sin definir"}
-          loading={loadingProfile}
-        />
-        <InfoRow label="Email" value={email || "Sin email"} loading={loadingProfile} />
-      </div>
-
-      <div className="profile-widgets">
+      <div className="profile-top">
         <div className="avatar-block">
           <div className="avatar-frame">
             {viewExtras.avatarUrl ? (
@@ -672,6 +972,7 @@ function PersonalData({
               <span>{username?.[0]?.toUpperCase() || "?"}</span>
             )}
           </div>
+
           {isEditing ? (
             <div className="avatar-inputs">
               <label className="btn-ghost sm" htmlFor="avatar-upload">
@@ -689,7 +990,11 @@ function PersonalData({
                 }}
               />
               {viewExtras.avatarUrl && (
-                <button className="btn-ghost sm" type="button" onClick={() => onAvatarFile(null)}>
+                <button
+                  className="btn-ghost sm"
+                  type="button"
+                  onClick={() => onAvatarFile(null)}
+                >
                   Quitar foto
                 </button>
               )}
@@ -700,70 +1005,75 @@ function PersonalData({
               )}
             </div>
           ) : (
-            <p className="muted">{viewExtras.avatarUrl ? "Foto personalizada." : "Personaliza tu foto cuando quieras."}</p>
+            <p className="muted">
+              {viewExtras.avatarUrl
+                ? "Foto personalizada."
+                : "Personaliza tu foto cuando quieras."}
+            </p>
           )}
         </div>
 
-        <div className="extra-block">
-          <span className="extra-label">Teléfono (opcional)</span>
-          {isEditing ? (
-            <input
-              className="input"
-              type="tel"
-              placeholder="+34 600 000 000"
-              value={draftExtras.phone}
-              onChange={(event) => onChangeDraft({ phone: event.target.value })}
+        <div className="profile-top-main">
+          <div className="info-grid info-grid--main">
+            <InfoRow
+              label="Nombre de usuario"
+              value={username || "Sin definir"}
+              loading={loadingProfile}
             />
-          ) : (
-            <p className="data-highlight">{viewExtras.phone || "Sin número"}</p>
-          )}
-        </div>
+            <InfoRow
+              label="Email"
+              value={email || "Sin email"}
+              loading={loadingProfile}
+            />
+          </div>
 
-        <div className="extra-block">
-          <span className="extra-label">Unidades preferidas</span>
-          {isEditing ? (
-            <div className="unit-options" role="radiogroup" aria-label="Elegir unidades">
-              {(["km", "mi"] as Units[]).map((unit) => (
-                <label key={unit} className={`unit-chip ${draftExtras.units === unit ? "selected" : ""}`}>
-                  <input
-                    type="radio"
-                    name="units"
-                    value={unit}
-                    checked={draftExtras.units === unit}
-                    onChange={() => onChangeDraft({ units: unit })}
-                  />
-                  {unit === "km" ? "Kilómetros" : "Millas"}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <span className="badge">{viewExtras.units === "km" ? "Kilómetros" : "Millas"}</span>
-          )}
+          <div className="profile-widgets">{/* extras ocultos */}</div>
         </div>
       </div>
 
-      <div className="stats-grid">
-        <StatCard label="Rutas creadas" value={stats.routes_created} />
-        <StatCard label="Rutas realizadas" value={stats.routes_completed} />
+      <div className="stats-summary">
+        <button type="button" className="stats-card" onClick={onGoToFollowers}>
+          <span className="stat-value">{followers.length}</span>
+          <span className="stat-label">
+            {followers.length === 1 ? "Seguidor" : "Seguidores"}
+          </span>
+        </button>
+        <button type="button" className="stats-card" onClick={onGoToFollowing}>
+          <span className="stat-value">{following.length}</span>
+          <span className="stat-label">Siguiendo</span>
+        </button>
+      </div>
+
+      <div className="stats-summary">
+        <button type="button" className="stats-card" onClick={onGoToCreated}>
+          <span className="stats-card-title">Rutas creadas</span>
+          <span className="stats-card-count">{stats.routes_created}</span>
+          <span className="stats-card-cta">Ver mis rutas</span>
+        </button>
+
+        <button type="button" className="stats-card" onClick={onGoToFavorites}>
+          <span className="stats-card-title">Rutas favoritas</span>
+          <span className="stats-card-count">{stats.routes_favorites}</span>
+          <span className="stats-card-cta">Ver rutas favoritas</span>
+        </button>
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value, loading }: { label: string; value: ReactNode; loading?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  loading,
+}: {
+  label: string;
+  value: ReactNode;
+  loading?: boolean;
+}) {
   return (
     <div className="info-row">
       <span className="info-label">{label}</span>
       <span className="info-value">{loading ? "Cargando…" : value}</span>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="stat-card">
-      <span className="stat-value">{value}</span>
-      <span className="stat-label">{label}</span>
     </div>
   );
 }
@@ -793,7 +1103,8 @@ function FavoritesPanel({
           <div>
             <h2>{selectedRoute.name}</h2>
             <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+              {formatDateLabel(selectedRoute.createdAt)}
             </p>
           </div>
           <button className="btn-ghost" type="button" onClick={onCloseRoute}>
@@ -801,11 +1112,30 @@ function FavoritesPanel({
           </button>
         </div>
         <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+          <MapView
+            className="favorites-map"
+            highlightPoints={selectedRoute.points}
+          />
         </div>
       </div>
     );
   }
+
+  const hasFavorites = favorites.length > 0;
+
+  const favoriteItems = favorites.map((route) => (
+    <div className="route-row" key={route.id}>
+      <div className="route-row-main">
+        <div className="route-row-title">{route.name}</div>
+        <div className="route-row-meta">
+          <span>{route.ownerName || route.ownerId}</span>
+          <span>· {route.category}</span>
+          <span>· {formatDateLabel(route.createdAt)}</span>
+        </div>
+      </div>
+      <div className="route-row-cta">Ver detalles</div>
+    </div>
+  ));
 
   return (
     <div className="card fill">
@@ -813,42 +1143,26 @@ function FavoritesPanel({
         <h2>Rutas favoritas</h2>
         <p>Accede y gestiona tus rutas</p>
       </div>
-      {status === "error" && error && <div className="alert error">{error}</div>}
-      <div className="table-scroll grow">
-        {status === "loading" && favorites.length === 0 ? (
-          <p className="muted">Cargando tus rutas guardadas…</p>
-        ) : favorites.length === 0 ? (
-          <p className="muted">Aún no has guardado rutas favoritas.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ruta</th>
-                <th>Propietario</th>
-                <th>Categoría</th>
-                <th>Creada</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {favorites.map((route) => (
-                <tr key={route.id}>
-                  <td>{route.name}</td>
-                  <td>{route.ownerName || route.ownerId}</td>
-                  <td>{route.category}</td>
-                  <td>{formatDateLabel(route.createdAt)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {status === "loading" && favorites.length > 0 && (
+
+      {status === "error" && error && (
+        <div className="alert error">{error}</div>
+      )}
+
+      {status === "loading" && !hasFavorites ? (
+        <p className="muted">Cargando tus rutas guardadas…</p>
+      ) : !hasFavorites ? (
+        <p className="muted">Aún no has guardado rutas favoritas.</p>
+      ) : (
+        <AnimatedList
+          items={favoriteItems}
+          className="routes-animated-list"
+          itemClassName="routes-animated-item"
+          showGradients
+          onItemSelect={(index) => onViewRoute(favorites[index])}
+        />
+      )}
+
+      {status === "loading" && hasFavorites && (
         <p className="muted" style={{ marginTop: 12 }}>
           Actualizando lista…
         </p>
@@ -882,7 +1196,8 @@ function CreatedRoutesPanel({
           <div>
             <h2>{selectedRoute.name}</h2>
             <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el {formatDateLabel(selectedRoute.createdAt)}
+              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+              {formatDateLabel(selectedRoute.createdAt)}
             </p>
           </div>
           <button className="btn-ghost" type="button" onClick={onCloseRoute}>
@@ -890,11 +1205,30 @@ function CreatedRoutesPanel({
           </button>
         </div>
         <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView className="favorites-map" highlightPoints={selectedRoute.points} />
+          <MapView
+            className="favorites-map"
+            highlightPoints={selectedRoute.points}
+          />
         </div>
       </div>
     );
   }
+
+  const hasRoutes = routes.length > 0;
+
+  const createdItems = routes.map((route) => (
+    <div className="route-row" key={route.id}>
+      <div className="route-row-main">
+        <div className="route-row-title">{route.name}</div>
+        <div className="route-row-meta">
+          <span>{route.ownerName || route.ownerId}</span>
+          <span>· {route.category}</span>
+          <span>· {formatDateLabel(route.createdAt)}</span>
+        </div>
+      </div>
+      <div className="route-row-cta">Ver detalles</div>
+    </div>
+  ));
 
   return (
     <div className="card fill">
@@ -902,46 +1236,214 @@ function CreatedRoutesPanel({
         <h2>Mis rutas</h2>
         <p>Listado de rutas creadas por ti</p>
       </div>
-      {status === "error" && error && <div className="alert error">{error}</div>}
-      <div className="table-scroll grow">
-        {status === "loading" && routes.length === 0 ? (
-          <p className="muted">Cargando tus rutas…</p>
-        ) : routes.length === 0 ? (
-          <p className="muted">Todavía no has creado rutas.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Ruta</th>
-                <th>Propietario</th>
-                <th>Categoría</th>
-                <th>Creada</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {routes.map((route) => (
-                <tr key={route.id}>
-                  <td>{route.name}</td>
-                  <td>{route.ownerName || route.ownerId}</td>
-                  <td>{route.category}</td>
-                  <td>{formatDateLabel(route.createdAt)}</td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn-ghost" type="button" onClick={() => onViewRoute(route)}>
-                      Ver
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      {status === "loading" && routes.length > 0 && (
+
+      {status === "error" && error && (
+        <div className="alert error">{error}</div>
+      )}
+
+      {status === "loading" && !hasRoutes ? (
+        <p className="muted">Cargando tus rutas…</p>
+      ) : !hasRoutes ? (
+        <p className="muted">Todavía no has creado rutas.</p>
+      ) : (
+        <AnimatedList
+          items={createdItems}
+          className="routes-animated-list"
+          itemClassName="routes-animated-item"
+          showGradients
+          onItemSelect={(index) => onViewRoute(routes[index])}
+        />
+      )}
+
+      {status === "loading" && hasRoutes && (
         <p className="muted" style={{ marginTop: 12 }}>
           Actualizando lista…
         </p>
       )}
+    </div>
+  );
+}
+
+type FollowersPanelProps = {
+  followers: Follower[];
+  status: "idle" | "loading" | "error";
+  error: string;
+};
+
+function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
+  const navigate = useNavigate();
+
+  if (status === "loading" && followers.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Seguidores</h2>
+          <p>Personas que siguen tus rutas y actividad</p>
+        </div>
+        <p className="muted">Cargando seguidores...</p>
+      </div>
+    );
+  }
+
+  if (status === "error" && error) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Seguidores</h2>
+          <p>Personas que siguen tus rutas y actividad</p>
+        </div>
+        <div className="alert error">{error}</div>
+      </div>
+    );
+  }
+
+  if (followers.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Seguidores</h2>
+          <p>Personas que siguen tus rutas y actividad</p>
+        </div>
+        <p className="muted">Todavía no tienes seguidores</p>
+      </div>
+    );
+  }
+
+  const followerItems = followers.map((follower) => (
+    <div className="user-row" key={follower.id}>
+      <UserPreviewCard
+        id={follower.id}
+        username={follower.username}
+        email={follower.email ?? ""}
+        name={follower.name}
+        avatar_url={follower.avatarUrl ?? defaultAvatar}
+      />
+    </div>
+  ));
+
+  const handleSelectFollower = (index: number) => {
+    const follower = followers[index];
+    if (!follower) return;
+
+    navigate("/", {
+      state: {
+        openUserFromFollowers: {
+          id: follower.id,
+          username: follower.username,
+          name: follower.name,
+          email: follower.email ?? "",
+          avatar_url: follower.avatarUrl ?? null,
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Seguidores</h2>
+        <p>Personas que siguen tus rutas y actividad</p>
+      </div>
+
+      <AnimatedList
+        items={followerItems}
+        className="followers-animated-list"
+        itemClassName="followers-animated-item"
+        showGradients
+        onItemSelect={handleSelectFollower}
+      />
+    </div>
+  );
+}
+
+type FollowingPanelProps = {
+  following: Follower[];
+  status: "idle" | "loading" | "error";
+  error: string;
+};
+
+function FollowingPanel({ following, status, error }: FollowingPanelProps) {
+  const navigate = useNavigate();
+
+  if (status === "loading" && following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Cargando lista…</p>
+      </div>
+    );
+  }
+
+  if (status === "error" && error) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <div className="alert error">{error}</div>
+      </div>
+    );
+  }
+
+  if (following.length === 0) {
+    return (
+      <div className="card fill">
+        <div className="section-title">
+          <h2>Siguiendo</h2>
+          <p>Personas a las que sigues</p>
+        </div>
+        <p className="muted">Todavía no sigues a nadie.</p>
+      </div>
+    );
+  }
+
+  const followingItems = following.map((user) => (
+    <div className="user-row" key={user.id}>
+      <UserPreviewCard
+        id={user.id}
+        username={user.username}
+        email={user.email ?? ""}
+        name={user.name}
+        avatar_url={user.avatarUrl ?? defaultAvatar}
+      />
+    </div>
+  ));
+
+  const handleSelectFollowing = (index: number) => {
+    const user = following[index];
+    if (!user) return;
+
+    navigate("/", {
+      state: {
+        openUserFromFollowers: {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          email: user.email ?? "",
+          avatar_url: user.avatarUrl ?? null,
+        },
+      },
+    });
+  };
+
+  return (
+    <div className="card fill">
+      <div className="section-title">
+        <h2>Siguiendo</h2>
+        <p>Personas a las que sigues</p>
+      </div>
+
+      <AnimatedList
+        items={followingItems}
+        className="followers-animated-list"
+        itemClassName="followers-animated-item"
+        showGradients
+        onItemSelect={handleSelectFollowing}
+      />
     </div>
   );
 }
