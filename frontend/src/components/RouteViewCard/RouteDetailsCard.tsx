@@ -47,6 +47,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [routeData, setRouteData] = useState<any>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
+  const [routeOwnership, setRouteOwnership] = useState<boolean | null>(null);
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -77,22 +78,48 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     loadRoute();
   }, [routeId, token, showAlert]);
 
+  useEffect(() => {
+    const checkOwnership = async () => {
+      if (!routeId || !token) {
+        setRouteOwnership(null);
+        return;
+      }
+      try {
+        const res = await fetchWithAuth(`/routes/${routeId}/ownership`);
+        if (res.ok) {
+          const data = await res.json();
+          setRouteOwnership(Boolean(data?.is_owner));
+        } else {
+          setRouteOwnership(null);
+        }
+      } catch (err) {
+        console.warn("No se pudo comprobar propiedad de la ruta", err);
+        setRouteOwnership(null);
+      }
+    };
+
+    checkOwnership();
+  }, [routeId, token]);
+
   const userId = user?.id || (user as any)?._id;
-  const ownerId = routeData?.owner_id;
+  const ownerId = routeData?.owner_id ?? (routeData as any)?.ownerId;
   const isAuthor =
     isOwnRoute ||
     routeData?.is_owner ||
+    routeOwnership === true ||
     (ownerId && userId && String(ownerId) === String(userId));
   const isAuthenticated = Boolean(token);
   const waitingRouteData = Boolean(isAuthenticated && !routeData);
-  const canRate = isAuthenticated && !isAuthor && !waitingRouteData;
-  const showRatingControl = true;
+  const waitingOwnership = Boolean(isAuthenticated && routeOwnership === null);
+  const waitingPerms = waitingRouteData || waitingOwnership;
+  const canRate = isAuthenticated && !waitingPerms && !isAuthor;
+  const showRatingControl = Boolean(routeData) && canRate;
 
   const ratingHint = !isAuthenticated
     ? "Inicia sesión para valorar esta ruta."
     : isAuthor
       ? "No puedes valorar tu propia ruta."
-      : waitingRouteData
+      : waitingPerms
         ? "Cargando permisos de valoración..."
         : "Haz clic en una estrella para valorar.";
 
@@ -105,9 +132,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const handleRatingChange = async (value: number) => {
     if (!canRate) {
       showAlert(
-        isAuthenticated
-          ? "No puedes valorar tu propia ruta."
-          : "Inicia sesión para valorar.",
+        !isAuthenticated
+          ? "Inicia sesión para valorar."
+          : isAuthor
+            ? "No puedes valorar tu propia ruta."
+            : "No puedes valorar esta ruta en este momento.",
         "error"
       );
       return;

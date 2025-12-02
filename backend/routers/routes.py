@@ -142,6 +142,24 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
         route["user_rating"] = user_rating
     return route
 
+@router.get("/{route_id}/ownership")
+async def check_route_ownership(
+    route_id: str, current_user: dict = Depends(get_current_user)
+) -> dict:
+    """
+    Devuelve si la ruta pertenece al usuario autenticado.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_owner = str(route.get("owner_id")) == str(current_user.get("_id"))
+    return {"is_owner": is_owner}
+
 @router.post(
     "/{route_id}/rating",
     response_model=RatingResponse,
