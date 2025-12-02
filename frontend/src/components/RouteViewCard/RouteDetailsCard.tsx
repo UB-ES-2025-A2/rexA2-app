@@ -46,6 +46,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
+  const [ratingSaving, setRatingSaving] = useState(false);
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -88,6 +89,60 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const handleDeleteConfirm = async () => {
     if (onDelete) {
       await onDelete(routeId);
+    }
+  };
+
+  const handleRatingChange = async (value: number) => {
+    if (!canRate) {
+      showAlert(
+        isAuthenticated
+          ? "No puedes valorar tu propia ruta."
+          : "Inicia sesión para valorar.",
+        "error"
+      );
+      return;
+    }
+    if (ratingSaving) return;
+
+    const previous = userRating;
+    setUserRating(value);
+    setRatingSaving(true);
+    try {
+      const res = await fetchWithAuth(`/routes/${routeId}/rating`, {
+        method: "POST",
+        body: JSON.stringify({ rating: value }),
+      });
+
+      if (!res.ok) {
+        setUserRating(previous ?? null);
+        const detail =
+          (await res.json().catch(() => null))?.detail ||
+          "No se pudo guardar la valoración.";
+        showAlert(detail, "error");
+        return;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      if (typeof data?.user_rating === "number") {
+        setUserRating(data.user_rating);
+      }
+      if (data?.average !== undefined || data?.count !== undefined) {
+        setRouteData((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                rating: data?.average ?? prev.rating,
+                rating_count: data?.count ?? prev.rating_count,
+              }
+            : prev
+        );
+      }
+    } catch (err) {
+      console.error("Error guardando valoración:", err);
+      setUserRating(previous ?? null);
+      showAlert("Error al guardar la valoración.", "error");
+    } finally {
+      setRatingSaving(false);
     }
   };
 
@@ -147,8 +202,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             </div>
             <StarRating
               value={userRating ?? 0}
-              onChange={(value) => setUserRating(value)}
-              disabled={!canRate}
+              onChange={handleRatingChange}
+              disabled={!canRate || ratingSaving}
               hint={ratingHint}
             />
           </div>
