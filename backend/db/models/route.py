@@ -28,6 +28,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "created_at": datetime.now(timezone.utc),
         "duration_minutes": route_data.get("duration_minutes"),
         "rating": route_data.get("rating"),
+        "rating_count": route_data.get("rating_count") or 0,
         "comments": [],
     }
 

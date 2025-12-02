@@ -108,3 +108,5 @@ class RoutePublic(RouteBase):
     created_at: datetime            # Fecha y hora de la creación
     owner_username: str | None = None
     comments: List[CommentThread] = Field(default_factory=list)
+    rating_count: int | None = None
+    user_rating: float | None = None
