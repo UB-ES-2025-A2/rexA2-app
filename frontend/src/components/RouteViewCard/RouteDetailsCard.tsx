@@ -40,7 +40,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   onDelete,
   isOwnRoute = false,
 }) => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { showAlert } = useAlert();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -76,15 +76,24 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     loadRoute();
   }, [routeId, token, showAlert]);
 
-  const isAuthor = isOwnRoute || routeData?.is_owner;
+  const userId = user?.id || (user as any)?._id;
+  const ownerId = routeData?.owner_id;
+  const isAuthor =
+    isOwnRoute ||
+    routeData?.is_owner ||
+    (ownerId && userId && String(ownerId) === String(userId));
   const isAuthenticated = Boolean(token);
-  const canRate = isAuthenticated && !isAuthor;
+  const waitingRouteData = Boolean(isAuthenticated && !routeData);
+  const canRate = isAuthenticated && !isAuthor && !waitingRouteData;
+  const showRatingControl = canRate;
 
   const ratingHint = !isAuthenticated
     ? "Inicia sesión para valorar esta ruta."
     : isAuthor
       ? "No puedes valorar tu propia ruta."
-      : "Haz clic en una estrella para valorar.";
+      : waitingRouteData
+        ? "Cargando permisos de valoración..."
+        : "Haz clic en una estrella para valorar.";
 
   const handleDeleteConfirm = async () => {
     if (onDelete) {
@@ -193,20 +202,22 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             </ul>
           </div>
 
-          <div className="route-details-card__rating">
-            <div className="route-details-card__rating-header">
-              <span className="route-details-card__rating-title">Tu valoración</span>
-              <span className="route-details-card__rating-value">
-                {userRating != null ? `${userRating}/5` : "Sin valorar"}
-              </span>
+          {showRatingControl ? (
+            <div className="route-details-card__rating">
+              <div className="route-details-card__rating-header">
+                <span className="route-details-card__rating-title">Tu valoración</span>
+                <span className="route-details-card__rating-value">
+                  {userRating != null ? `${userRating}/5` : "Sin valorar"}
+                </span>
+              </div>
+              <StarRating
+                value={userRating ?? 0}
+                onChange={handleRatingChange}
+                disabled={!canRate || ratingSaving}
+                hint={ratingHint}
+              />
             </div>
-            <StarRating
-              value={userRating ?? 0}
-              onChange={handleRatingChange}
-              disabled={!canRate || ratingSaving}
-              hint={ratingHint}
-            />
-          </div>
+          ) : null}
 
           <div
             className="route-details-card__footer"
