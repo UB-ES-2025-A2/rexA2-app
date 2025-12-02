@@ -6,6 +6,7 @@ import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
 import DeleteRouteModal from "./DeleteRouteModal";
 import DeleteButton from "./DeleteButton";
+import StarRating from "../StarRating";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
@@ -44,6 +45,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
+  const [userRating, setUserRating] = useState<number | null>(null);
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -58,6 +60,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         if (res.ok) {
           const data = await res.json();
           setRouteData(data);
+          if (typeof data?.user_rating === "number") {
+            setUserRating(data.user_rating);
+          } else if (typeof data?.rating === "number") {
+            setUserRating(data.rating);
+          }
         }
       } catch (err) {
         console.error("Error loading route:", err);
@@ -67,6 +74,16 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
     loadRoute();
   }, [routeId, token, showAlert]);
+
+  const isAuthor = isOwnRoute || routeData?.is_owner;
+  const isAuthenticated = Boolean(token);
+  const canRate = isAuthenticated && !isAuthor;
+
+  const ratingHint = !isAuthenticated
+    ? "Inicia sesión para valorar esta ruta."
+    : isAuthor
+      ? "No puedes valorar tu propia ruta."
+      : "Haz clic en una estrella para valorar.";
 
   const handleDeleteConfirm = async () => {
     if (onDelete) {
@@ -119,6 +136,21 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
                 </li>
               ))}
             </ul>
+          </div>
+
+          <div className="route-details-card__rating">
+            <div className="route-details-card__rating-header">
+              <span className="route-details-card__rating-title">Tu valoración</span>
+              <span className="route-details-card__rating-value">
+                {userRating != null ? `${userRating}/5` : "Sin valorar"}
+              </span>
+            </div>
+            <StarRating
+              value={userRating ?? 0}
+              onChange={(value) => setUserRating(value)}
+              disabled={!canRate}
+              hint={ratingHint}
+            />
           </div>
 
           <div
