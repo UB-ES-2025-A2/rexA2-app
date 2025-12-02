@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
@@ -47,7 +47,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [routeData, setRouteData] = useState<any>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
-  const [ratingSaved, setRatingSaved] = useState(false);
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -118,7 +117,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     const previous = userRating;
     setUserRating(value);
     setRatingSaving(true);
-    setRatingSaved(false);
     try {
       const res = await fetchWithAuth(`/routes/${routeId}/rating`, {
         method: "POST",
@@ -149,7 +147,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             : prev
         );
       }
-      setRatingSaved(true);
       showAlert("Valoración guardada", "success");
     } catch (err) {
       console.error("Error guardando valoración:", err);
@@ -215,9 +212,6 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
                   {userRating != null ? `${userRating}/5` : "Sin valorar"}
                 </span>
               </div>
-              {ratingSaved ? (
-                <span className="route-details-card__rating-status">✔ Guardado</span>
-              ) : null}
               <StarRating
                 value={userRating ?? 0}
                 onChange={handleRatingChange}
