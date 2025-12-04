@@ -8,14 +8,14 @@ from backend.db.schemas.route import (
     CommentThread,
     CommentCreated,
 )
-from backend.core.security import get_current_user
+from backend.core.security import get_current_user, get_current_user_optional
 from pymongo.errors import DuplicateKeyError
 from bson.errors import InvalidId
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
 
-async def _ensure_route_access(route_id: str, current_user: dict) -> dict:
+async def _ensure_route_access(route_id: str, current_user: dict | None) -> dict:
     """
     Devuelve la ruta si el usuario puede acceder a ella; lanza HTTPException en caso contrario.
     """
@@ -27,7 +27,10 @@ async def _ensure_route_access(route_id: str, current_user: dict) -> dict:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
 
     is_public = bool(route.get("visibility"))
-    is_owner = route.get("owner_id") == current_user["_id"]
+    # Si no hay usuario, is_owner es False
+    is_owner = False
+    if current_user:
+        is_owner = str(route.get("owner_id")) == str(current_user["_id"])
 
     if not is_public and not is_owner:
         raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
@@ -116,7 +119,7 @@ async def list_user_public_routes(
     return routes
 
 @router.get("/{route_id}", response_model=RoutePublic)
-async def get_route(route_id: str, current_user: dict = Depends(get_current_user)):
+async def get_route(route_id: str, current_user: dict | None = Depends(get_current_user_optional)):
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
@@ -125,7 +128,9 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     
     is_public = bool(route.get("visibility"))
-    is_owner = str(route.get("owner_id")) == str(current_user["_id"])
+    is_owner = False
+    if current_user:
+        is_owner = str(route.get("owner_id")) == str(current_user["_id"])
 
     if not is_public and not is_owner:
         raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
@@ -153,7 +158,7 @@ async def get_public_route_by_name(name: str, current_user: dict = Depends(get_c
     response_model=list[CommentThread],
 )
 async def list_route_comments(
-    route_id: str, current_user: dict = Depends(get_current_user)
+    route_id: str, current_user: dict | None = Depends(get_current_user_optional)
 ):
     """
     Devuelve los comentarios de una ruta si es pública o el usuario es el propietario.

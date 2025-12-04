@@ -190,11 +190,18 @@ export default function Home() {
             if (existing.points.length > 0) {
               setMapCenter(existing.points[0]);
             }
+            navigate(window.location.pathname, { replace: true });
             return;
           }
 
           // Si no, hacemos fetch
-          const res = await fetch(`${API}/routes/${sharedRouteId}`);
+          const headers: HeadersInit = {};
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+
+          const res = await fetch(`${API}/routes/${sharedRouteId}`, { headers });
+
           if (res.ok) {
             const data = await res.json();
             const formattedRoute: RouteItem = {
@@ -216,14 +223,27 @@ export default function Home() {
             if (formattedRoute.points.length > 0) {
               setMapCenter(formattedRoute.points[0]);
             }
+            navigate(window.location.pathname, { replace: true });
+          } else {
+            // Gestión de errores
+            if (res.status === 404 || res.status === 401) {
+              showAlert("La ruta compartida no existe o ha sido eliminada.", "error");
+            } else if (res.status === 403) {
+              showAlert("No tienes permiso para ver esta ruta o es privada.", "error");
+            } else {
+              showAlert("Error al cargar la ruta compartida.", "error");
+            }
+            navigate(window.location.pathname, { replace: true });
           }
         } catch (err) {
           console.error("Error loading shared route:", err);
+          showAlert("Error de conexión al cargar la ruta compartida.", "error");
+          navigate(window.location.pathname, { replace: true });
         }
       };
       loadSharedRoute();
     }
-  }, [location.search, routes]);
+  }, [location.search, routes, showAlert, navigate, token]);
 
   useEffect(() => {
     const fetchAll = async () => {
