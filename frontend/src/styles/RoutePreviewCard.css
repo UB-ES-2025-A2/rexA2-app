@@ -54,6 +54,14 @@
   min-width: 0;
 }
 
+.route-preview-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* =========================================
   ROUTE PREVIEW TEXTS
   ========================================= */
@@ -90,11 +98,32 @@
   margin: 0;
 }
 
+.route-preview-rating-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #a16207;
+  font-weight: 800;
+  box-shadow: var(--shadow-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.route-preview-rating__star {
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.route-preview-rating__value {
+  font-variant-numeric: tabular-nums;
+}
+
 /* =========================================
   PREVIEW SAVE - BOTÓN FAVORITO
   ========================================= */
 .preview-save {
-  margin-left: auto;
   display: flex;
   align-items: center;
   justify-content: center;

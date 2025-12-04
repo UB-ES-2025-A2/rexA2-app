@@ -20,6 +20,7 @@ type MockRoute = {
   username?: string;
   email?: string;
   rating?: number | null;
+  rating_count?: number | null;
 };
 
 type MockComment = {
@@ -87,6 +88,7 @@ export async function setupBackendMocks(page: Page) {
       username: FOLLOWEE_USER.username,
       email: FOLLOWEE_USER.email,
       rating: 4.2,
+      rating_count: 5,
     },
     {
       id: "route-owner",
@@ -105,6 +107,7 @@ export async function setupBackendMocks(page: Page) {
       username: PRIMARY_USER.username,
       email: PRIMARY_USER.email,
       rating: null,
+      rating_count: 0,
     },
   ];
 
@@ -185,7 +188,8 @@ export async function setupBackendMocks(page: Page) {
           values.length > 0
             ? values.reduce((a, b) => a + b, 0) / values.length
             : r.rating ?? null;
-        return { ...r, rating: average };
+        const count = values.length > 0 ? values.length : r.rating_count ?? 0;
+        return { ...r, rating: average, rating_count: count };
       });
       await route.fulfill(jsonResponse(enriched));
       return;
@@ -208,11 +212,13 @@ export async function setupBackendMocks(page: Page) {
         allRatings.length > 0
           ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length
           : found.rating ?? null;
+      const count = allRatings.length > 0 ? allRatings.length : found.rating_count ?? 0;
       await route.fulfill(
         jsonResponse({
           ...found,
           is_owner: authedUser?.id === found.owner_id,
           rating: average,
+          rating_count: count,
           user_rating: userRating,
         })
       );
