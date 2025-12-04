@@ -12,6 +12,9 @@ type Props = {
   name: string;
   category: Category;
   points: Array<[number, number]>;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string | null;
   onClick?: () => void;
   initialSaved?: boolean;
   favoriteUrl?: string;
@@ -24,6 +27,9 @@ const RoutePreviewCard: React.FC<Props> = ({
   name,
   category,
   points,
+  distanceKm,
+  durationMinutes,
+  difficulty,
   onClick,
   initialSaved = false,
   favoriteUrl,
@@ -79,6 +85,23 @@ const RoutePreviewCard: React.FC<Props> = ({
     }
   };
 
+  const formatDuration = (minutes?: number | null) => {
+    if (minutes == null) return null;
+    if (minutes < 60) return `<1h`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = Math.round(minutes % 60);
+    if (remaining === 0) return `${hours}h`;
+    return `${hours}h ${remaining}m`;
+  };
+
+  const difficultyLabel = difficulty
+    ? {
+        easy: "Fácil",
+        medium: "Media",
+        hard: "Alta",
+      }[difficulty.toLowerCase()] ?? difficulty
+    : null;
+
   return (
     <div
       className="route-preview-card"
@@ -95,6 +118,27 @@ const RoutePreviewCard: React.FC<Props> = ({
           <p className="route-preview-points">
             {points.length} punto{points.length === 1 ? "" : "s"}
           </p>
+
+          <div className="route-preview-meta">
+            {typeof distanceKm === "number" ? (
+              <span className="route-preview-pill" title="Distancia aproximada">
+                <span className="pill-dot distance" />
+                {distanceKm} km
+              </span>
+            ) : null}
+            {formatDuration(durationMinutes) ? (
+              <span className="route-preview-pill" title="Duración aproximada">
+                <span className="pill-dot duration" />
+                {formatDuration(durationMinutes)}
+              </span>
+            ) : null}
+            {difficultyLabel ? (
+              <span className="route-preview-pill" title="Dificultad estimada">
+                <span className="pill-dot difficulty" />
+                {difficultyLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <label

@@ -26,6 +26,7 @@ export function useRouteCard({
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category | "">("");
   const [isPrivate, setIsPrivate] = useState(true);
+  const [difficulty, setDifficulty] = useState<"" | "easy" | "medium" | "hard">("");
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
   const [nameTooLong, setNameTooLong] = useState(false);
@@ -148,6 +149,10 @@ export function useRouteCard({
       showAlert("No se ha seleccionado ninguna categoría", "error");
       return;
     }
+    if (!difficulty) {
+      showAlert("Selecciona una dificultad para la ruta", "error");
+      return;
+    }
 
     const formattedPoints = points.map(([lng, lat]) => ({
       latitude: lat,
@@ -160,6 +165,7 @@ export function useRouteCard({
       points: formattedPoints,
       visibility: !isPrivate,
       category: category as Category,
+      difficulty,
     };
 
     try {
@@ -203,6 +209,8 @@ export function useRouteCard({
       onTogglePrivate: setIsPrivate,
       onChangeCategory: (v: Category | "") => setCategory(v),
       onChangeDescription: setDescription,
+      difficulty,
+      onChangeDifficulty: setDifficulty,
       onChangeMode: changeMode,
       onAddSearchPoint: addSearchPoint,
       onClearSearchPoints: clearSearchPoints,

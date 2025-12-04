@@ -72,25 +72,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   filters = DEFAULT_FILTERS,
   isLoading = false,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>(
-    filters.category ?? "all"
-  );
-  const [pointsFilter, setPointsFilter] = useState<string>(
-    filters.pointsFilter ?? "all"
-  );
-  const [distance, setDistance] = useState<DistanceFilter>(
-    filters.distance ?? "all"
-  );
-  const [duration, setDuration] = useState<DurationFilter>(
-    filters.duration ?? "all"
-  );
-  const [difficulty, setDifficulty] = useState<DifficultyFilter>(
-    filters.difficulty ?? "all"
-  );
-  const [routeType, setRouteType] = useState<RouteTypeFilter>(
-    filters.routeType ?? "all"
-  );
-  const [theme, setTheme] = useState<ThemeFilter>(filters.theme ?? "all");
+  const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const categories = useMemo(() => {
@@ -99,14 +81,16 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   }, [routes]);
 
   useEffect(() => {
-    setSelectedCategory(filters.category ?? "all");
-    setPointsFilter(filters.pointsFilter ?? "all");
-    setDistance(filters.distance ?? "all");
-    setDuration(filters.duration ?? "all");
-    setDifficulty(filters.difficulty ?? "all");
-    setRouteType(filters.routeType ?? "all");
-    setTheme(filters.theme ?? "all");
+    setLocalFilters(filters);
   }, [filters]);
+
+  const updateFilters = (partial: Partial<FiltersState>) => {
+    setLocalFilters((prev) => {
+      const next = { ...prev, ...partial };
+      if (mode === "routes" && onApplyFilters) onApplyFilters(next);
+      return next;
+    });
+  };
 
   const handleFilterClick = () => {
     setShowFilterModal(!showFilterModal);
@@ -114,38 +98,12 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
   const handleApplyFilters = () => {
     setShowFilterModal(false);
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: selectedCategory,
-        pointsFilter: pointsFilter,
-        distance,
-        duration,
-        difficulty,
-        routeType,
-        theme,
-      });
-    }
+    if (onApplyFilters) onApplyFilters(localFilters);
   };
 
   const handleResetFilters = () => {
-    setSelectedCategory("all");
-    setPointsFilter("all");
-    setDistance("all");
-    setDuration("all");
-    setDifficulty("all");
-    setRouteType("all");
-    setTheme("all");
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: "all",
-        pointsFilter: "all",
-        distance: "all",
-        duration: "all",
-        difficulty: "all",
-        routeType: "all",
-        theme: "all",
-      });
-    }
+    setLocalFilters(DEFAULT_FILTERS);
+    if (onApplyFilters) onApplyFilters(DEFAULT_FILTERS);
   };
 
   const handleCloseModal = () => {
@@ -153,13 +111,13 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   };
 
   const hasActiveFilters =
-    selectedCategory !== "all" ||
-    pointsFilter !== "all" ||
-    distance !== "all" ||
-    duration !== "all" ||
-    difficulty !== "all" ||
-    routeType !== "all" ||
-    theme !== "all";
+    localFilters.category !== "all" ||
+    localFilters.pointsFilter !== "all" ||
+    localFilters.distance !== "all" ||
+    localFilters.duration !== "all" ||
+    localFilters.difficulty !== "all" ||
+    localFilters.routeType !== "all" ||
+    localFilters.theme !== "all";
 
   useEffect(() => {
     if (mode !== "routes") {
@@ -278,8 +236,8 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   <div className="filter-section">
                     <label className="filter-label">Categoria</label>
                     <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      value={localFilters.category}
+                      onChange={(e) => updateFilters({ category: e.target.value })}
                       className="filter-select-modal"
                     >
                       <option value="all">Todas las categorias</option>
@@ -294,8 +252,10 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   <div className="filter-section">
                     <label className="filter-label">Numero de puntos</label>
                     <select
-                      value={pointsFilter}
-                      onChange={(e) => setPointsFilter(e.target.value)}
+                      value={localFilters.pointsFilter}
+                      onChange={(e) =>
+                        updateFilters({ pointsFilter: e.target.value })
+                      }
                       className="filter-select-modal"
                     >
                       <option value="all">Todos los puntos</option>
@@ -318,9 +278,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         <button
                           key={option.value}
                           className={`filter-chip ${
-                            distance === option.value ? "active" : ""
+                            localFilters.distance === option.value ? "active" : ""
                           }`}
-                          onClick={() => setDistance(option.value)}
+                          onClick={() => updateFilters({ distance: option.value })}
                         >
                           {option.label}
                         </button>
@@ -341,9 +301,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         <button
                           key={option.value}
                           className={`filter-chip ${
-                            duration === option.value ? "active" : ""
+                            localFilters.duration === option.value ? "active" : ""
                           }`}
-                          onClick={() => setDuration(option.value)}
+                          onClick={() => updateFilters({ duration: option.value })}
                         >
                           {option.label}
                         </button>
@@ -363,9 +323,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         <button
                           key={option.value}
                           className={`filter-chip ${
-                            difficulty === option.value ? "active" : ""
+                            localFilters.difficulty === option.value ? "active" : ""
                           }`}
-                          onClick={() => setDifficulty(option.value)}
+                          onClick={() => updateFilters({ difficulty: option.value })}
                         >
                           {option.label}
                         </button>
@@ -391,9 +351,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         <button
                           key={option.value}
                           className={`filter-chip ${
-                            routeType === option.value ? "active" : ""
+                            localFilters.routeType === option.value ? "active" : ""
                           }`}
-                          onClick={() => setRouteType(option.value)}
+                          onClick={() => updateFilters({ routeType: option.value })}
                         >
                           {option.label}
                         </button>
@@ -413,9 +373,9 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                         <button
                           key={option.value}
                           className={`filter-chip ${
-                            theme === option.value ? "active" : ""
+                            localFilters.theme === option.value ? "active" : ""
                           }`}
-                          onClick={() => setTheme(option.value)}
+                          onClick={() => updateFilters({ theme: option.value })}
                         >
                           {option.label}
                         </button>

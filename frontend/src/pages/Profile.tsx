@@ -644,6 +644,17 @@ export default function Profile() {
                 (selectedFavorite.category as Category) || "entretenimiento"
               }
               points={selectedFavorite.points}
+              distanceKm={
+                (selectedFavorite as any).distanceKm ??
+                (selectedFavorite as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedFavorite as any).durationMinutes ??
+                (selectedFavorite as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedFavorite as any).difficulty ?? null}
               isPrivate={!selectedFavorite.visibility}
               onClose={closeFavoriteView}
               initialSaved
@@ -660,6 +671,17 @@ export default function Profile() {
                 (selectedCreatedRoute.category as Category) || "entretenimiento"
               }
               points={selectedCreatedRoute.points}
+              distanceKm={
+                (selectedCreatedRoute as any).distanceKm ??
+                (selectedCreatedRoute as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedCreatedRoute as any).durationMinutes ??
+                (selectedCreatedRoute as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedCreatedRoute as any).difficulty ?? null}
               isPrivate={!selectedCreatedRoute.visibility}
               onClose={closeCreatedView}
               initialSaved={favorites.some(

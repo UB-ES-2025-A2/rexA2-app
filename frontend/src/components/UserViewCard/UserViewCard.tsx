@@ -348,6 +348,9 @@ const UserViewCard: React.FC<Props> = ({
               name={r.name}
               category={r.category as Category}
               points={r.points}
+              distanceKm={r.distanceKm}
+              durationMinutes={r.durationMinutes}
+              difficulty={r.difficulty}
               initialSaved={false}
               onClick={() => onRouteClick?.(r)}
             />

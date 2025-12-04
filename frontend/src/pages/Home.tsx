@@ -364,7 +364,10 @@ export default function Home() {
             p.longitude,
             p.latitude,
           ]);
-          const distanceKm = calculateRouteDistanceKm(pointTuples);
+          const distanceKm =
+            route.distance_km ||
+            route.distanceKm ||
+            calculateRouteDistanceKm(pointTuples);
           const durationMinutes = normalizeDurationMinutes(
             route.duration_minutes ??
               route.durationMinutes ??
@@ -665,17 +668,20 @@ export default function Home() {
               onClose={handleCloseRouteCard}
             />
           ) : selectedRoute ? (
-            <RouteDetailsCard
-              routeId={selectedRoute.id}
-              name={selectedRoute.name}
-              description={selectedRoute.description}
-              category={selectedRoute.category as Category}
-              points={selectedRoute.points}
-              isPrivate={!selectedRoute.visibility}
-              isOwnRoute={selectedRoute.is_owner || false}
-              onClose={() => {
-                setSelectedRoute(null);
-                setSelectedRoutePoints([]);
+              <RouteDetailsCard
+                routeId={selectedRoute.id}
+                name={selectedRoute.name}
+                description={selectedRoute.description}
+                category={selectedRoute.category as Category}
+                points={selectedRoute.points}
+                distanceKm={selectedRoute.distanceKm}
+                durationMinutes={selectedRoute.durationMinutes}
+                difficulty={selectedRoute.difficulty}
+                isPrivate={!selectedRoute.visibility}
+                isOwnRoute={selectedRoute.is_owner || false}
+                onClose={() => {
+                  setSelectedRoute(null);
+                  setSelectedRoutePoints([]);
                 setShowComments(false);
                 if (userInitialCenterRef.current) {
                   setMapCenter(userInitialCenterRef.current);
@@ -740,59 +746,33 @@ export default function Home() {
 
               {searchMode === "routes" ? (
                 <>
-                  {routesLoading ? (
-                    renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
-                  ) : routesError ? (
-                    renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
-                  ) : routes.length === 0 ? (
-                    renderEmptyState("No hay rutas disponibles")
-                  ) : (() => {
-                    const filteredRoutes = getFilteredRoutes();
-                    const hasFiltersApplied =
-                      appliedFilters.category !== "all" ||
-                      appliedFilters.pointsFilter !== "all" ||
-                      appliedFilters.distance !== "all" ||
-                      appliedFilters.duration !== "all" ||
-                      appliedFilters.difficulty !== "all" ||
-                      appliedFilters.routeType !== "all" ||
-                      appliedFilters.theme !== "all";
-                    const hasSearch = Boolean(routeSearchQuery.trim());
+              {routesLoading ? (
+                renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
+              ) : routesError ? (
+                renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
+              ) : (() => {
+                const filteredRoutes = getFilteredRoutes();
+                const hasFiltersApplied =
+                  appliedFilters.category !== "all" ||
+                  appliedFilters.pointsFilter !== "all" ||
+                  appliedFilters.distance !== "all" ||
+                  appliedFilters.duration !== "all" ||
+                  appliedFilters.difficulty !== "all" ||
+                  appliedFilters.routeType !== "all" ||
+                  appliedFilters.theme !== "all";
+                const hasSearch = Boolean(routeSearchQuery.trim());
+                const resultCount = filteredRoutes.length;
 
-                    if (filteredRoutes.length === 0) {
-                      return (
-                        renderEmptyState(
-                          hasFiltersApplied || hasSearch
-                            ? "Sin coincidencias"
-                            : "No hay rutas disponibles",
-                          hasFiltersApplied || hasSearch
-                            ? "Prueba ajustar la búsqueda o los filtros"
-                            : undefined
-                        )
-                      );
-                    }
-
-                    const routeItems = filteredRoutes.map((r) => (
-                      <div className="route-row" key={r.id}>
-                        <RoutePreviewCard
-                          id={r.id}
-                          name={r.name}
-                          category={r.category as Category}
-                          points={r.points}
-                          initialSaved={favoriteIds.has(String(r.id))}
-                        />
+                return (
+                  <>
+                    <div className="routes-meta">
+                      <div className="routes-count">
+                        {resultCount} rutas encontradas
                       </div>
-                    ));
-
-                    return (
-                      <>
-                        <div className="routes-meta">
-                          <div className="routes-count">
-                            {filteredRoutes.length} rutas encontradas
-                          </div>
-                          {(hasFiltersApplied || hasSearch) && (
-                            <div className="routes-active-filters">
-                              {hasSearch ? (
-                                <span className="routes-filter-chip muted">
+                      {(hasFiltersApplied || hasSearch) && (
+                        <div className="routes-active-filters">
+                          {hasSearch ? (
+                            <span className="routes-filter-chip muted">
                                   Búsqueda: "{routeSearchQuery.trim()}"
                                 </span>
                               ) : null}
@@ -829,38 +809,62 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.theme !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Temática: {THEME_LABELS[appliedFilters.theme]}
-                                </span>
-                              ) : null}
-                              <button
-                                className="routes-reset"
-                                onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
-                              >
-                                Restablecer filtros
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                            Temática: {THEME_LABELS[appliedFilters.theme]}
+                          </span>
+                        ) : null}
+                        <button
+                          className="routes-reset"
+                          onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                        >
+                          Restablecer filtros
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-                        <AnimatedList
-                          items={routeItems}
-                          className="routes-animated-list"
-                          itemClassName="routes-animated-item"
-                          showGradients
-                          onItemSelect={(index) =>
-                            requireAuth(() => {
-                              const route = filteredRoutes[index];
-                              if (!route) return;
-                              setSelectedRoute(route);
-                              setSelectedRoutePoints(route.points);
-                            })
-                          }
+                    {resultCount === 0 ? (
+                      renderEmptyState(
+                        hasFiltersApplied || hasSearch
+                          ? "Sin coincidencias"
+                          : "No hay rutas disponibles",
+                        hasFiltersApplied || hasSearch
+                          ? "Prueba ajustar la búsqueda o los filtros"
+                          : undefined
+                      )
+                    ) : (
+                      <AnimatedList
+                        items={filteredRoutes.map((r) => (
+                          <div className="route-row" key={r.id}>
+                        <RoutePreviewCard
+                          id={r.id}
+                          name={r.name}
+                          category={r.category as Category}
+                          points={r.points}
+                          distanceKm={r.distanceKm ?? null}
+                          durationMinutes={r.durationMinutes ?? null}
+                          difficulty={r.difficulty ?? null}
+                          initialSaved={favoriteIds.has(String(r.id))}
                         />
-                      </>
-                    );
-                  })()}
-                </>
-              ) : (
+                      </div>
+                    ))}
+                        className="routes-animated-list"
+                        itemClassName="routes-animated-item"
+                        showGradients
+                        onItemSelect={(index) =>
+                          requireAuth(() => {
+                            const route = filteredRoutes[index];
+                            if (!route) return;
+                            setSelectedRoute(route);
+                            setSelectedRoutePoints(route.points);
+                          })
+                        }
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </>
+          ) : (
                 <>
                   {usersLoading ? (
                     renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
