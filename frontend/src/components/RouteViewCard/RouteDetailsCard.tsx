@@ -26,6 +26,7 @@ interface RouteDetailsCardProps {
   onShowComments?: () => void;
   onDelete?: (routeId: string) => Promise<void>;
   isOwnRoute?: boolean;
+  onRatingChange?: (stats: { average: number | null; count: number }) => void;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -43,6 +44,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   onShowComments,
   onDelete,
   isOwnRoute = false,
+  onRatingChange,
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
@@ -52,6 +54,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [routeOwnership, setRouteOwnership] = useState<boolean | null>(null);
+  const [ratingStats, setRatingStats] = useState<{ average: number | null; count: number }>(
+    () => ({
+      average: rating,
+      count: typeof ratingCount === "number" ? ratingCount : 0,
+    })
+  );
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -71,6 +79,18 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           } else if (typeof data?.rating === "number") {
             setUserRating(data.rating);
           }
+          setRatingStats({
+            average:
+              typeof data?.rating === "number"
+                ? Math.round(Number(data.rating) * 10) / 10
+                : rating,
+            count:
+              typeof data?.rating_count === "number"
+                ? data.rating_count
+                : typeof ratingCount === "number"
+                  ? ratingCount
+                  : 0,
+          });
         }
         // Si no está ok, dejamos los datos tal como estaban (se mostrará la prop inicial)
       } catch (err) {
@@ -81,6 +101,30 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
     loadRoute();
   }, [routeId, token, showAlert]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!routeId || !token) return;
+      try {
+        const res = await fetchWithAuth(`/routes/${routeId}/rating`);
+        if (!res.ok) return;
+        const stats = await res.json();
+        const average =
+          stats?.average != null && Number.isFinite(stats.average)
+            ? Math.round(Number(stats.average) * 10) / 10
+            : null;
+        const count = typeof stats?.count === "number" ? stats.count : 0;
+        setRatingStats({ average, count });
+        setRouteData((prev: any) =>
+          prev ? { ...prev, rating: average, rating_count: count } : prev
+        );
+        onRatingChange?.({ average, count });
+      } catch (err) {
+        console.warn("No se pudo obtener stats de valoración", err);
+      }
+    };
+    fetchStats();
+  }, [routeId, token, onRatingChange]);
 
   useEffect(() => {
     const checkOwnership = async () => {
@@ -121,15 +165,17 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
   const roundToOneDecimal = (value: number) =>
     (Math.round(value * 10) / 10).toFixed(1);
-  const averageRating = routeData?.rating ?? rating ?? null;
-  const averageRatingValue = Number(averageRating);
+  const averageRating = ratingStats.average ?? routeData?.rating ?? rating ?? null;
+  const averageRatingValue = Number(averageRating ?? 0);
   const ratingCountValue = Math.max(
     0,
-    Number.isFinite(routeData?.rating_count)
-      ? Number(routeData?.rating_count)
-      : Number.isFinite(ratingCount)
-        ? Number(ratingCount)
-        : 0
+    Number.isFinite(ratingStats.count)
+      ? Number(ratingStats.count)
+      : Number.isFinite(routeData?.rating_count)
+        ? Number(routeData?.rating_count)
+        : Number.isFinite(ratingCount)
+          ? Number(ratingCount)
+          : 0
   );
   const hasRatings =
     averageRating != null && Number.isFinite(averageRatingValue) && ratingCountValue > 0;
@@ -190,15 +236,22 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         setUserRating(data.user_rating);
       }
       if (data?.average !== undefined || data?.count !== undefined) {
+        const average =
+          data?.average != null && Number.isFinite(data.average)
+            ? Math.round(Number(data.average) * 10) / 10
+            : null;
+        const count = typeof data?.count === "number" ? data.count : 0;
+        setRatingStats({ average, count });
         setRouteData((prev: any) =>
           prev
             ? {
                 ...prev,
-                rating: data?.average ?? prev.rating,
-                rating_count: data?.count ?? prev.rating_count,
+                rating: average ?? prev.rating,
+                rating_count: count ?? prev.rating_count,
               }
             : prev
         );
+        onRatingChange?.({ average, count });
       }
       showAlert("Valoración guardada", "success");
     } catch (err) {
