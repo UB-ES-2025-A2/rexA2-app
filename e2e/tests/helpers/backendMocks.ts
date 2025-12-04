@@ -19,6 +19,7 @@ type MockRoute = {
   owner_username: string;
   username?: string;
   email?: string;
+  rating?: number | null;
 };
 
 type MockComment = {
@@ -66,6 +67,7 @@ function resolveUserFromAuth(request: Request): MockUser | null {
 
 export async function setupBackendMocks(page: Page) {
   let followState = false;
+  const ratingState: Record<string, Record<string, number>> = {};
 
   const routes: MockRoute[] = [
     {
@@ -75,15 +77,34 @@ export async function setupBackendMocks(page: Page) {
       description: "Ruta E2E de ejemplo",
       category: "montaña",
       points: [
-        [0, 0],
-        [1, 1],
-        [2, 2],
+        { latitude: 0, longitude: 0 },
+        { latitude: 1, longitude: 1 },
+        { latitude: 2, longitude: 2 },
       ],
       visibility: true,
       owner_id: FOLLOWEE_USER.id,
       owner_username: FOLLOWEE_USER.username,
       username: FOLLOWEE_USER.username,
       email: FOLLOWEE_USER.email,
+      rating: 4.2,
+    },
+    {
+      id: "route-owner",
+      _id: "route-owner",
+      name: "Mi ruta propia",
+      description: "Ruta del usuario autenticado",
+      category: "ciudad",
+      points: [
+        { latitude: 1, longitude: 0 },
+        { latitude: 2, longitude: 1 },
+        { latitude: 3, longitude: 2 },
+      ],
+      visibility: true,
+      owner_id: PRIMARY_USER.id,
+      owner_username: PRIMARY_USER.username,
+      username: PRIMARY_USER.username,
+      email: PRIMARY_USER.email,
+      rating: null,
     },
   ];
 
@@ -158,7 +179,15 @@ export async function setupBackendMocks(page: Page) {
     }
 
     if (pathname === "/routes" && method === "GET") {
-      await route.fulfill(jsonResponse(routes));
+      const enriched = routes.map((r) => {
+        const values = ratingState[r.id] ? Object.values(ratingState[r.id]) : [];
+        const average =
+          values.length > 0
+            ? values.reduce((a, b) => a + b, 0) / values.length
+            : r.rating ?? null;
+        return { ...r, rating: average };
+      });
+      await route.fulfill(jsonResponse(enriched));
       return;
     }
 
@@ -170,10 +199,21 @@ export async function setupBackendMocks(page: Page) {
         await route.fulfill(jsonResponse({ detail: "Ruta no encontrada" }, 404));
         return;
       }
+      const userRating =
+        (authedUser && ratingState[found.id]?.[authedUser.id]) ?? null;
+      const allRatings = ratingState[found.id]
+        ? Object.values(ratingState[found.id])
+        : [];
+      const average =
+        allRatings.length > 0
+          ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length
+          : found.rating ?? null;
       await route.fulfill(
         jsonResponse({
           ...found,
           is_owner: authedUser?.id === found.owner_id,
+          rating: average,
+          user_rating: userRating,
         })
       );
       return;
@@ -210,6 +250,57 @@ export async function setupBackendMocks(page: Page) {
         await route.fulfill(jsonResponse(newComment, 201));
         return;
       }
+    }
+
+    const ownershipMatch = pathname.match(/^\/routes\/([^/]+)\/ownership$/);
+    if (ownershipMatch) {
+      const routeId = ownershipMatch[1];
+      const found = routes.find((r) => r.id === routeId || r._id === routeId);
+      if (!found) {
+        await route.fulfill(jsonResponse({ detail: "Ruta no encontrada" }, 404));
+        return;
+      }
+      await route.fulfill(jsonResponse({ is_owner: authedUser?.id === found.owner_id }));
+      return;
+    }
+
+    const ratingMatch = pathname.match(/^\/routes\/([^/]+)\/rating$/);
+    if (ratingMatch) {
+      const routeId = ratingMatch[1];
+      const found = routes.find((r) => r.id === routeId || r._id === routeId);
+      if (!found) {
+        await route.fulfill(jsonResponse({ detail: "Ruta no encontrada" }, 404));
+        return;
+      }
+      if (!authedUser) {
+        await route.fulfill(jsonResponse({ detail: "No autorizado" }, 401));
+        return;
+      }
+      if (found.owner_id === authedUser.id) {
+        await route.fulfill(
+          jsonResponse({ detail: "No puedes valorar tu propia ruta" }, 403)
+        );
+        return;
+      }
+      let payload: { rating?: number } = {};
+      try {
+        payload = (route.request().postDataJSON() as any) ?? {};
+      } catch {
+        payload = {};
+      }
+      const rating = Number(payload.rating);
+      if (!Number.isFinite(rating)) {
+        await route.fulfill(jsonResponse({ detail: "rating inválido" }, 422));
+        return;
+      }
+      ratingState[found.id] = ratingState[found.id] || {};
+      ratingState[found.id][authedUser.id] = rating;
+      const values = Object.values(ratingState[found.id]);
+      const average = values.reduce((a, b) => a + b, 0) / values.length;
+      await route.fulfill(
+        jsonResponse({ user_rating: rating, average, count: values.length })
+      );
+      return;
     }
 
     if (pathname === "/users/search") {
