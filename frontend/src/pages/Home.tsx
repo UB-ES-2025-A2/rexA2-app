@@ -62,6 +62,72 @@ const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
 
+const formatRouteFromApi = (route: any): RouteItem => ({
+  id: route.id,
+  name: route.name,
+  description: route.description || "Sin descripción",
+  category: route.category || "sin categoría",
+  points: (route.points || []).map((p: any) => [
+    p.longitude ?? p.lng ?? p[0],
+    p.latitude ?? p.lat ?? p[1],
+  ]),
+  visibility: route.visibility ?? false,
+  is_owner: route.is_owner ?? route.isOwner ?? false,
+  ownerName:
+    route.owner_name ||
+    route.ownerName ||
+    route.user?.name ||
+    route.username ||
+    "",
+  ownerUsername:
+    route.owner_username ||
+    route.ownerUsername ||
+    route.user?.username ||
+    route.username ||
+    "",
+  username: route.username,
+  email: route.user?.email || route.email,
+  ownerId:
+    route.owner_id ||
+    route.user_id ||
+    route.user?.id ||
+    route.ownerId ||
+    route.userId ||
+    null,
+  userId: route.user_id || route.userId || route.user?.id || null,
+  city:
+    route.city ||
+    route.city_name ||
+    route.cityName ||
+    route.location?.city ||
+    "",
+  createdAt: route.created_at || route.createdAt || route.creation_date,
+  popularity:
+    route.popularity ??
+    route.relevance ??
+    route.popularity_score ??
+    route.popularityScore ??
+    null,
+  user: route.user
+    ? {
+        id: route.user._id || route.user.id,
+        username: route.user.username,
+        name: route.user.name,
+        email: route.user.email,
+      }
+    : route.username || route.ownerName || route.ownerUsername
+    ? {
+        id: route.user_id || route.owner_id,
+        username: route.username,
+        name: route.ownerName,
+        email: route.email,
+      }
+    : undefined,
+  difficulty: route.difficulty,
+  distanceKm: route.distance_km ?? route.distanceKm,
+  durationMinutes: route.duration_minutes ?? route.durationMinutes,
+});
+
 export default function Home() {
   const { user, token, logout } = useAuth();
   const { showAlert } = useAlert();
@@ -205,70 +271,9 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
         const data = await response.json();
 
-    const formatted: RouteItem[] = data.map((route: any) => ({
-      id: route.id,
-      name: route.name,
-      description: route.description || "Sin descripci?n",
-      category: route.category || "sin categor?a",
-      points: route.points.map((p: any) => [p.longitude, p.latitude]),
-      visibility: route.visibility ?? false,
-      is_owner: route.is_owner ?? route.isOwner ?? false,
-      difficulty: route.difficulty,
-      distanceKm: route.distance_km ?? route.distanceKm,
-      durationMinutes: route.duration_minutes ?? route.durationMinutes,
-      owner_id: route.owner_id,
-      user_id: route.user_id,
-      city:
-        route.city ||
-        route.city_name ||
-            route.cityName ||
-            route.location?.city ||
-            "",
-          createdAt: route.created_at || route.createdAt || route.creation_date,
-          popularity:
-            route.popularity ??
-            route.relevance ??
-            route.popularity_score ??
-            route.popularityScore ??
-            null,
-          ownerName:
-            route.owner_name ||
-            route.ownerName ||
-            route.user?.name ||
-            route.username ||
-            "",
-          ownerUsername:
-            route.owner_username ||
-            route.ownerUsername ||
-            route.user?.username ||
-            route.username ||
-            "",
-          ownerId:
-            route.owner_id ||
-            route.user_id ||
-            route.user?.id ||
-            route.ownerId ||
-            route.userId ||
-            null,
-          userId: route.user_id || route.userId || route.user?.id || null,
-          email: route.user?.email || route.email,
-          user: route.user
-            ? {
-                id: route.user._id || route.user.id,
-                username: route.user.username,
-                name: route.user.name,
-                email: route.user.email,
-              }
-            : route.username || route.ownerName || route.ownerUsername
-            ? {
-                id: route.user_id || route.owner_id,
-                username: route.username,
-                name: route.ownerName,
-                email: route.email,
-              }
-            : undefined,
-          username: route.username,
-        }));
+        const formatted: RouteItem[] = data.map((route: any) =>
+          formatRouteFromApi(route)
+        );
 
         setRoutes(formatted);
       } catch (error) {
@@ -502,6 +507,18 @@ export default function Home() {
                 difficulty: editingRoute.difficulty,
               }}
               onCancel={() => setEditingRoute(null)}
+              onSaved={(updated) => {
+                const formatted = formatRouteFromApi(updated);
+                setRoutes((prev) => {
+                  const exists = prev.some((r) => r.id === formatted.id);
+                  if (!exists) return [formatted, ...prev];
+                  return prev.map((r) => (r.id === formatted.id ? formatted : r));
+                });
+                setSelectedRoute(formatted);
+                setSelectedRoutePoints(formatted.points);
+                setEditingRoute(null);
+                setShowComments(false);
+              }}
             />
           ) : selectedRoute ? (
             <RouteDetailsCard

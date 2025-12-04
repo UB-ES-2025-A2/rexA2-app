@@ -110,3 +110,41 @@ class RoutePublic(RouteBase):
     comments: List[CommentThread] = Field(default_factory=list)
     rating_count: int | None = None
     user_rating: float | None = None
+
+
+class RouteUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    visibility: bool | None = None
+    duration_minutes: int | None = Field(default=None, ge=0)
+    difficulty: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir nombre a la ruta")
+        if len(v) > 30:
+            raise ValueError("El nombre de la ruta debe tener menos de 30 caracteres")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def _desc_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir una descripción a la ruta")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _cat_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("No se ha seleccionado ninguna categoría")
+        return v

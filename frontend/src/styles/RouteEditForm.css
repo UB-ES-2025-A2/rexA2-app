@@ -95,3 +95,10 @@
   box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
   transform: translateY(-1px);
 }
+
+.ref-error {
+  margin: 0;
+  color: #dc2626;
+  font-weight: 700;
+  font-size: 13px;
+}

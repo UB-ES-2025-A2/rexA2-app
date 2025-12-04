@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Category } from "../types";
+import { useAlert } from "../../context/AlertContext";
+import { fetchWithAuth } from "../../services/api";
 import "../../styles/RouteEditForm.css";
 
 export type RouteEditData = {
@@ -43,23 +45,74 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 type Props = {
   data: RouteEditData;
   onCancel: () => void;
+  onSaved?: (route: any) => void;
 };
 
-export default function RouteEditForm({ data, onCancel }: Props) {
+export default function RouteEditForm({ data, onCancel, onSaved }: Props) {
   const [name, setName] = useState(data.name);
   const [description, setDescription] = useState(data.description);
   const [category, setCategory] = useState<Category>(data.category as Category);
   const [difficulty, setDifficulty] = useState<string>(data.difficulty || "");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { showAlert } = useAlert();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validate = () => {
+    if (!name.trim()) {
+      setError("El nombre es obligatorio.");
+      return false;
+    }
+    if (name.trim().length > 60) {
+      setError("El nombre debe tener 60 caracteres o menos.");
+      return false;
+    }
+    if (!description.trim()) {
+      setError("La descripción es obligatoria.");
+      return false;
+    }
+    if (!category) {
+      setError("Selecciona una categoría.");
+      return false;
+    }
+    setError(null);
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     setSaving(true);
-    // Aquí se integrará la llamada a la API en la siguiente tarea.
-    setTimeout(() => {
+    try {
+      const res = await fetchWithAuth(`/routes/${data.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          category,
+          difficulty: difficulty || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const detail =
+          (await res.json().catch(() => null))?.detail ||
+          "No se han podido guardar los cambios.";
+        showAlert(detail, "error");
+        setError(detail);
+        return;
+      }
+
+      const updated = await res.json();
+      showAlert("Ruta actualizada correctamente", "success");
+      onSaved?.(updated);
+    } catch (err) {
+      console.error(err);
+      const detail = "No se han podido guardar los cambios. Inténtalo de nuevo.";
+      showAlert(detail, "error");
+      setError(detail);
+    } finally {
       setSaving(false);
-      alert("Guardado pendiente de implementación.");
-    }, 500);
+    }
   };
 
   return (
@@ -118,6 +171,8 @@ export default function RouteEditForm({ data, onCancel }: Props) {
             {saving ? "Guardando..." : "Guardar cambios"}
           </button>
         </div>
+
+        {error ? <p className="ref-error">{error}</p> : null}
       </form>
     </div>
   );
