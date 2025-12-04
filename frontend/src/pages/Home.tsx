@@ -516,6 +516,20 @@ export default function Home() {
               rating={selectedRoute.rating ?? null}
               ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
+              onRatingChange={({ average, count }) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+              }}
               onClose={() => {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);

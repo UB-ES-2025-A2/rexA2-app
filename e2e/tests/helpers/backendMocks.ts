@@ -278,6 +278,18 @@ export async function setupBackendMocks(page: Page) {
         await route.fulfill(jsonResponse({ detail: "Ruta no encontrada" }, 404));
         return;
       }
+      if (route.request().method() === "GET") {
+        const values = ratingState[found.id] ? Object.values(ratingState[found.id]) : [];
+        const averageRaw =
+          values.length > 0
+            ? values.reduce((a, b) => a + b, 0) / values.length
+            : found.rating ?? null;
+        const count = values.length > 0 ? values.length : found.rating_count ?? 0;
+        const average =
+          averageRaw == null ? null : Math.round(Number(averageRaw) * 10) / 10;
+        await route.fulfill(jsonResponse({ average, count }));
+        return;
+      }
       if (!authedUser) {
         await route.fulfill(jsonResponse({ detail: "No autorizado" }, 401));
         return;

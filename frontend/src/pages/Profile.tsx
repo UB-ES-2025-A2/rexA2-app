@@ -653,6 +653,21 @@ export default function Profile() {
               isPrivate={!selectedFavorite.visibility}
               rating={selectedFavorite.rating ?? null}
               ratingCount={selectedFavorite.rating_count ?? null}
+              userRating={selectedFavorite.user_rating ?? null}
+              onRatingChange={({ average, count }) => {
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeFavoriteView}
               initialSaved
               onSavedChange={handleFavoriteSavedChange}
@@ -671,6 +686,21 @@ export default function Profile() {
               isPrivate={!selectedCreatedRoute.visibility}
               rating={selectedCreatedRoute.rating ?? null}
               ratingCount={selectedCreatedRoute.rating_count ?? null}
+              userRating={selectedCreatedRoute.user_rating ?? null}
+              onRatingChange={({ average, count }) => {
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeCreatedView}
               initialSaved={favorites.some(
                 (route) => route.id === selectedCreatedRoute.id
