@@ -47,6 +47,9 @@ type FavoriteRouteApi = {
   visibility: boolean;
   points: FavoriteRoutePoint[];
   owner_username?: string | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 type FavoriteRoute = {
   id: string;
@@ -58,6 +61,9 @@ type FavoriteRoute = {
   createdAt: string;
   visibility: boolean;
   points: Array<[number, number]>;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 
 const API_BASE = (
@@ -645,6 +651,8 @@ export default function Profile() {
               }
               points={selectedFavorite.points}
               isPrivate={!selectedFavorite.visibility}
+              rating={selectedFavorite.rating ?? null}
+              ratingCount={selectedFavorite.rating_count ?? null}
               onClose={closeFavoriteView}
               initialSaved
               onSavedChange={handleFavoriteSavedChange}
@@ -661,6 +669,8 @@ export default function Profile() {
               }
               points={selectedCreatedRoute.points}
               isPrivate={!selectedCreatedRoute.visibility}
+              rating={selectedCreatedRoute.rating ?? null}
+              ratingCount={selectedCreatedRoute.rating_count ?? null}
               onClose={closeCreatedView}
               initialSaved={favorites.some(
                 (route) => route.id === selectedCreatedRoute.id
@@ -832,6 +842,18 @@ function normalizeFavoriteRoute(
     createdAt,
     visibility: Boolean(route.visibility),
     points: normalizedPoints,
+    rating:
+      typeof route.rating === "number"
+        ? route.rating
+        : route.user_rating ?? null,
+    rating_count:
+      typeof route.rating_count === "number"
+        ? route.rating_count
+        : typeof (route as any).ratingCount === "number"
+          ? (route as any).ratingCount
+          : null,
+    user_rating:
+      typeof route.user_rating === "number" ? route.user_rating : null,
   };
 }
 

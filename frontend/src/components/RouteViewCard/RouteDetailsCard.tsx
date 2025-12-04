@@ -273,26 +273,29 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               </div>
             </div>
 
-            <div className="route-details-card__rating-divider" aria-hidden="true" />
-
-            {showRatingControl ? (
+            {showRatingControl || (!isAuthor && ratingHint) ? (
               <>
-                <div className="route-details-card__rating-header">
-                  <span className="route-details-card__rating-title">Tu valoración</span>
-                  <span className="route-details-card__rating-value">
-                    {userRating != null ? `${userRating}/5` : "Sin valorar"}
-                  </span>
-                </div>
-                <StarRating
-                  value={userRating ?? 0}
-                  onChange={handleRatingChange}
-                  disabled={!canRate || ratingSaving}
-                  hint={ratingHint}
-                />
+                <div className="route-details-card__rating-divider" aria-hidden="true" />
+                {showRatingControl ? (
+                  <>
+                    <div className="route-details-card__rating-header">
+                      <span className="route-details-card__rating-title">Tu valoración</span>
+                      <span className="route-details-card__rating-value">
+                        {userRating != null ? `${userRating}` : "Sin valorar"}
+                      </span>
+                    </div>
+                    <StarRating
+                      value={userRating ?? 0}
+                      onChange={handleRatingChange}
+                      disabled={!canRate || ratingSaving}
+                      hint={ratingHint}
+                    />
+                  </>
+                ) : (
+                  <p className="route-details-card__rating-hint">{ratingHint}</p>
+                )}
               </>
-            ) : (
-              <p className="route-details-card__rating-hint">{ratingHint}</p>
-            )}
+            ) : null}
           </div>
 
           <div
