@@ -27,6 +27,8 @@ type RouteItem = {
   points: Array<[number, number]>;
   visibility: boolean;
   is_owner?: boolean;
+  owner_id?: string | number;
+  user_id?: string | number;
   ownerName?: string;
   ownerUsername?: string;
   username?: string;
@@ -37,6 +39,9 @@ type RouteItem = {
   createdAt?: string;
   popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 
 type SelectedUser = {
@@ -222,6 +227,23 @@ export default function Home() {
             route.popularity_score ??
             route.popularityScore ??
             null,
+          rating:
+            route.rating ??
+            route.average_rating ??
+            route.averageRating ??
+            null,
+          rating_count:
+            typeof route.rating_count === "number"
+              ? route.rating_count
+              : typeof route.ratingCount === "number"
+                ? route.ratingCount
+                : null,
+          user_rating:
+            typeof route.user_rating === "number"
+              ? route.user_rating
+              : typeof route.userRating === "number"
+                ? route.userRating
+                : null,
           ownerName:
             route.owner_name ||
             route.ownerName ||
@@ -491,7 +513,23 @@ export default function Home() {
               category={selectedRoute.category as Category}
               points={selectedRoute.points}
               isPrivate={!selectedRoute.visibility}
+              rating={selectedRoute.rating ?? null}
+              ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
+              onRatingChange={({ average, count }) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+              }}
               onClose={() => {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);
@@ -592,6 +630,8 @@ export default function Home() {
                           name={r.name}
                           category={r.category as Category}
                           points={r.points}
+                          ratingAverage={r.rating ?? null}
+                          ratingCount={r.rating_count ?? null}
                           initialSaved={favoriteIds.has(String(r.id))}
                         />
                       </div>

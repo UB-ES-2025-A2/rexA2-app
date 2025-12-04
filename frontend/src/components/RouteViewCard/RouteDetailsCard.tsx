@@ -19,11 +19,14 @@ interface RouteDetailsCardProps {
   isPrivate?: boolean;
   onClose: () => void;
   routeId: string;
+  rating?: number | null;
+  ratingCount?: number | null;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
   onShowComments?: () => void;
   onDelete?: (routeId: string) => Promise<void>;
   isOwnRoute?: boolean;
+  onRatingChange?: (stats: { average: number | null; count: number }) => void;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -34,11 +37,14 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   isPrivate = false,
   onClose,
   routeId,
+  rating = null,
+  ratingCount = null,
   initialSaved = false,
   onSavedChange,
   onShowComments,
   onDelete,
   isOwnRoute = false,
+  onRatingChange,
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
@@ -48,6 +54,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [routeOwnership, setRouteOwnership] = useState<boolean | null>(null);
+  const [ratingStats, setRatingStats] = useState<{ average: number | null; count: number }>(
+    () => ({
+      average: rating,
+      count: typeof ratingCount === "number" ? ratingCount : 0,
+    })
+  );
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -67,6 +79,18 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           } else if (typeof data?.rating === "number") {
             setUserRating(data.rating);
           }
+          setRatingStats({
+            average:
+              typeof data?.rating === "number"
+                ? Math.round(Number(data.rating) * 10) / 10
+                : rating,
+            count:
+              typeof data?.rating_count === "number"
+                ? data.rating_count
+                : typeof ratingCount === "number"
+                  ? ratingCount
+                  : 0,
+          });
         }
         // Si no está ok, dejamos los datos tal como estaban (se mostrará la prop inicial)
       } catch (err) {
@@ -77,6 +101,30 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
     loadRoute();
   }, [routeId, token, showAlert]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!routeId || !token) return;
+      try {
+        const res = await fetchWithAuth(`/routes/${routeId}/rating`);
+        if (!res.ok) return;
+        const stats = await res.json();
+        const average =
+          stats?.average != null && Number.isFinite(stats.average)
+            ? Math.round(Number(stats.average) * 10) / 10
+            : null;
+        const count = typeof stats?.count === "number" ? stats.count : 0;
+        setRatingStats({ average, count });
+        setRouteData((prev: any) =>
+          prev ? { ...prev, rating: average, rating_count: count } : prev
+        );
+        onRatingChange?.({ average, count });
+      } catch (err) {
+        console.warn("No se pudo obtener stats de valoración", err);
+      }
+    };
+    fetchStats();
+  }, [routeId, token, onRatingChange]);
 
   useEffect(() => {
     const checkOwnership = async () => {
@@ -114,6 +162,28 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const waitingPerms = waitingRouteData || waitingOwnership;
   const canRate = isAuthenticated && !waitingPerms && !isAuthor;
   const showRatingControl = Boolean(routeData) && canRate;
+
+  const roundToOneDecimal = (value: number) =>
+    (Math.round(value * 10) / 10).toFixed(1);
+  const averageRating = ratingStats.average ?? routeData?.rating ?? rating ?? null;
+  const averageRatingValue = Number(averageRating ?? 0);
+  const ratingCountValue = Math.max(
+    0,
+    Number.isFinite(ratingStats.count)
+      ? Number(ratingStats.count)
+      : Number.isFinite(routeData?.rating_count)
+        ? Number(routeData?.rating_count)
+        : Number.isFinite(ratingCount)
+          ? Number(ratingCount)
+          : 0
+  );
+  const hasRatings =
+    averageRating != null && Number.isFinite(averageRatingValue) && ratingCountValue > 0;
+  const displayAverage = hasRatings ? roundToOneDecimal(averageRatingValue) : null;
+  const ratingCountLabel =
+    ratingCountValue > 0
+      ? `${ratingCountValue} valoración${ratingCountValue === 1 ? "" : "es"}`
+      : "Sin valoraciones";
 
   const ratingHint = !isAuthenticated
     ? "Inicia sesión para valorar esta ruta."
@@ -166,15 +236,22 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         setUserRating(data.user_rating);
       }
       if (data?.average !== undefined || data?.count !== undefined) {
+        const average =
+          data?.average != null && Number.isFinite(data.average)
+            ? Math.round(Number(data.average) * 10) / 10
+            : null;
+        const count = typeof data?.count === "number" ? data.count : 0;
+        setRatingStats({ average, count });
         setRouteData((prev: any) =>
           prev
             ? {
                 ...prev,
-                rating: data?.average ?? prev.rating,
-                rating_count: data?.count ?? prev.rating_count,
+                rating: average ?? prev.rating,
+                rating_count: count ?? prev.rating_count,
               }
             : prev
         );
+        onRatingChange?.({ average, count });
       }
       showAlert("Valoración guardada", "success");
     } catch (err) {
@@ -233,22 +310,46 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             </ul>
           </div>
 
-          {showRatingControl ? (
-            <div className="route-details-card__rating">
-              <div className="route-details-card__rating-header">
-                <span className="route-details-card__rating-title">Tu valoración</span>
-                <span className="route-details-card__rating-value">
-                  {userRating != null ? `${userRating}/5` : "Sin valorar"}
+          <div className="route-details-card__rating">
+            <div className="route-details-card__rating-summary" aria-live="polite">
+              <div className="route-details-card__rating-meta">
+                <span className="route-details-card__rating-label">Valoración de la ruta</span>
+                <span className="route-details-card__rating-count">{ratingCountLabel}</span>
+              </div>
+              <div className="route-details-card__rating-number">
+                <span className="route-details-card__rating-average">
+                  {displayAverage ?? "—"}
+                </span>
+                <span className="route-details-card__rating-scale">
+                  /5 <span className="route-details-card__rating-star-inline" aria-hidden="true">★</span>
                 </span>
               </div>
-              <StarRating
-                value={userRating ?? 0}
-                onChange={handleRatingChange}
-                disabled={!canRate || ratingSaving}
-                hint={ratingHint}
-              />
             </div>
-          ) : null}
+
+            {showRatingControl || (!isAuthor && ratingHint) ? (
+              <>
+                <div className="route-details-card__rating-divider" aria-hidden="true" />
+                {showRatingControl ? (
+                  <>
+                    <div className="route-details-card__rating-header">
+                      <span className="route-details-card__rating-title">Tu valoración</span>
+                      <span className="route-details-card__rating-value">
+                        {userRating != null ? `${userRating}` : "Sin valorar"}
+                      </span>
+                    </div>
+                    <StarRating
+                      value={userRating ?? 0}
+                      onChange={handleRatingChange}
+                      disabled={!canRate || ratingSaving}
+                      hint={ratingHint}
+                    />
+                  </>
+                ) : (
+                  <p className="route-details-card__rating-hint">{ratingHint}</p>
+                )}
+              </>
+            ) : null}
+          </div>
 
           <div
             className="route-details-card__footer"
