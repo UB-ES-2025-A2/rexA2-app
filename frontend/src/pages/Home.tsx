@@ -5,6 +5,7 @@ import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
+import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
@@ -37,6 +38,9 @@ type RouteItem = {
   createdAt?: string;
   popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
+  difficulty?: string;
+  distanceKm?: number;
+  durationMinutes?: number;
 };
 
 type SelectedUser = {
@@ -76,6 +80,7 @@ export default function Home() {
   const [routesError, setRoutesError] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [editingRoute, setEditingRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
@@ -200,18 +205,22 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
         const data = await response.json();
 
-        const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route.id,
-          name: route.name,
-          description: route.description || "Sin descripci?n",
-          category: route.category || "sin categor?a",
-          points: route.points.map((p: any) => [p.longitude, p.latitude]),
-          visibility: route.visibility ?? false,
-          owner_id: route.owner_id,
-          user_id: route.user_id,
-          city:
-            route.city ||
-            route.city_name ||
+    const formatted: RouteItem[] = data.map((route: any) => ({
+      id: route.id,
+      name: route.name,
+      description: route.description || "Sin descripci?n",
+      category: route.category || "sin categor?a",
+      points: route.points.map((p: any) => [p.longitude, p.latitude]),
+      visibility: route.visibility ?? false,
+      is_owner: route.is_owner ?? route.isOwner ?? false,
+      difficulty: route.difficulty,
+      distanceKm: route.distance_km ?? route.distanceKm,
+      durationMinutes: route.duration_minutes ?? route.durationMinutes,
+      owner_id: route.owner_id,
+      user_id: route.user_id,
+      city:
+        route.city ||
+        route.city_name ||
             route.cityName ||
             route.location?.city ||
             "",
@@ -483,6 +492,17 @@ export default function Home() {
               onResetPoints={() => setDrawPoints([])}
               onClose={handleCloseRouteCard}
             />
+          ) : editingRoute ? (
+            <RouteEditForm
+              data={{
+                id: editingRoute.id,
+                name: editingRoute.name,
+                description: editingRoute.description,
+                category: editingRoute.category || "otros",
+                difficulty: editingRoute.difficulty,
+              }}
+              onCancel={() => setEditingRoute(null)}
+            />
           ) : selectedRoute ? (
             <RouteDetailsCard
               routeId={selectedRoute.id}
@@ -492,6 +512,23 @@ export default function Home() {
               points={selectedRoute.points}
               isPrivate={!selectedRoute.visibility}
               isOwnRoute={selectedRoute.is_owner || false}
+              onEdit={(rd) => {
+                const payload = rd
+                  ? {
+                      id: rd.id ?? selectedRoute.id,
+                      name: rd.name ?? selectedRoute.name,
+                      description: rd.description ?? selectedRoute.description,
+                      category: rd.category ?? selectedRoute.category,
+                      difficulty: rd.difficulty ?? selectedRoute.difficulty,
+                      distanceKm: rd.distance_km ?? rd.distanceKm ?? selectedRoute.distanceKm,
+                      durationMinutes:
+                        rd.duration_minutes ??
+                        rd.durationMinutes ??
+                        selectedRoute.durationMinutes,
+                    }
+                  : selectedRoute;
+                setEditingRoute(payload as RouteItem);
+              }}
               onClose={() => {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);

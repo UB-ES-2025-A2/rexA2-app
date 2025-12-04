@@ -24,6 +24,7 @@ interface RouteDetailsCardProps {
   onShowComments?: () => void;
   onDelete?: (routeId: string) => Promise<void>;
   isOwnRoute?: boolean;
+  onEdit?: (routeData?: any) => void;
 }
 
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
@@ -39,6 +40,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   onShowComments,
   onDelete,
   isOwnRoute = false,
+  onEdit,
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
@@ -90,11 +92,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           const data = await res.json();
           setRouteOwnership(Boolean(data?.is_owner));
         } else {
-          setRouteOwnership(null);
+          setRouteOwnership(false);
         }
       } catch (err) {
         console.warn("No se pudo comprobar propiedad de la ruta", err);
-        setRouteOwnership(null);
+        setRouteOwnership(false);
       }
     };
 
@@ -194,16 +196,37 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     }
   };
 
-  const canDelete = isOwnRoute || routeData?.is_owner;
+  const canDelete = isAuthor;
 
   return (
     <>
       <div className="route-details-card">
         <header className="route-details-card__header">
           <h2 className="route-details-card__title">{name}</h2>
-          <button className="route-details-card__close" onClick={onClose}>
-            ✕
-          </button>
+          <div className="route-details-card__header-actions">
+            {isAuthor && onEdit ? (
+              <button
+                className="route-details-card__edit-btn"
+                onClick={() =>
+                  onEdit(
+                    routeData || {
+                      id: routeId,
+                      name,
+                      description,
+                      category,
+                      points,
+                      isPrivate,
+                    }
+                  )
+                }
+              >
+                Editar ruta
+              </button>
+            ) : null}
+            <button className="route-details-card__close" onClick={onClose}>
+              ✕
+            </button>
+          </div>
         </header>
 
         <section className="route-details-card__body">
@@ -268,11 +291,13 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
                 onSavedChange={onSavedChange}
               />
             </div>
-            {canDelete && (
-              <DeleteButton
-                onClick={() => setDeleteModalOpen(true)}
-              />
-            )}
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              {canDelete && (
+                <DeleteButton
+                  onClick={() => setDeleteModalOpen(true)}
+                />
+              )}
+            </div>
           </div>
         </section>
       </div>
