@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Category } from "../types";
 import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
@@ -56,6 +56,47 @@ export default function RouteEditForm({ data, onCancel, onSaved }: Props) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { showAlert } = useAlert();
+  const initialSnapshotRef = useRef({
+    name: data.name,
+    description: data.description,
+    category: data.category,
+    difficulty: data.difficulty || "",
+  });
+
+  useEffect(() => {
+    // Actualiza el snapshot si cambia la ruta a editar
+    initialSnapshotRef.current = {
+      name: data.name,
+      description: data.description,
+      category: data.category,
+      difficulty: data.difficulty || "",
+    };
+    setName(data.name);
+    setDescription(data.description);
+    setCategory(data.category as Category);
+    setDifficulty(data.difficulty || "");
+    setError(null);
+  }, [data]);
+
+  const isDirty = useMemo(() => {
+    const snap = initialSnapshotRef.current;
+    return (
+      snap.name !== name ||
+      snap.description !== description ||
+      snap.category !== category ||
+      (snap.difficulty || "") !== (difficulty || "")
+    );
+  }, [name, description, category, difficulty]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   const validate = () => {
     if (!name.trim()) {
@@ -104,6 +145,12 @@ export default function RouteEditForm({ data, onCancel, onSaved }: Props) {
 
       const updated = await res.json();
       showAlert("Ruta actualizada correctamente", "success");
+      initialSnapshotRef.current = {
+        name,
+        description,
+        category,
+        difficulty: difficulty || "",
+      };
       onSaved?.(updated);
     } catch (err) {
       console.error(err);
@@ -164,7 +211,19 @@ export default function RouteEditForm({ data, onCancel, onSaved }: Props) {
         </select>
 
         <div className="route-edit-form__actions">
-          <button type="button" className="btn-secondary" onClick={onCancel}>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => {
+              if (isDirty) {
+                const leave = window.confirm(
+                  "Tienes cambios sin guardar. ¿Quieres salir sin guardarlos?"
+                );
+                if (!leave) return;
+              }
+              onCancel();
+            }}
+          >
             Cancelar
           </button>
           <button type="submit" className="btn-primary" disabled={saving}>
