@@ -176,6 +176,56 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sharedRouteId = params.get("route");
+
+    if (sharedRouteId) {
+      const loadSharedRoute = async () => {
+        try {
+          // Si ya tenemos las rutas cargadas, buscamos ahí primero
+          const existing = routes.find((r) => String(r.id) === sharedRouteId);
+          if (existing) {
+            setSelectedRoute(existing);
+            setSelectedRoutePoints(existing.points);
+            if (existing.points.length > 0) {
+              setMapCenter(existing.points[0]);
+            }
+            return;
+          }
+
+          // Si no, hacemos fetch
+          const res = await fetch(`${API}/routes/${sharedRouteId}`);
+          if (res.ok) {
+            const data = await res.json();
+            const formattedRoute: RouteItem = {
+              id: data.id,
+              name: data.name,
+              description: data.description || "Sin descripción",
+              category: data.category || "sin categoría",
+              points: (data.points || []).map((p: any) => [p.longitude, p.latitude]),
+              visibility: data.visibility ?? false,
+              is_owner: data.is_owner,
+              ownerName: data.owner_name || data.user?.name || "",
+              ownerUsername: data.owner_username || data.user?.username || "",
+              createdAt: data.created_at || data.createdAt,
+            };
+
+            setSelectedRoute(formattedRoute);
+            setSelectedRoutePoints(formattedRoute.points);
+
+            if (formattedRoute.points.length > 0) {
+              setMapCenter(formattedRoute.points[0]);
+            }
+          }
+        } catch (err) {
+          console.error("Error loading shared route:", err);
+        }
+      };
+      loadSharedRoute();
+    }
+  }, [location.search, routes]);
+
+  useEffect(() => {
     const fetchAll = async () => {
       setRoutesLoading(true);
       setRoutesError(null);
@@ -245,19 +295,19 @@ export default function Home() {
           email: route.user?.email || route.email,
           user: route.user
             ? {
-                id: route.user._id || route.user.id,
-                username: route.user.username,
-                name: route.user.name,
-                email: route.user.email,
-              }
+              id: route.user._id || route.user.id,
+              username: route.user.username,
+              name: route.user.name,
+              email: route.user.email,
+            }
             : route.username || route.ownerName || route.ownerUsername
-            ? {
+              ? {
                 id: route.user_id || route.owner_id,
                 username: route.username,
                 name: route.ownerName,
                 email: route.email,
               }
-            : undefined,
+              : undefined,
           username: route.username,
         }));
 

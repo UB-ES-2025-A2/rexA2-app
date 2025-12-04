@@ -6,6 +6,8 @@ import FavoriteButton from "../FavoriteButton";
 import CommentsModal from "../CommentsModal";
 import DeleteRouteModal from "./DeleteRouteModal";
 import DeleteButton from "./DeleteButton";
+import ShareButton from "../ShareButton";
+import ShareModal from "../ShareModal";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
@@ -43,6 +45,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const { showAlert } = useAlert();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
   const useExternalComments = Boolean(onShowComments);
 
@@ -138,6 +141,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
                 initialSaved={initialSaved}
                 onSavedChange={onSavedChange}
               />
+              <ShareButton onClick={() => setShareModalOpen(true)} />
             </div>
             {canDelete && (
               <DeleteButton
@@ -161,6 +165,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         routeName={name}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteModalOpen(false)}
+      />
+
+      <ShareModal
+        open={shareModalOpen}
+        onClose={() => setShareModalOpen(false)}
+        link={`${window.location.origin}/?route=${routeId}`}
       />
     </>
   );
