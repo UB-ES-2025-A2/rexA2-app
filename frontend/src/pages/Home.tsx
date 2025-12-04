@@ -121,13 +121,28 @@ const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
   hard: "Alta",
 };
 
+const CATEGORY_OPTIONS = [
+  "all",
+  "gastronomia",
+  "naturaleza",
+  "aventura",
+  "cultura",
+  "deporte",
+  "historia",
+  "urban",
+  "entretenimiento",
+  "otros",
+];
+
 const CATEGORY_LABELS: Record<string, string> = {
+  all: "Todas",
   gastronomia: "Gastronomía",
   naturaleza: "Naturaleza",
   aventura: "Aventura",
   cultura: "Cultura",
   deporte: "Deporte",
   historia: "Historia",
+  urban: "Urbana",
   entretenimiento: "Entretenimiento",
   otros: "Otros",
 };
@@ -627,6 +642,10 @@ export default function Home() {
     setAppliedFilters({ ...filters });
   };
 
+  const handleCategorySelect = (category: string) => {
+    setAppliedFilters((prev) => ({ ...prev, category }));
+  };
+
   // Controlar qué puntos se ven en el mapa según el modo actual
   let visiblePoints = selectedRoutePoints;
   if (routeCardOpen) {
@@ -815,6 +834,21 @@ export default function Home() {
 
                 return (
                   <>
+                    <div className="category-chip-bar" aria-label="Filtrar por categoría">
+                      {CATEGORY_OPTIONS.map((cat) => (
+                        <button
+                          key={cat}
+                          className={`category-chip ${
+                            appliedFilters.category === cat ? "active" : ""
+                          }`}
+                          onClick={() => handleCategorySelect(cat)}
+                          aria-pressed={appliedFilters.category === cat}
+                        >
+                          {CATEGORY_LABELS[cat] ?? cat}
+                        </button>
+                      ))}
+                    </div>
+
                     <div className="routes-meta">
                       <div className="routes-count">
                         {resultCount} rutas encontradas

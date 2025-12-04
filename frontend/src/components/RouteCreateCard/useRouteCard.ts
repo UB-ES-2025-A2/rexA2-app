@@ -13,6 +13,7 @@ const PUBLIC_CATEGORIES: Category[] = [
   "cultura",
   "deporte",
   "historia",
+  "urban",
   "entretenimiento",
   "otros",
 ];

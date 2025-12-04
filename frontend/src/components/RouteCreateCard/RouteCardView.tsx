@@ -53,6 +53,18 @@ const RouteCardView: React.FC<Props> = ({
   onSave,
   onChangeDescription,
 }) => {
+  const formatCategory = (cat: string) => {
+    if (!cat) return "";
+    const labels: Record<string, string> = {
+      urban: "Urbana",
+      gastronomia: "Gastronomía",
+    };
+    if (labels[cat]) return labels[cat];
+    return cat
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <div className="route-card-panel">
       <div className="route-card__header">
@@ -98,9 +110,7 @@ const RouteCardView: React.FC<Props> = ({
                 </option>
                 {categoryOptions.map((cat) => (
                   <option key={cat} value={cat}>
-                    {cat
-                      .replace(/-/g, " ")
-                      .replace(/\b\w/g, (c) => c.toUpperCase())}
+                    {formatCategory(cat)}
                   </option>
                 ))}
               </select>
