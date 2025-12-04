@@ -8,7 +8,9 @@ from backend.db.schemas.route import (
     CommentThread,
     CommentCreated,
 )
+from backend.db.schemas.rating import RatingPayload, RatingResponse
 from backend.core.security import get_current_user
+from backend.db.models import rating as rating_crud
 from pymongo.errors import DuplicateKeyError
 from bson.errors import InvalidId
 
@@ -132,7 +134,66 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
     
     route["_id"] = str(route["_id"])
     route["is_owner"] = is_owner  # ← NUEVO
+    try:
+        user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
+    except Exception:
+        user_rating = None
+    if user_rating is not None:
+        route["user_rating"] = user_rating
     return route
+
+@router.get("/{route_id}/ownership")
+async def check_route_ownership(
+    route_id: str, current_user: dict = Depends(get_current_user)
+) -> dict:
+    """
+    Devuelve si la ruta pertenece al usuario autenticado.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_owner = str(route.get("owner_id")) == str(current_user.get("_id"))
+    return {"is_owner": is_owner}
+
+@router.post(
+    "/{route_id}/rating",
+    response_model=RatingResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def rate_route(
+    route_id: str,
+    payload: RatingPayload,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Guarda o actualiza la valoración de una ruta (1-5) para el usuario autenticado.
+    - No permite valorar rutas privadas de otros usuarios.
+    - No permite que el autor valore su propia ruta.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_owner = str(route.get("owner_id")) == str(current_user["_id"])
+    if is_owner:
+        raise HTTPException(status_code=403, detail="No puedes valorar tu propia ruta")
+
+    if not route.get("visibility", False):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    result = await rating_crud.set_user_rating(
+        str(current_user["_id"]), route_id, payload.rating
+    )
+    return result
 
 @router.get("/by-name/{name}", response_model=RoutePublic)
 async def get_public_route_by_name(name: str, current_user: dict = Depends(get_current_user)):

@@ -118,6 +118,37 @@
   overflow: auto;
 }
 
+.route-details-card__rating {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 2px dashed var(--border);
+  background: linear-gradient(
+    135deg,
+    rgba(99, 102, 241, 0.05),
+    rgba(99, 102, 241, 0.02)
+  );
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.route-details-card__rating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.route-details-card__rating-title {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.route-details-card__rating-value {
+  font-weight: 700;
+  color: var(--muted);
+}
+
 .route-details-card__points-list h4 {
   margin-bottom: 0.5rem;
   font-size: 1.1rem;
