@@ -28,7 +28,6 @@ type RouteItem = {
   distanceKm?: number | null;
   durationMinutes?: number | null;
   difficulty?: string;
-  routeType?: string;
   theme?: string;
   visibility: boolean;
   is_owner?: boolean;
@@ -58,7 +57,6 @@ type AppliedFilters = {
   distance: DistanceFilter;
   duration: DurationFilter;
   difficulty: DifficultyFilter;
-  routeType: RouteTypeFilter;
   theme: ThemeFilter;
 };
 
@@ -71,8 +69,18 @@ const GEO_ZOOM = 13;
 type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
 type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
 type DifficultyFilter = "all" | "easy" | "medium" | "hard";
-type RouteTypeFilter = "all" | "loop" | "pointToPoint" | "outAndBack";
-type ThemeFilter = "all" | "nature" | "urban" | "cultural";
+type ThemeFilter =
+  | "all"
+  | "nature"
+  | "urban"
+  | "cultural"
+  | "gastronomia"
+  | "exploracion-urbana"
+  | "aventura"
+  | "deporte"
+  | "historia"
+  | "entretenimiento"
+  | "otros";
 
 const DEFAULT_FILTERS: AppliedFilters = {
   category: "all",
@@ -80,7 +88,6 @@ const DEFAULT_FILTERS: AppliedFilters = {
   distance: "all",
   duration: "all",
   difficulty: "all",
-  routeType: "all",
   theme: "all",
 };
 
@@ -114,11 +121,15 @@ const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
   hard: "Alta",
 };
 
-const ROUTE_TYPE_LABELS: Record<RouteTypeFilter, string> = {
-  all: "Todos los tipos",
-  loop: "Circular",
-  pointToPoint: "Punto a punto",
-  outAndBack: "Ida y vuelta",
+const CATEGORY_LABELS: Record<string, string> = {
+  gastronomia: "Gastronomía",
+  naturaleza: "Naturaleza",
+  aventura: "Aventura",
+  cultura: "Cultura",
+  deporte: "Deporte",
+  historia: "Historia",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
 };
 
 const THEME_LABELS: Record<ThemeFilter, string> = {
@@ -126,6 +137,13 @@ const THEME_LABELS: Record<ThemeFilter, string> = {
   nature: "Naturaleza",
   urban: "Urbana",
   cultural: "Cultural",
+  gastronomia: "Gastronomía",
+  "exploracion-urbana": "Exploración urbana",
+  aventura: "Aventura",
+  deporte: "Deporte",
+  historia: "Historia",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
 };
 
 const AVERAGE_WALKING_SPEED_KMH = 4; // Aproximación para estimar duración cuando no viene del backend
@@ -288,11 +306,45 @@ export default function Home() {
       );
     }
 
-    if (appliedFilters.routeType !== "all") {
+    if (appliedFilters.theme !== "all") {
       filtered = filtered.filter(
         (r) =>
-          r.routeType &&
-          r.routeType.toLowerCase() === appliedFilters.routeType.toLowerCase()
+          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.distance !== "all") {
+      filtered = filtered.filter((r) => {
+        const d = r.distanceKm;
+        if (d == null) return false;
+        if (appliedFilters.distance === "lt5") return d < 5;
+        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
+        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
+        if (appliedFilters.distance === "gt20") return d > 20;
+        return true;
+      });
+    }
+
+    if (appliedFilters.duration !== "all") {
+      filtered = filtered.filter((r) => {
+        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
+        if (minutes == null) return false;
+
+        if (appliedFilters.duration === "lt1") return minutes < 60;
+        if (appliedFilters.duration === "1to3")
+          return minutes >= 60 && minutes < 180;
+        if (appliedFilters.duration === "3to6")
+          return minutes >= 180 && minutes <= 360;
+        if (appliedFilters.duration === "gt6") return minutes > 360;
+        return true;
+      });
+    }
+
+    if (appliedFilters.difficulty !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.difficulty &&
+          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
       );
     }
 
@@ -386,8 +438,7 @@ export default function Home() {
             durationMinutes,
             difficulty:
               route.difficulty || route.difficulty_level || route.difficultyLevel,
-            routeType: route.route_type || route.routeType || route.type,
-            theme: route.theme || route.topic || route.themedCategory,
+          theme: route.theme || route.topic || route.themedCategory,
             visibility: route.visibility ?? false,
             owner_id: route.owner_id,
             user_id: route.user_id,
@@ -758,7 +809,6 @@ export default function Home() {
                   appliedFilters.distance !== "all" ||
                   appliedFilters.duration !== "all" ||
                   appliedFilters.difficulty !== "all" ||
-                  appliedFilters.routeType !== "all" ||
                   appliedFilters.theme !== "all";
                 const hasSearch = Boolean(routeSearchQuery.trim());
                 const resultCount = filteredRoutes.length;
@@ -778,7 +828,9 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.category !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Categoría: {appliedFilters.category}
+                                  Categoría:{" "}
+                                  {CATEGORY_LABELS[appliedFilters.category] ??
+                                    appliedFilters.category}
                                 </span>
                               ) : null}
                               {appliedFilters.pointsFilter !== "all" ? (
@@ -800,11 +852,6 @@ export default function Home() {
                                 <span className="routes-filter-chip">
                                   Dificultad:{" "}
                                   {DIFFICULTY_LABELS[appliedFilters.difficulty]}
-                                </span>
-                              ) : null}
-                              {appliedFilters.routeType !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Tipo: {ROUTE_TYPE_LABELS[appliedFilters.routeType]}
                                 </span>
                               ) : null}
                               {appliedFilters.theme !== "all" ? (
