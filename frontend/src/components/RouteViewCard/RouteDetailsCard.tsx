@@ -19,6 +19,8 @@ interface RouteDetailsCardProps {
   isPrivate?: boolean;
   onClose: () => void;
   routeId: string;
+  rating?: number | null;
+  ratingCount?: number | null;
   initialSaved?: boolean;
   onSavedChange?: (saved: boolean) => void;
   onShowComments?: () => void;
@@ -34,6 +36,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   isPrivate = false,
   onClose,
   routeId,
+  rating = null,
+  ratingCount = null,
   initialSaved = false,
   onSavedChange,
   onShowComments,
@@ -114,6 +118,26 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const waitingPerms = waitingRouteData || waitingOwnership;
   const canRate = isAuthenticated && !waitingPerms && !isAuthor;
   const showRatingControl = Boolean(routeData) && canRate;
+
+  const roundToOneDecimal = (value: number) =>
+    (Math.round(value * 10) / 10).toFixed(1);
+  const averageRating = routeData?.rating ?? rating ?? null;
+  const averageRatingValue = Number(averageRating);
+  const ratingCountValue = Math.max(
+    0,
+    Number.isFinite(routeData?.rating_count)
+      ? Number(routeData?.rating_count)
+      : Number.isFinite(ratingCount)
+        ? Number(ratingCount)
+        : 0
+  );
+  const hasRatings =
+    averageRating != null && Number.isFinite(averageRatingValue) && ratingCountValue > 0;
+  const displayAverage = hasRatings ? roundToOneDecimal(averageRatingValue) : null;
+  const ratingCountLabel =
+    ratingCountValue > 0
+      ? `${ratingCountValue} valoración${ratingCountValue === 1 ? "" : "es"}`
+      : "Sin valoraciones";
 
   const ratingHint = !isAuthenticated
     ? "Inicia sesión para valorar esta ruta."
@@ -233,22 +257,43 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             </ul>
           </div>
 
-          {showRatingControl ? (
-            <div className="route-details-card__rating">
-              <div className="route-details-card__rating-header">
-                <span className="route-details-card__rating-title">Tu valoración</span>
-                <span className="route-details-card__rating-value">
-                  {userRating != null ? `${userRating}/5` : "Sin valorar"}
+          <div className="route-details-card__rating">
+            <div className="route-details-card__rating-summary" aria-live="polite">
+              <div className="route-details-card__rating-meta">
+                <span className="route-details-card__rating-label">Valoración de la ruta</span>
+                <span className="route-details-card__rating-count">{ratingCountLabel}</span>
+              </div>
+              <div className="route-details-card__rating-number">
+                <span className="route-details-card__rating-average">
+                  {displayAverage ?? "—"}
+                </span>
+                <span className="route-details-card__rating-scale">
+                  /5 <span className="route-details-card__rating-star-inline" aria-hidden="true">★</span>
                 </span>
               </div>
-              <StarRating
-                value={userRating ?? 0}
-                onChange={handleRatingChange}
-                disabled={!canRate || ratingSaving}
-                hint={ratingHint}
-              />
             </div>
-          ) : null}
+
+            <div className="route-details-card__rating-divider" aria-hidden="true" />
+
+            {showRatingControl ? (
+              <>
+                <div className="route-details-card__rating-header">
+                  <span className="route-details-card__rating-title">Tu valoración</span>
+                  <span className="route-details-card__rating-value">
+                    {userRating != null ? `${userRating}/5` : "Sin valorar"}
+                  </span>
+                </div>
+                <StarRating
+                  value={userRating ?? 0}
+                  onChange={handleRatingChange}
+                  disabled={!canRate || ratingSaving}
+                  hint={ratingHint}
+                />
+              </>
+            ) : (
+              <p className="route-details-card__rating-hint">{ratingHint}</p>
+            )}
+          </div>
 
           <div
             className="route-details-card__footer"
