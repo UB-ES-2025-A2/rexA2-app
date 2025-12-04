@@ -7,6 +7,11 @@ interface Route {
   description: string;
   category: string;
   points: Array<[number, number]>;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string;
+  routeType?: string;
+  theme?: string;
   visibility: boolean;
   is_owner?: boolean;
   ownerName?: string;
@@ -22,12 +27,39 @@ interface Route {
 
 type SearchScope = "routes" | "users";
 
+type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+type RouteTypeFilter = "all" | "loop" | "pointToPoint" | "outAndBack";
+type ThemeFilter = "all" | "nature" | "urban" | "cultural";
+
+type FiltersState = {
+  category: string;
+  pointsFilter: string;
+  distance: DistanceFilter;
+  duration: DurationFilter;
+  difficulty: DifficultyFilter;
+  routeType: RouteTypeFilter;
+  theme: ThemeFilter;
+};
+
+const DEFAULT_FILTERS: FiltersState = {
+  category: "all",
+  pointsFilter: "all",
+  distance: "all",
+  duration: "all",
+  difficulty: "all",
+  routeType: "all",
+  theme: "all",
+};
+
 interface RouteSearchBarProps {
   routes: Route[];
   mode: SearchScope;
   query: string;
   onQueryChange: (query: string) => void;
-  onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
+  onApplyFilters?: (filters: FiltersState) => void;
+  filters?: FiltersState;
   isLoading?: boolean;
 }
 
@@ -37,16 +69,44 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   query,
   onQueryChange,
   onApplyFilters,
+  filters = DEFAULT_FILTERS,
   isLoading = false,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [pointsFilter, setPointsFilter] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    filters.category ?? "all"
+  );
+  const [pointsFilter, setPointsFilter] = useState<string>(
+    filters.pointsFilter ?? "all"
+  );
+  const [distance, setDistance] = useState<DistanceFilter>(
+    filters.distance ?? "all"
+  );
+  const [duration, setDuration] = useState<DurationFilter>(
+    filters.duration ?? "all"
+  );
+  const [difficulty, setDifficulty] = useState<DifficultyFilter>(
+    filters.difficulty ?? "all"
+  );
+  const [routeType, setRouteType] = useState<RouteTypeFilter>(
+    filters.routeType ?? "all"
+  );
+  const [theme, setTheme] = useState<ThemeFilter>(filters.theme ?? "all");
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const categories = useMemo(() => {
     const cats = new Set(routes.map((r) => r.category));
     return Array.from(cats).sort();
   }, [routes]);
+
+  useEffect(() => {
+    setSelectedCategory(filters.category ?? "all");
+    setPointsFilter(filters.pointsFilter ?? "all");
+    setDistance(filters.distance ?? "all");
+    setDuration(filters.duration ?? "all");
+    setDifficulty(filters.difficulty ?? "all");
+    setRouteType(filters.routeType ?? "all");
+    setTheme(filters.theme ?? "all");
+  }, [filters]);
 
   const handleFilterClick = () => {
     setShowFilterModal(!showFilterModal);
@@ -58,6 +118,11 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
       onApplyFilters({
         category: selectedCategory,
         pointsFilter: pointsFilter,
+        distance,
+        duration,
+        difficulty,
+        routeType,
+        theme,
       });
     }
   };
@@ -65,10 +130,20 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const handleResetFilters = () => {
     setSelectedCategory("all");
     setPointsFilter("all");
+    setDistance("all");
+    setDuration("all");
+    setDifficulty("all");
+    setRouteType("all");
+    setTheme("all");
     if (onApplyFilters) {
       onApplyFilters({
         category: "all",
         pointsFilter: "all",
+        distance: "all",
+        duration: "all",
+        difficulty: "all",
+        routeType: "all",
+        theme: "all",
       });
     }
   };
@@ -78,7 +153,13 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   };
 
   const hasActiveFilters =
-    selectedCategory !== "all" || pointsFilter !== "all";
+    selectedCategory !== "all" ||
+    pointsFilter !== "all" ||
+    distance !== "all" ||
+    duration !== "all" ||
+    difficulty !== "all" ||
+    routeType !== "all" ||
+    theme !== "all";
 
   useEffect(() => {
     if (mode !== "routes") {
@@ -224,12 +305,130 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                     </select>
                   </div>
 
+                  <div className="filter-section">
+                    <div className="filter-label">Distancia</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Cualquiera", value: "all" as DistanceFilter },
+                        { label: "<5 km", value: "lt5" as DistanceFilter },
+                        { label: "5–10 km", value: "5to10" as DistanceFilter },
+                        { label: "10–20 km", value: "10to20" as DistanceFilter },
+                        { label: ">20 km", value: "gt20" as DistanceFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${
+                            distance === option.value ? "active" : ""
+                          }`}
+                          onClick={() => setDistance(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Duración aproximada</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Cualquiera", value: "all" as DurationFilter },
+                        { label: "<1h", value: "lt1" as DurationFilter },
+                        { label: "1–3h", value: "1to3" as DurationFilter },
+                        { label: "3–6h", value: "3to6" as DurationFilter },
+                        { label: ">6h", value: "gt6" as DurationFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${
+                            duration === option.value ? "active" : ""
+                          }`}
+                          onClick={() => setDuration(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Dificultad (opcional)</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Todas", value: "all" as DifficultyFilter },
+                        { label: "Fácil", value: "easy" as DifficultyFilter },
+                        { label: "Media", value: "medium" as DifficultyFilter },
+                        { label: "Alta", value: "hard" as DifficultyFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${
+                            difficulty === option.value ? "active" : ""
+                          }`}
+                          onClick={() => setDifficulty(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Tipo de ruta (opcional)</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Todas", value: "all" as RouteTypeFilter },
+                        { label: "Circular", value: "loop" as RouteTypeFilter },
+                        {
+                          label: "Punto a punto",
+                          value: "pointToPoint" as RouteTypeFilter,
+                        },
+                        {
+                          label: "Ida y vuelta",
+                          value: "outAndBack" as RouteTypeFilter,
+                        },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${
+                            routeType === option.value ? "active" : ""
+                          }`}
+                          onClick={() => setRouteType(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Categoría temática</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Todas", value: "all" as ThemeFilter },
+                        { label: "Naturaleza", value: "nature" as ThemeFilter },
+                        { label: "Urbana", value: "urban" as ThemeFilter },
+                        { label: "Cultural", value: "cultural" as ThemeFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${
+                            theme === option.value ? "active" : ""
+                          }`}
+                          onClick={() => setTheme(option.value)}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="filter-modal-actions">
                     <button
                       className="filter-modal-btn reset"
                       onClick={handleResetFilters}
                     >
-                      Limpiar
+                      Restablecer
                     </button>
                     <button
                       className="filter-modal-btn apply"
