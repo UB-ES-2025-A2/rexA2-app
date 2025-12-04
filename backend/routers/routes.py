@@ -8,7 +8,7 @@ from backend.db.schemas.route import (
     CommentThread,
     CommentCreated,
 )
-from backend.db.schemas.rating import RatingPayload, RatingResponse
+from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
 from backend.core.security import get_current_user
 from backend.db.models import rating as rating_crud
 from pymongo.errors import DuplicateKeyError
@@ -194,6 +194,26 @@ async def rate_route(
         str(current_user["_id"]), route_id, payload.rating
     )
     return result
+
+
+@router.get(
+    "/{route_id}/rating",
+    response_model=RatingStatsResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_route_rating_stats(
+    route_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Devuelve la media (redondeada a 1 decimal) y el total de valoraciones de una ruta.
+    Requiere que la ruta sea pública o pertenezca al usuario autenticado.
+    """
+    await _ensure_route_access(route_id, current_user)
+    stats = await rating_crud.get_route_rating_stats(route_id)
+    avg = stats.get("average")
+    stats["average"] = round(float(avg), 1) if avg is not None else None
+    return stats
 
 @router.get("/by-name/{name}", response_model=RoutePublic)
 async def get_public_route_by_name(name: str, current_user: dict = Depends(get_current_user)):

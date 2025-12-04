@@ -9,3 +9,8 @@ class RatingResponse(BaseModel):
     user_rating: float
     average: float | None = None
     count: int = 0
+
+
+class RatingStatsResponse(BaseModel):
+    average: float | None = None
+    count: int = 0
