@@ -823,19 +823,39 @@ export default function Home() {
                   </div>
 
                     {resultCount === 0 ? (
-                      renderEmptyState(
-                        hasFiltersApplied || hasSearch
-                          ? "Sin coincidencias"
-                          : "No hay rutas disponibles",
-                        hasFiltersApplied || hasSearch
-                          ? "Prueba ajustar la búsqueda o los filtros"
-                          : undefined
-                      )
+                      <div className="routes-empty">
+                        <h4>
+                          {hasFiltersApplied || hasSearch
+                            ? "No hay rutas para estos filtros"
+                            : "No hay rutas disponibles"}
+                        </h4>
+                        <p className="muted">
+                          {hasFiltersApplied || hasSearch
+                            ? "Ajusta la búsqueda o prueba con filtros más amplios."
+                            : "Crea una ruta para verla aquí."}
+                        </p>
+                        <div className="routes-empty__tips">
+                          <span>• Reduce filtros activos.</span>
+                          <span>• Amplía el rango de distancia o duración.</span>
+                          <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                        </div>
+                        {(hasFiltersApplied || hasSearch) && (
+                          <button
+                            className="routes-reset"
+                            onClick={() => {
+                              handleApplyFilters(DEFAULT_FILTERS);
+                              setRouteSearchQuery("");
+                            }}
+                          >
+                            Restablecer filtros
+                          </button>
+                        )}
+                      </div>
                     ) : (
                       <AnimatedList
                         items={filteredRoutes.map((r) => (
                           <div className="route-row" key={r.id}>
-                        <RoutePreviewCard
+                            <RoutePreviewCard
                           id={r.id}
                           name={r.name}
                           category={r.category as Category}

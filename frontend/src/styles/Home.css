@@ -255,6 +255,32 @@ button {
   transform: translateY(-1px);
 }
 
+.routes-empty {
+  padding: 24px;
+  background: #f8fafc;
+  border: 2px dashed var(--close-border);
+  border-radius: 16px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.routes-empty h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.routes-empty__tips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #475569;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 .input {
   border: 2px solid var(--close-border);
   outline: none;
