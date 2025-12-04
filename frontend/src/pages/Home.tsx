@@ -25,6 +25,11 @@ type RouteItem = {
   description: string;
   category: string;
   points: Array<[number, number]>;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string;
+  routeType?: string;
+  theme?: string;
   visibility: boolean;
   is_owner?: boolean;
   ownerName?: string;
@@ -50,6 +55,11 @@ type SelectedUser = {
 type AppliedFilters = {
   category: string;
   pointsFilter: string;
+  distance: DistanceFilter;
+  duration: DurationFilter;
+  difficulty: DifficultyFilter;
+  routeType: RouteTypeFilter;
+  theme: ThemeFilter;
 };
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
@@ -57,6 +67,106 @@ const API = import.meta.env.VITE_API_URL || window.location.origin;
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
+
+type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+type RouteTypeFilter = "all" | "loop" | "pointToPoint" | "outAndBack";
+type ThemeFilter = "all" | "nature" | "urban" | "cultural";
+
+const DEFAULT_FILTERS: AppliedFilters = {
+  category: "all",
+  pointsFilter: "all",
+  distance: "all",
+  duration: "all",
+  difficulty: "all",
+  routeType: "all",
+  theme: "all",
+};
+
+const DISTANCE_LABELS: Record<DistanceFilter, string> = {
+  all: "Todas las distancias",
+  lt5: "<5 km",
+  "5to10": "5–10 km",
+  "10to20": "10–20 km",
+  gt20: ">20 km",
+};
+
+const DURATION_LABELS: Record<DurationFilter, string> = {
+  all: "Todas las duraciones",
+  lt1: "<1h",
+  "1to3": "1–3h",
+  "3to6": "3–6h",
+  gt6: ">6h",
+};
+
+const POINTS_LABELS: Record<string, string> = {
+  all: "Todos los puntos",
+  few: "1-5 puntos",
+  medium: "6-15 puntos",
+  many: "+15 puntos",
+};
+
+const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
+  all: "Todas las dificultades",
+  easy: "Fácil",
+  medium: "Media",
+  hard: "Alta",
+};
+
+const ROUTE_TYPE_LABELS: Record<RouteTypeFilter, string> = {
+  all: "Todos los tipos",
+  loop: "Circular",
+  pointToPoint: "Punto a punto",
+  outAndBack: "Ida y vuelta",
+};
+
+const THEME_LABELS: Record<ThemeFilter, string> = {
+  all: "Todas las temáticas",
+  nature: "Naturaleza",
+  urban: "Urbana",
+  cultural: "Cultural",
+};
+
+const AVERAGE_WALKING_SPEED_KMH = 4; // Aproximación para estimar duración cuando no viene del backend
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function calculateSegmentDistanceKm(a: [number, number], b: [number, number]) {
+  const [lng1, lat1] = a;
+  const [lng2, lat2] = b;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lng2 - lng1);
+  const rLat1 = toRadians(lat1);
+  const rLat2 = toRadians(lat2);
+
+  const haversine =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(rLat1) * Math.cos(rLat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  const earthRadiusKm = 6371;
+  return earthRadiusKm * c;
+}
+
+function calculateRouteDistanceKm(points: Array<[number, number]>): number | null {
+  if (!points || points.length < 2) return null;
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += calculateSegmentDistanceKm(points[i - 1], points[i]);
+  }
+  return Number.isFinite(total) ? Number(total.toFixed(2)) : null;
+}
+
+function normalizeDurationMinutes(
+  rawDuration: number | null | undefined,
+  distanceKm: number | null | undefined
+): number | null {
+  if (rawDuration != null) return rawDuration;
+  if (!distanceKm) return null;
+  return Math.round((distanceKm / AVERAGE_WALKING_SPEED_KMH) * 60);
+}
 
 export default function Home() {
   const { user, token, logout } = useAuth();
@@ -96,8 +206,7 @@ export default function Home() {
 
   // Estados para filtros aplicados
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
-    category: "all",
-    pointsFilter: "all",
+    ...DEFAULT_FILTERS,
   });
 
   const openAuth = (m: "login" | "signup" = "login") => {
@@ -142,6 +251,56 @@ export default function Home() {
         if (appliedFilters.pointsFilter === "many") return pointCount > 15;
         return true;
       });
+    }
+
+    if (appliedFilters.distance !== "all") {
+      filtered = filtered.filter((r) => {
+        const d = r.distanceKm;
+        if (d == null) return false;
+        if (appliedFilters.distance === "lt5") return d < 5;
+        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
+        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
+        if (appliedFilters.distance === "gt20") return d > 20;
+        return true;
+      });
+    }
+
+    if (appliedFilters.duration !== "all") {
+      filtered = filtered.filter((r) => {
+        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
+        if (minutes == null) return false;
+
+        if (appliedFilters.duration === "lt1") return minutes < 60;
+        if (appliedFilters.duration === "1to3")
+          return minutes >= 60 && minutes < 180;
+        if (appliedFilters.duration === "3to6")
+          return minutes >= 180 && minutes <= 360;
+        if (appliedFilters.duration === "gt6") return minutes > 360;
+        return true;
+      });
+    }
+
+    if (appliedFilters.difficulty !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.difficulty &&
+          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.routeType !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.routeType &&
+          r.routeType.toLowerCase() === appliedFilters.routeType.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.theme !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
+      );
     }
 
     if (normalizedSearch) {
@@ -200,66 +359,87 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
         const data = await response.json();
 
-        const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route.id,
-          name: route.name,
-          description: route.description || "Sin descripci?n",
-          category: route.category || "sin categor?a",
-          points: route.points.map((p: any) => [p.longitude, p.latitude]),
-          visibility: route.visibility ?? false,
-          owner_id: route.owner_id,
-          user_id: route.user_id,
-          city:
-            route.city ||
-            route.city_name ||
-            route.cityName ||
-            route.location?.city ||
-            "",
-          createdAt: route.created_at || route.createdAt || route.creation_date,
-          popularity:
-            route.popularity ??
-            route.relevance ??
-            route.popularity_score ??
-            route.popularityScore ??
-            null,
-          ownerName:
-            route.owner_name ||
-            route.ownerName ||
-            route.user?.name ||
-            route.username ||
-            "",
-          ownerUsername:
-            route.owner_username ||
-            route.ownerUsername ||
-            route.user?.username ||
-            route.username ||
-            "",
-          ownerId:
-            route.owner_id ||
-            route.user_id ||
-            route.user?.id ||
-            route.ownerId ||
-            route.userId ||
-            null,
-          userId: route.user_id || route.userId || route.user?.id || null,
-          email: route.user?.email || route.email,
-          user: route.user
-            ? {
-                id: route.user._id || route.user.id,
-                username: route.user.username,
-                name: route.user.name,
-                email: route.user.email,
-              }
-            : route.username || route.ownerName || route.ownerUsername
-            ? {
-                id: route.user_id || route.owner_id,
-                username: route.username,
-                name: route.ownerName,
-                email: route.email,
-              }
-            : undefined,
-          username: route.username,
-        }));
+        const formatted: RouteItem[] = data.map((route: any) => {
+          const pointTuples = (route.points || []).map((p: any) => [
+            p.longitude,
+            p.latitude,
+          ]);
+          const distanceKm = calculateRouteDistanceKm(pointTuples);
+          const durationMinutes = normalizeDurationMinutes(
+            route.duration_minutes ??
+              route.durationMinutes ??
+              route.duration ??
+              route.durationMinutes,
+            distanceKm
+          );
+
+          return {
+            id: route.id,
+            name: route.name,
+            description: route.description || "Sin descripci?n",
+            category: route.category || "sin categor?a",
+            points: pointTuples,
+            distanceKm,
+            durationMinutes,
+            difficulty:
+              route.difficulty || route.difficulty_level || route.difficultyLevel,
+            routeType: route.route_type || route.routeType || route.type,
+            theme: route.theme || route.topic || route.themedCategory,
+            visibility: route.visibility ?? false,
+            owner_id: route.owner_id,
+            user_id: route.user_id,
+            city:
+              route.city ||
+              route.city_name ||
+              route.cityName ||
+              route.location?.city ||
+              "",
+            createdAt: route.created_at || route.createdAt || route.creation_date,
+            popularity:
+              route.popularity ??
+              route.relevance ??
+              route.popularity_score ??
+              route.popularityScore ??
+              null,
+            ownerName:
+              route.owner_name ||
+              route.ownerName ||
+              route.user?.name ||
+              route.username ||
+              "",
+            ownerUsername:
+              route.owner_username ||
+              route.ownerUsername ||
+              route.user?.username ||
+              route.username ||
+              "",
+            ownerId:
+              route.owner_id ||
+              route.user_id ||
+              route.user?.id ||
+              route.ownerId ||
+              route.userId ||
+              null,
+            userId: route.user_id || route.userId || route.user?.id || null,
+            email: route.user?.email || route.email,
+            user: route.user
+              ? {
+                  id: route.user._id || route.user.id,
+                  username: route.user.username,
+                  name: route.user.name,
+                  email: route.user.email,
+                }
+              : route.username || route.ownerName || route.ownerUsername
+              ? {
+                  id: route.user_id || route.owner_id,
+                  username: route.username,
+                  name: route.ownerName,
+                  email: route.email,
+                }
+              : undefined,
+            username: route.username,
+          };
+        });
 
         setRoutes(formatted);
       } catch (error) {
@@ -390,7 +570,7 @@ export default function Home() {
   };
 
   const handleApplyFilters = (filters: AppliedFilters) => {
-    setAppliedFilters(filters);
+    setAppliedFilters({ ...filters });
   };
 
   // Controlar qué puntos se ven en el mapa según el modo actual
@@ -424,6 +604,7 @@ export default function Home() {
                 : setUserSearchQuery(q)
             }
             onApplyFilters={handleApplyFilters}
+            filters={appliedFilters}
             isLoading={searchMode === "users" ? usersLoading : routesLoading}
           />
         )}
@@ -567,18 +748,23 @@ export default function Home() {
                     renderEmptyState("No hay rutas disponibles")
                   ) : (() => {
                     const filteredRoutes = getFilteredRoutes();
+                    const hasFiltersApplied =
+                      appliedFilters.category !== "all" ||
+                      appliedFilters.pointsFilter !== "all" ||
+                      appliedFilters.distance !== "all" ||
+                      appliedFilters.duration !== "all" ||
+                      appliedFilters.difficulty !== "all" ||
+                      appliedFilters.routeType !== "all" ||
+                      appliedFilters.theme !== "all";
+                    const hasSearch = Boolean(routeSearchQuery.trim());
 
                     if (filteredRoutes.length === 0) {
-                      const hasFilters =
-                        appliedFilters.category !== "all" ||
-                        appliedFilters.pointsFilter !== "all";
-                      const hasSearch = Boolean(routeSearchQuery.trim());
                       return (
                         renderEmptyState(
-                          hasFilters || hasSearch
+                          hasFiltersApplied || hasSearch
                             ? "Sin coincidencias"
                             : "No hay rutas disponibles",
-                          hasFilters || hasSearch
+                          hasFiltersApplied || hasSearch
                             ? "Prueba ajustar la búsqueda o los filtros"
                             : undefined
                         )
@@ -598,20 +784,79 @@ export default function Home() {
                     ));
 
                     return (
-                      <AnimatedList
-                        items={routeItems}
-                        className="routes-animated-list"
-                        itemClassName="routes-animated-item"
-                        showGradients
-                        onItemSelect={(index) =>
-                          requireAuth(() => {
-                            const route = filteredRoutes[index];
-                            if (!route) return;
-                            setSelectedRoute(route);
-                            setSelectedRoutePoints(route.points);
-                          })
-                        }
-                      />
+                      <>
+                        <div className="routes-meta">
+                          <div className="routes-count">
+                            {filteredRoutes.length} rutas encontradas
+                          </div>
+                          {(hasFiltersApplied || hasSearch) && (
+                            <div className="routes-active-filters">
+                              {hasSearch ? (
+                                <span className="routes-filter-chip muted">
+                                  Búsqueda: "{routeSearchQuery.trim()}"
+                                </span>
+                              ) : null}
+                              {appliedFilters.category !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Categoría: {appliedFilters.category}
+                                </span>
+                              ) : null}
+                              {appliedFilters.pointsFilter !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.distance !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.duration !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Duración: {DURATION_LABELS[appliedFilters.duration]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.difficulty !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Dificultad:{" "}
+                                  {DIFFICULTY_LABELS[appliedFilters.difficulty]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.routeType !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Tipo: {ROUTE_TYPE_LABELS[appliedFilters.routeType]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.theme !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Temática: {THEME_LABELS[appliedFilters.theme]}
+                                </span>
+                              ) : null}
+                              <button
+                                className="routes-reset"
+                                onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                              >
+                                Restablecer filtros
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        <AnimatedList
+                          items={routeItems}
+                          className="routes-animated-list"
+                          itemClassName="routes-animated-item"
+                          showGradients
+                          onItemSelect={(index) =>
+                            requireAuth(() => {
+                              const route = filteredRoutes[index];
+                              if (!route) return;
+                              setSelectedRoute(route);
+                              setSelectedRoutePoints(route.points);
+                            })
+                          }
+                        />
+                      </>
                     );
                   })()}
                 </>
