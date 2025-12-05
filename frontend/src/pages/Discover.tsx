@@ -17,6 +17,7 @@ type DiscoverRoute = {
   rating_count?: number | null;
   difficulty?: string | null;
   images?: string[];
+  image_urls?: string[];
   points?: Array<[number, number]> | Array<number[]>;
 };
 
@@ -386,8 +387,16 @@ export default function Discover() {
     [themeBlocks, country, theme]
   );
 
-  const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = "default") => {
-    const points = (route.points as Array<[number, number]>) || [];
+const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = "default") => {
+    const points: Array<[number, number]> = Array.isArray(route.points)
+      ? (route.points as Array<any>).map((p: any) => [
+          p.longitude ?? p.lng ?? p[0],
+          p.latitude ?? p.lat ?? p[1],
+        ]) as Array<[number, number]>
+      : [];
+    const coverImage =
+      (Array.isArray(route.images) && route.images[0]) ||
+      (Array.isArray(route.image_urls) && route.image_urls[0]);
     const difficultyLabel = formatDifficulty(route.difficulty);
     const ratingDisplay =
       route.rating != null && Number.isFinite(route.rating)
@@ -398,7 +407,9 @@ export default function Discover() {
       <div className={`route-preview-card discover-route-card ${variant}`}>
         <div className="route-preview-content">
           <div className="route-preview-thumb">
-            {points.length > 0 ? (
+            {coverImage ? (
+              <img src={coverImage} alt={`Imagen de ${route.name}`} loading="lazy" />
+            ) : points.length > 0 ? (
               <RouteMiniMap points={points} className="route-preview-thumb__map" />
             ) : (
               <div className="route-preview-thumb__placeholder" aria-label="Ruta sin imagen">

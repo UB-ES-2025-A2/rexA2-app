@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Category, Mode } from "../types";
 
 type Props = {
@@ -61,6 +61,8 @@ const RouteCardView: React.FC<Props> = ({
   onSelectImages,
   onRemoveImage,
 }) => {
+  const [isDragging, setIsDragging] = useState(false);
+
   const formatCategory = (cat: string) => {
     if (!cat) return "";
     const labels: Record<string, string> = {
@@ -71,6 +73,39 @@ const RouteCardView: React.FC<Props> = ({
     return cat
       .replace(/-/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer?.files;
+    if (files && files.length) {
+      onSelectImages(files);
+      return;
+    }
+    const items = e.dataTransfer?.items;
+    if (items && items.length) {
+      const fileList = Array.from(items)
+        .filter((it) => it.kind === "file")
+        .map((it) => it.getAsFile())
+        .filter(Boolean) as File[];
+      if (fileList.length) {
+        // Convert array to a FileList-like object for compatibility
+        const dataTransfer = new DataTransfer();
+        fileList.forEach((f) => dataTransfer.items.add(f));
+        onSelectImages(dataTransfer.files);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (!isDragging) setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(false);
   };
 
   return (
@@ -285,7 +320,12 @@ const RouteCardView: React.FC<Props> = ({
               Añade hasta 10 imágenes JPG/PNG (máx. 2 MB). No es obligatorio para guardar la ruta.
             </span>
           </div>
-          <div className="route-card__images">
+          <div
+            className={`route-card__images ${isDragging ? "is-dragging" : ""}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
             <label className="btn" htmlFor="route-images-input">
               Seleccionar imágenes
             </label>
@@ -293,13 +333,17 @@ const RouteCardView: React.FC<Props> = ({
               id="route-images-input"
               type="file"
               multiple
-              accept="image/*"
+              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/*"
               style={{ display: "none" }}
               onChange={(e) => {
                 onSelectImages(e.target.files);
                 e.target.value = "";
               }}
             />
+            <div className="route-card__dropzone-hint">
+              <strong>Arrastra y suelta</strong> tus imágenes aquí o usa el botón superior.
+              <span>Formatos: PNG, JPG, JPEG, WEBP, GIF. Máx. 2 MB por imagen.</span>
+            </div>
             <p className="route-card__helper">Puedes omitirlas y guardar la ruta igual.</p>
             {images.length === 0 ? (
               <p className="muted">No has añadido imágenes.</p>

@@ -23,7 +23,7 @@ export function useRouteCard({
   drawPoints,
   onResetPoints,
   onClose,
-  initialImages = [],
+  initialImages,
 }: {
   modeDefault: Mode;
   drawPoints: Array<[number, number]>;
@@ -132,7 +132,8 @@ export function useRouteCard({
   };
 
   useEffect(() => {
-    const normalized = (initialImages ?? []).map((url, idx) => ({
+    if (!initialImages || initialImages.length === 0) return;
+    const normalized = initialImages.map((url, idx) => ({
       id: `initial-${idx}`,
       url,
       name: `Imagen ${idx + 1}`,
@@ -225,10 +226,13 @@ export function useRouteCard({
         body: JSON.stringify(payload),
       });
 
-      try {
-        console.log("Ruta enviada:", await res.json());
-      } catch {
-        console.log("Ruta enviada (sin JSON)");
+      const resJson = await res.json().catch(() => null);
+      if (!res.ok) {
+        const detail =
+          (resJson as any)?.detail ||
+          "No se pudo guardar la ruta. Revisa que estés autenticado.";
+        showAlert(detail, "error");
+        return;
       }
 
       showAlert("Ruta creada correctamente", "success");
