@@ -825,6 +825,27 @@ export default function Home() {
     </p>
   );
 
+  // US-29: Calcular rutas filtradas para el mapa y la lista
+  const filteredRoutes = searchMode === "routes" ? getFilteredRoutes() : [];
+
+  const mapMarkers = filteredRoutes
+    .filter((r) => r.points.length > 0)
+    .map((r) => ({
+      id: r.id,
+      lat: r.points[0][1],
+      lng: r.points[0][0],
+      title: r.name,
+    }));
+
+  const handleMarkerClick = useCallback((id: string) => {
+    const route = routes.find((r) => r.id === id);
+    if (route) {
+      setSelectedRoute(route);
+      setSelectedRoutePoints(route.points);
+      setShowComments(false);
+    }
+  }, [routes]);
+
   return (
     <div className="home">
       <header className="home__header">
@@ -1039,7 +1060,7 @@ export default function Home() {
                   ) : routesError ? (
                     renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
                   ) : (() => {
-                    const filteredRoutes = getFilteredRoutes();
+                    // const filteredRoutes = getFilteredRoutes(); // Ya calculado arriba
                     const hasFiltersApplied =
                       appliedFilters.category !== "all" ||
                       appliedFilters.pointsFilter !== "all" ||
@@ -1254,6 +1275,8 @@ export default function Home() {
                 highlightPoints={visiblePoints}
                 fitOnHighlight={!routeCardOpen}
                 onBoundsChange={handleBoundsChange}
+                markers={!routeCardOpen && !selectedRoute ? mapMarkers : []}
+                onMarkerClick={handleMarkerClick}
               />
 
               <button

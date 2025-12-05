@@ -13,6 +13,7 @@ type Props = {
   markers?: MarkerData[];
   allowPickPoint?: boolean;
   onPickPoint?: (lng: number, lat: number) => void;
+  onMarkerClick?: (id: string) => void;
   highlightPoints?: Array<[number, number]>;
   fitOnHighlight?: boolean;
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
@@ -54,6 +55,8 @@ export default function MapView({
   highlightPoints = [],
   fitOnHighlight = true,
   onBoundsChange,
+  markers = [],
+  onMarkerClick,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -392,6 +395,44 @@ export default function MapView({
     prevViewportRef.current = null;
     map.easeTo({ center, zoom, duration: 400 });
   }, [center, zoom, mapLoaded, fitOnHighlight, highlightPoints.length]);
+
+  // Renderizar marcadores
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    // Limpiar marcadores anteriores
+    markerRefs.current.forEach((m) => m.remove());
+    markerRefs.current = [];
+
+    if (!markers || markers.length === 0) return;
+
+    markers.forEach((markerData) => {
+      const el = document.createElement("div");
+      el.className = "map-marker";
+      el.style.backgroundImage = "url('/marker-icon.png')"; // Asegúrate de tener un icono o usa CSS
+      el.style.width = "30px";
+      el.style.height = "30px";
+      el.style.backgroundSize = "cover";
+      el.style.cursor = "pointer";
+
+      // Fallback si no hay imagen, un círculo simple
+      el.style.backgroundColor = "#4f46e5";
+      el.style.borderRadius = "50%";
+      el.style.border = "2px solid white";
+
+      el.addEventListener("click", (e) => {
+        e.stopPropagation(); // Evitar click en el mapa
+        onMarkerClick?.(markerData.id);
+      });
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([markerData.lng, markerData.lat])
+        .addTo(map);
+
+      markerRefs.current.push(marker);
+    });
+  }, [markers, mapLoaded, onMarkerClick]);
 
   const startAnimations = (map: Map) => {
     if (animationFrameRef.current) {
