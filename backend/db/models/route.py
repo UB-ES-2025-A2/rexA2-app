@@ -1,12 +1,116 @@
 # from db.client import db
+import json
 import math
+from pathlib import Path
 import backend.db.client as db_client
 from bson import ObjectId
 from datetime import datetime, timezone
 from uuid import uuid4
-# from typing import Dict
+from typing import Any
 
 # ============ HELPERS ======================
+COUNTRY_BBOXES = [
+    {"code": "ES", "name": "España", "lat_min": 27.0, "lat_max": 44.5, "lon_min": -19.0, "lon_max": 5.0},
+    {"code": "FR", "name": "Francia", "lat_min": 41.0, "lat_max": 51.5, "lon_min": -5.5, "lon_max": 9.9},
+    {"code": "PT", "name": "Portugal", "lat_min": 36.8, "lat_max": 42.3, "lon_min": -9.6, "lon_max": -6.0},
+    {"code": "IT", "name": "Italia", "lat_min": 36.0, "lat_max": 47.2, "lon_min": 6.5, "lon_max": 19.0},
+    {"code": "CL", "name": "Chile", "lat_min": -56.5, "lat_max": -17.5, "lon_min": -76.0, "lon_max": -66.0},
+    {"code": "US", "name": "Estados Unidos", "lat_min": 24.5, "lat_max": 49.5, "lon_min": -125.0, "lon_max": -66.5},
+    {"code": "CA", "name": "Canadá", "lat_min": 41.6, "lat_max": 83.1, "lon_min": -141.0, "lon_max": -52.6},
+]
+
+# Carga opcional de polígonos de países desde un GeoJSON simplificado.
+COUNTRY_POLYGONS: list[dict[str, Any]] = []
+GEOJSON_PATH = Path(__file__).resolve().parents[2] / "assets" / "countries.geojson"
+if GEOJSON_PATH.exists():
+    try:
+        data = json.loads(GEOJSON_PATH.read_text(encoding="utf-8"))
+        for feature in data.get("features", []):
+            props = feature.get("properties", {})
+            code = props.get("ISO_A2") or props.get("iso_a2") or props.get("code")
+            name = props.get("ADMIN") or props.get("admin") or props.get("name")
+            geom = feature.get("geometry", {})
+            if not code or not name or not geom:
+                continue
+            COUNTRY_POLYGONS.append({"code": code, "name": name, "geometry": geom})
+        if COUNTRY_POLYGONS:
+            print(f"[COUNTRY] Cargados {len(COUNTRY_POLYGONS)} países desde GeoJSON")
+    except Exception as e:
+        print(f"[COUNTRY] No se pudo cargar GeoJSON de países ({e}); usando bounding boxes por defecto")
+
+
+def _guess_country_from_points(points: list[dict]) -> tuple[str | None, str | None]:
+    """
+    Estima el país principal usando, en orden:
+    1) Polígonos cargados desde GeoJSON (si existe assets/countries.geojson).
+    2) Bounding boxes de fallback.
+    Devuelve (code, name) o (None, None) si no se puede determinar.
+    """
+    if not points:
+        return (None, None)
+
+    def point_in_polygon(lon: float, lat: float, geom: dict) -> bool:
+        """
+        Algoritmo winding simple para Polygons/Multipolygons en lon/lat.
+        """
+        def poly_contains(coords: list[list[float]]) -> bool:
+            inside = False
+            j = len(coords) - 1
+            for i in range(len(coords)):
+                xi, yi = coords[i][0], coords[i][1]
+                xj, yj = coords[j][0], coords[j][1]
+                intersect = ((yi > lat) != (yj > lat)) and (
+                    lon < (xj - xi) * (lat - yi) / (yj - yi + 1e-9) + xi
+                )
+                if intersect:
+                    inside = not inside
+                j = i
+            return inside
+
+        geom_type = geom.get("type")
+        coords = geom.get("coordinates", [])
+        if geom_type == "Polygon":
+            # coords: [ [ [lon, lat], ... ] , ...]
+            if not coords:
+                return False
+            return poly_contains(coords[0])
+        if geom_type == "MultiPolygon":
+            for poly in coords:
+                if poly and poly_contains(poly[0]):
+                    return True
+        return False
+
+    counts: dict[str, int] = {}
+    for p in points:
+        if isinstance(p, (list, tuple)) and len(p) >= 2:
+            lon, lat = float(p[0]), float(p[1])
+        else:
+            lat = float(p.get("latitude", p.get("lat", 0)))
+            lon = float(p.get("longitude", p.get("lng", 0)))
+
+        found = False
+        for feat in COUNTRY_POLYGONS:
+            if point_in_polygon(lon, lat, feat["geometry"]):
+                code = feat["code"]
+                counts[code] = counts.get(code, 0) + 1
+                found = True
+                break
+        if found:
+            continue
+
+        for bbox in COUNTRY_BBOXES:
+            if bbox["lat_min"] <= lat <= bbox["lat_max"] and bbox["lon_min"] <= lon <= bbox["lon_max"]:
+                code = bbox["code"]
+                counts[code] = counts.get(code, 0) + 1
+                break
+
+    if not counts:
+        return (None, None)
+    best_code = max(counts, key=counts.get)
+    best = next((b for b in COUNTRY_POLYGONS if b.get("code") == best_code), None) or next(
+        (b for b in COUNTRY_BBOXES if b["code"] == best_code), None
+    )
+    return (best_code, best.get("name") if best else None)
 
 def _normalize(doc: dict) -> dict:
     d = dict(doc)
@@ -18,6 +122,10 @@ def _normalize(doc: dict) -> dict:
     # Asegura tipos compatibles con los esquemas de respuesta
     if "duration_minutes" in d and isinstance(d.get("duration_minutes"), float):
         d["duration_minutes"] = int(round(d["duration_minutes"]))
+    if "country_code" not in d:
+        d["country_code"] = None
+    if "country_name" not in d:
+        d["country_name"] = None
     return d
 
 
@@ -26,17 +134,20 @@ def _discover_projection(doc: dict) -> dict:
     Proyección simplificada para bloques de descubrimiento.
     """
     d = _normalize(doc)
-    d["country"] = (
-        doc.get("country")
+    country_name = (
+        doc.get("country_name")
+        or doc.get("country")
         or doc.get("region")
-        or doc.get("country_name")
         or "Desconocido"
     )
+    country_code = doc.get("country_code")
     d["theme"] = doc.get("theme") or doc.get("category") or "otros"
     return {
         "id": d.get("_id") or d.get("id"),
         "name": d.get("name"),
-        "country": d.get("country"),
+        "country": country_name,
+        "country_code": country_code,
+        "country_name": country_name,
         "theme": d.get("theme"),
         "distance_km": d.get("distance_km"),
         "duration_minutes": d.get("duration_minutes"),
@@ -53,6 +164,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
     distance_km = _calculate_distance_km(route_data["points"])
     duration_minutes = _estimate_duration_minutes(distance_km)
     difficulty = _normalize_difficulty(route_data.get("difficulty")) or _estimate_difficulty(distance_km, duration_minutes)
+    country_code, country_name = _guess_country_from_points(route_data["points"])
 
     route = {
         "owner_id": str(owner_id),
@@ -69,6 +181,8 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "rating_count": route_data.get("rating_count") or 0,
         "images": route_data.get("images") or [],
         "comments": [],
+        "country_code": route_data.get("country_code") or country_code,
+        "country_name": route_data.get("country_name") or country_name,
     }
 
     result = await db_client.db["routes"].insert_one(route)
@@ -148,6 +262,11 @@ async def update_route(
     si no existe o no pertenece al usuario.
     """
     filter_ = {"_id": ObjectId(route_id), "owner_id": str(owner_id)}
+    country_code, country_name = _guess_country_from_points(route_data.get("points", []))
+    if route_data.get("country_code"):
+        country_code = route_data.get("country_code")
+    if route_data.get("country_name"):
+        country_name = route_data.get("country_name")
     update_fields = {
         "name": route_data["name"],
         "points": route_data["points"],
@@ -157,6 +276,8 @@ async def update_route(
         "duration_minutes": route_data.get("duration_minutes"),
         "rating": route_data.get("rating"),
         "images": route_data.get("images") or [],
+        "country_code": country_code,
+        "country_name": country_name,
     }
     result = await db_client.db["routes"].update_one(
         filter_, {"$set": update_fields}
@@ -242,8 +363,19 @@ async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
         "visibility",
         "duration_minutes",
         "difficulty",
+        "country_code",
+        "country_name",
     }
     payload = {k: v for k, v in data.items() if v is not None and k in allowed_fields}
+    # Añade país calculado si se modifican puntos (este update no recibe puntos, pero mantenemos soporte)
+    if "points" in data and data["points"] is not None:
+        code, name = _guess_country_from_points(data["points"])
+        payload["country_code"] = code
+        payload["country_name"] = name
+    if data.get("country_code"):
+        payload["country_code"] = data.get("country_code")
+    if data.get("country_name"):
+        payload["country_name"] = data.get("country_name")
     if not payload:
         return await get_route_by_id(route_id)
 
@@ -354,10 +486,17 @@ async def get_featured_by_country(
             "$addFields": {
                 "effective_rating": {"$ifNull": ["$rating", 0]},
                 "effective_rating_count": {"$ifNull": ["$rating_count", 0]},
+                "country_name": {
+                    "$ifNull": [
+                        "$country_name",
+                        {"$ifNull": ["$country", {"$ifNull": ["$region", "Desconocido"]}]},
+                    ]
+                },
+                "country_code": {"$ifNull": ["$country_code", None]},
                 "country": {
                     "$ifNull": [
-                        "$country",
-                        {"$ifNull": ["$region", {"$ifNull": ["$country_name", "Desconocido"]}]},
+                        "$country_name",
+                        {"$ifNull": ["$country", {"$ifNull": ["$region", "Desconocido"]}]},
                     ]
                 },
                 "theme": {"$ifNull": ["$theme", {"$ifNull": ["$category", "otros"]}]},
@@ -371,9 +510,25 @@ async def get_featured_by_country(
             {
                 "$match": {
                     "$expr": {
-                        "$eq": [
-                            {"$toLower": "$country"},
-                            country_filter_norm,
+                        "$or": [
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country_code"},
+                                    country_filter_norm,
+                                ]
+                            },
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country"},
+                                    country_filter_norm,
+                                ]
+                            },
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country_name"},
+                                    country_filter_norm,
+                                ]
+                            },
                         ]
                     }
                 }
@@ -451,10 +606,17 @@ async def get_featured_by_theme(
                 "effective_rating": {"$ifNull": ["$rating", 0]},
                 "effective_rating_count": {"$ifNull": ["$rating_count", 0]},
                 "theme": {"$ifNull": ["$theme", {"$ifNull": ["$category", "otros"]}]},
+                "country_name": {
+                    "$ifNull": [
+                        "$country_name",
+                        {"$ifNull": ["$country", {"$ifNull": ["$region", "Desconocido"]}]},
+                    ]
+                },
+                "country_code": {"$ifNull": ["$country_code", None]},
                 "country": {
                     "$ifNull": [
-                        "$country",
-                        {"$ifNull": ["$region", {"$ifNull": ["$country_name", "Desconocido"]}]},
+                        "$country_name",
+                        {"$ifNull": ["$country", {"$ifNull": ["$region", "Desconocido"]}]},
                     ]
                 },
             }
@@ -467,9 +629,25 @@ async def get_featured_by_theme(
             {
                 "$match": {
                     "$expr": {
-                        "$eq": [
-                            {"$toLower": "$country"},
-                            country_filter_norm,
+                        "$or": [
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country_code"},
+                                    country_filter_norm,
+                                ]
+                            },
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country"},
+                                    country_filter_norm,
+                                ]
+                            },
+                            {
+                                "$eq": [
+                                    {"$toLower": "$country_name"},
+                                    country_filter_norm,
+                                ]
+                            },
                         ]
                     }
                 }

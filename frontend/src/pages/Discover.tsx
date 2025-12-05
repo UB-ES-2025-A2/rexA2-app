@@ -7,6 +7,8 @@ type DiscoverRoute = {
   id: string;
   name: string;
   country?: string | null;
+  country_name?: string | null;
+  country_code?: string | null;
   theme?: string | null;
   distance_km?: number | null;
   duration_minutes?: number | null;
@@ -84,7 +86,10 @@ const coverStyle = (route: DiscoverRoute) => {
       backgroundPosition: "center",
     };
   }
-  return { background: THEME_GRADIENTS[normalizeTheme(route.theme)] || THEME_GRADIENTS.otros };
+  return {
+    background:
+      THEME_GRADIENTS[normalizeTheme(route.theme)] || THEME_GRADIENTS.otros,
+  };
 };
 
 export default function Discover() {
@@ -95,8 +100,26 @@ export default function Discover() {
   const [themeBlocks, setThemeBlocks] = useState<ThemeBlock[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const PREFERRED_COUNTRIES = useMemo(
+    () => [
+      "Todos",
+      "España",
+      "Francia",
+      "Portugal",
+      "Italia",
+      "Chile",
+      "Estados Unidos",
+      "Canadá",
+    ],
+    []
+  );
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
+
+  const [ratingFilter, setRatingFilter] = useState<number>(0);
+  const [durationFilter, setDurationFilter] = useState<
+    "any" | "lt1" | "1to3" | "3to6" | "gt6"
+  >("any");
 
   useEffect(() => {
     document.documentElement.classList.add("discover-html");
@@ -145,7 +168,9 @@ export default function Discover() {
       } catch (err) {
         if (controller.signal.aborted) return;
         const message =
-          err instanceof Error ? err.message : "No se pudo cargar descubrimiento.";
+          err instanceof Error
+            ? err.message
+            : "No se pudo cargar descubrimiento.";
         setError(message);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -163,29 +188,25 @@ export default function Discover() {
   }, [countryBlocks, themeBlocks]);
 
   const countryOptions = useMemo(() => {
-    const fromBlocks = countryBlocks.map((c) => c.country || "Desconocido");
-    const fromThemes = themeBlocks.flatMap((t) =>
-      (t.routes || []).map((r) => r.country || "Desconocido")
+    const fromBlocks = countryBlocks.map(
+      (c) => c.country || (c as any).country_name || "Desconocido"
     );
-    const unique = Array.from(new Set([...fromBlocks, ...fromThemes]));
-    return ["Todos", ...unique];
-  }, [countryBlocks, themeBlocks]);
+    const fromThemes = themeBlocks.flatMap((t) =>
+      (t.routes || []).map(
+        (r) => r.country_name || r.country || r.country_code || "Desconocido"
+      )
+    );
+    const unique = Array.from(
+      new Set([...PREFERRED_COUNTRIES, ...fromBlocks, ...fromThemes])
+    );
+    // Garantiza que "Todos" esté en primer lugar
+    const withoutAll = unique.filter((c) => c !== "Todos");
+    return ["Todos", ...withoutAll];
+  }, [countryBlocks, themeBlocks, PREFERRED_COUNTRIES]);
 
   const themeOptions = useMemo(() => {
     return ["todos", ...CATEGORY_ORDER];
   }, []);
-
-  const filteredRoutes = useMemo(
-    () =>
-      allRoutes.filter((route) => {
-        const routeCountry = route.country || "Desconocido";
-        const routeTheme = normalizeTheme(route.theme);
-        if (country !== "Todos" && routeCountry !== country) return false;
-        if (theme !== "todos" && routeTheme !== theme) return false;
-        return true;
-      }),
-    [allRoutes, country, theme]
-  );
 
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
@@ -211,7 +232,11 @@ export default function Discover() {
         );
         const routes = (block?.routes || [])
           .filter((route) => {
-            const routeCountry = route.country || "Desconocido";
+            const routeCountry =
+              route.country_name ||
+              route.country ||
+              route.country_code ||
+              "Desconocido";
             const routeTheme = normalizeCategory(route.theme);
             if (country !== "Todos" && routeCountry !== country) return false;
             if (theme !== "todos" && routeTheme !== theme) return false;
@@ -227,7 +252,11 @@ export default function Discover() {
     <div className="discover">
       <header className="primary-header">
         <div className="header__start">
-          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
+          <Link
+            to="/descubrir"
+            className="brand"
+            aria-label="Volver a descubrir"
+          >
             REX
           </Link>
           <nav className="main-nav" aria-label="Navegación principal">
@@ -251,14 +280,9 @@ export default function Discover() {
           </nav>
         </div>
 
-        <div className="header__search">
-          <div className="discover__hero-chip">Rutas curadas para inspirarte</div>
-        </div>
+        <div className="header__search"></div>
 
         <div className="header__cta">
-          <button className="pill-btn" onClick={() => navigate("/mapa")}>
-            Ver mapa
-          </button>
           <div className="profile-menu-container">
             <button
               className="profile-menu-btn"
@@ -330,25 +354,9 @@ export default function Discover() {
             <p className="eyebrow">Explorar</p>
             <h1>Descubre rutas como si ya estuvieras allí</h1>
             <p className="lead">
-              Explora rutas destacadas por país o temática, con el look & feel de
-              un catálogo cuidadosamente curado al estilo Airbnb.
+              Explora rutas destacadas por país o temática, con el look & feel
+              de un catálogo cuidadosamente curado al estilo Airbnb.
             </p>
-            <div className="hero-badges">
-              <span>Fotos que inspiran</span>
-              <span>Duración estimada</span>
-              <span>Valoración media</span>
-            </div>
-            <div className="hero-actions">
-              <button className="pill-btn" onClick={() => setTheme("todos")}>
-                Mostrar todo
-              </button>
-              <button
-                className="ghost-btn"
-                onClick={() => setTheme("costa")}
-              >
-                Saltar a costa
-              </button>
-            </div>
           </div>
           <div className="discover-hero__panel">
             <div className="panel-card">
@@ -356,32 +364,29 @@ export default function Discover() {
                 <span className="eyebrow">Contexto</span>
                 <h3>Elige dónde empezar</h3>
               </div>
-              <div className="panel-card__chips">
-                {countryOptions.slice(1, 4).map((c) => (
-                  <button
-                    key={c}
-                    className={`filter-chip ${country === c ? "active" : ""}`}
-                    onClick={() => setCountry(c)}
-                    disabled={loading}
-                  >
+              <label className="label" htmlFor="country-select">
+                País o región
+              </label>
+              <select
+                id="country-select"
+                className="country-select"
+                value={country}
+                onChange={(e) => setCountry(e.target.value)}
+                disabled={loading}
+              >
+                {countryOptions.map((c) => (
+                  <option key={c} value={c}>
                     {c}
-                  </button>
+                  </option>
                 ))}
-                <button
-                  className={`filter-chip subtle ${country === "Todos" ? "active" : ""}`}
-                  onClick={() => setCountry("Todos")}
-                  disabled={loading}
-                >
-                  Cualquier destino
-                </button>
-              </div>
+              </select>
+              <div className="panel-card__chips"></div>
               <div className="panel-card__footer">
                 Las colecciones se adaptan al país que selecciones.
               </div>
             </div>
           </div>
         </section>
-
         <section className="filters">
           <div className="filters__group">
             <span className="label">País o región</span>
@@ -412,84 +417,61 @@ export default function Discover() {
               {themeOptions
                 .filter((t) => t !== "todos")
                 .map((option) => (
+                  <button
+                    key={option}
+                    className={`filter-chip ${
+                      theme === option ? "active" : ""
+                    }`}
+                    onClick={() => setTheme(option)}
+                    disabled={loading}
+                  >
+                    {CATEGORY_LABELS[option] || option}
+                  </button>
+                ))}
+            </div>
+          </div>
+
+          <div className="filters__group">
+            <span className="label">Valoración media</span>
+            <div className="filters__chips">
+              {[0, 4, 4.5, 4.8].map((threshold) => (
                 <button
-                  key={option}
-                  className={`filter-chip ${theme === option ? "active" : ""}`}
-                  onClick={() => setTheme(option)}
+                  key={threshold}
+                  className={`filter-chip ${
+                    ratingFilter === threshold ? "active" : ""
+                  }`}
+                  onClick={() => setRatingFilter(threshold)}
                   disabled={loading}
                 >
-                  {CATEGORY_LABELS[option] || option}
+                  {threshold === 0 ? "Cualquier rating" : `⭐ ${threshold}+`}
                 </button>
               ))}
             </div>
           </div>
-        </section>
 
-        <section className="featured">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Rutas destacadas</p>
-              <h2>Te llevamos de viaje en un vistazo</h2>
-              <p className="muted">
-                Elige una ruta para saltar al mapa y seguir explorándola en detalle.
-              </p>
-            </div>
-            <span className="pill muted">
-              {loading ? "Cargando..." : `${filteredRoutes.length} resultados`}
-            </span>
-          </div>
-
-          {loading ? (
-            <div className="empty">
-              <p className="muted">Cargando rutas destacadas...</p>
-            </div>
-          ) : error ? (
-            <div className="empty">
-              <p className="muted">{error}</p>
-            </div>
-          ) : filteredRoutes.length === 0 ? (
-            <div className="empty">
-              <p className="muted">
-                No hay rutas en esta combinación todavía. Prueba otro país o
-                temática.
-              </p>
-            </div>
-          ) : (
-            <div className="discover-grid">
-              {filteredRoutes.slice(0, 9).map((route) => (
+          <div className="filters__group">
+            <span className="label">Duración estimada</span>
+            <div className="filters__chips">
+              {[
+                { key: "any", label: "Cualquiera" },
+                { key: "lt1", label: "< 1h" },
+                { key: "1to3", label: "1–3h" },
+                { key: "3to6", label: "3–6h" },
+                { key: "gt6", label: ">6h" },
+              ].map((opt) => (
                 <button
-                  key={route.id}
-                  className="discover-card"
-                  onClick={() =>
-                    navigate(`/routes/${route.id}`, {
-                      state: { fallbackRoute: route },
-                    })
-                  }
+                  key={opt.key}
+                  className={`filter-chip ${
+                    durationFilter === opt.key ? "active" : ""
+                  }`}
+                  onClick={() => setDurationFilter(opt.key as any)}
+                  disabled={loading}
                 >
-                  <div
-                    className="discover-card__cover"
-                    style={coverStyle(route)}
-                  >
-                    <span className="pill">{route.country || "Desconocido"}</span>
-                    <span className="pill muted">{normalizeTheme(route.theme)}</span>
-                  </div>
-                  <div className="discover-card__body">
-                    <div className="discover-card__title">
-                      <h3>{route.name}</h3>
-                      <p>{route.country || "Ruta destacada"}</p>
-                    </div>
-                    <div className="discover-card__meta">
-                      <span>{formatDistance(route.distance_km)}</span>
-                      <span>{formatDuration(route.duration_minutes)}</span>
-                      <span>
-                        ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
-                      </span>
-                    </div>
-                  </div>
+                  {opt.label}
                 </button>
               ))}
             </div>
-          )}
+          </div>
         </section>
 
         <section className="country-sections">
@@ -498,7 +480,8 @@ export default function Discover() {
               <p className="eyebrow">País o región</p>
               <h2>Rutas seleccionadas por destino</h2>
               <p className="muted">
-                Bloques diferenciados con entre 5 y 10 rutas para cada país destacado.
+                Bloques diferenciados con entre 5 y 10 rutas para cada país
+                destacado.
               </p>
             </div>
           </div>
@@ -513,7 +496,9 @@ export default function Discover() {
             </div>
           ) : countryGroups.length === 0 ? (
             <div className="empty">
-              <p className="muted">No hay rutas disponibles para este país todavía.</p>
+              <p className="muted">
+                No hay rutas disponibles para este país todavía.
+              </p>
             </div>
           ) : (
             <div className="country-blocks">
@@ -553,14 +538,22 @@ export default function Discover() {
                             <div>
                               <strong>{route.name}</strong>
                               <p className="muted">
-                                {route.country || "Ruta destacada"}
+                                {route.country_name ||
+                                  route.country ||
+                                  route.country_code ||
+                                  "Ruta destacada"}
                               </p>
                             </div>
                             <div className="country-tile__meta">
                               <span>{formatDistance(route.distance_km)}</span>
-                              <span>{formatDuration(route.duration_minutes)}</span>
                               <span>
-                                ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
+                                {formatDuration(route.duration_minutes)}
+                              </span>
+                              <span>
+                                ⭐{" "}
+                                {route.rating != null
+                                  ? route.rating.toFixed(1)
+                                  : "N/D"}
                               </span>
                             </div>
                           </div>
@@ -627,10 +620,18 @@ export default function Discover() {
                           ></div>
                           <div className="collection-card__copy">
                             <strong>{route.name}</strong>
-                            <span className="muted">{route.country || "Ruta destacada"}</span>
+                            <span className="muted">
+                              {route.country_name ||
+                                route.country ||
+                                route.country_code ||
+                                "Ruta destacada"}
+                            </span>
                           </div>
                           <span className="pill mini">
-                            ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
+                            ⭐{" "}
+                            {route.rating != null
+                              ? route.rating.toFixed(1)
+                              : "N/D"}
                           </span>
                         </button>
                       ))}
@@ -639,9 +640,13 @@ export default function Discover() {
                 </div>
               ))}
 
-              {themedCollections.every((collection) => collection.routes.length === 0) ? (
+              {themedCollections.every(
+                (collection) => collection.routes.length === 0
+              ) ? (
                 <div className="empty">
-                  <p className="muted">No hay colecciones disponibles para este país todavía.</p>
+                  <p className="muted">
+                    No hay colecciones disponibles para este país todavía.
+                  </p>
                 </div>
               ) : null}
             </div>
