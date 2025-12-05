@@ -15,6 +15,9 @@ def _normalize(doc: dict) -> dict:
     # Normaliza campos opcionales para evitar None en la capa API
     if "images" not in d or d.get("images") is None:
         d["images"] = []
+    # Asegura tipos compatibles con los esquemas de respuesta
+    if "duration_minutes" in d and isinstance(d.get("duration_minutes"), float):
+        d["duration_minutes"] = int(round(d["duration_minutes"]))
     return d
 
 # ============ CREATE OPERATIONS ============
@@ -51,7 +54,8 @@ async def get_route_by_id(route_id: str) -> dict | None:
     '''
     Devuelve una ruta por su ID o None si no existe
     '''
-    return await db_client.db["routes"].find_one({"_id": ObjectId(route_id)})
+    doc = await db_client.db["routes"].find_one({"_id": ObjectId(route_id)})
+    return _normalize(doc) if doc else None
 
 
 async def get_routes_by_ids(route_ids: list[str]) -> list[dict]:
@@ -273,7 +277,7 @@ def _estimate_duration_minutes(distance_km: float | None) -> float | None:
         return None
     avg_speed_kmh = 4
     minutes = (distance_km / avg_speed_kmh) * 60
-    return round(minutes, 1)
+    return int(round(minutes))
 
 
 def _estimate_difficulty(distance_km: float | None, duration_minutes: float | None) -> str | None:
