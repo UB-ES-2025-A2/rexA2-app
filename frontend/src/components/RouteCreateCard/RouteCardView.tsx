@@ -8,6 +8,7 @@ type Props = {
   isPrivate: boolean;
   category: Category | "";
   difficulty: "" | "easy" | "medium" | "hard";
+  categoryOptions?: Category[];
 
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
@@ -33,6 +34,7 @@ const RouteCardView: React.FC<Props> = ({
   isPrivate,
   category,
   difficulty,
+  categoryOptions = [],
   geocoderRef,
   searchPoints,
   drawPoints,
@@ -51,6 +53,18 @@ const RouteCardView: React.FC<Props> = ({
   onSave,
   onChangeDescription,
 }) => {
+  const formatCategory = (cat: string) => {
+    if (!cat) return "";
+    const labels: Record<string, string> = {
+      urban: "Urbana",
+      gastronomia: "Gastronomía",
+    };
+    if (labels[cat]) return labels[cat];
+    return cat
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <div className="route-card-panel">
       <div className="route-card__header">
@@ -80,7 +94,7 @@ const RouteCardView: React.FC<Props> = ({
                 type="text"
                 value={name}
                 onChange={(e) => onChangeName(e.target.value)}
-                placeholder="Ej: Ruta al trabajo"
+                placeholder="Ej: Ruta gastronómica"
               />
             </div>
 
@@ -94,8 +108,11 @@ const RouteCardView: React.FC<Props> = ({
                 <option value="" disabled>
                   Selecciona una categoría…
                 </option>
-                <option value="entretenimiento">Entretenimiento</option>
-                <option value="trabajo">Trabajo</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {formatCategory(cat)}
+                  </option>
+                ))}
               </select>
             </div>
 

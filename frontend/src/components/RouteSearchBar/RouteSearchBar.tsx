@@ -30,8 +30,39 @@ type SearchScope = "routes" | "users";
 type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
 type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
 type DifficultyFilter = "all" | "easy" | "medium" | "hard";
-type RouteTypeFilter = "all" | "loop" | "pointToPoint" | "outAndBack";
-type ThemeFilter = "all" | "nature" | "urban" | "cultural";
+type ThemeFilter =
+  | "all"
+  | "nature"
+  | "urban"
+  | "cultural"
+  | "gastronomia"
+  | "aventura"
+  | "deporte"
+  | "historia"
+  | "entretenimiento"
+  | "otros";
+
+const HIDDEN_CATEGORIES = new Set(["trabajo", "Trabajo"]);
+const CATEGORY_OPTIONS = [
+  "gastronomia",
+  "naturaleza",
+  "aventura",
+  "cultura",
+  "deporte",
+  "historia",
+  "entretenimiento",
+  "otros",
+];
+const CATEGORY_LABELS: Record<string, string> = {
+  gastronomia: "Gastronomía",
+  naturaleza: "Naturaleza",
+  aventura: "Aventura",
+  cultura: "Cultura",
+  deporte: "Deporte",
+  historia: "Historia",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
+};
 
 type FiltersState = {
   category: string;
@@ -39,7 +70,6 @@ type FiltersState = {
   distance: DistanceFilter;
   duration: DurationFilter;
   difficulty: DifficultyFilter;
-  routeType: RouteTypeFilter;
   theme: ThemeFilter;
 };
 
@@ -49,7 +79,6 @@ const DEFAULT_FILTERS: FiltersState = {
   distance: "all",
   duration: "all",
   difficulty: "all",
-  routeType: "all",
   theme: "all",
 };
 
@@ -76,7 +105,12 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   const [showFilterModal, setShowFilterModal] = useState(false);
 
   const categories = useMemo(() => {
-    const cats = new Set(routes.map((r) => r.category));
+    const cats = new Set<string>();
+    CATEGORY_OPTIONS.forEach((c) => cats.add(c));
+    routes
+      .map((r) => r.category)
+      .filter((c) => c && !HIDDEN_CATEGORIES.has(String(c).toLowerCase()))
+      .forEach((c) => cats.add(c));
     return Array.from(cats).sort();
   }, [routes]);
 
@@ -116,7 +150,6 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
     localFilters.distance !== "all" ||
     localFilters.duration !== "all" ||
     localFilters.difficulty !== "all" ||
-    localFilters.routeType !== "all" ||
     localFilters.theme !== "all";
 
   useEffect(() => {
@@ -234,38 +267,6 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   </div>
 
                   <div className="filter-section">
-                    <label className="filter-label">Categoria</label>
-                    <select
-                      value={localFilters.category}
-                      onChange={(e) => updateFilters({ category: e.target.value })}
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todas las categorias</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="filter-section">
-                    <label className="filter-label">Numero de puntos</label>
-                    <select
-                      value={localFilters.pointsFilter}
-                      onChange={(e) =>
-                        updateFilters({ pointsFilter: e.target.value })
-                      }
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todos los puntos</option>
-                      <option value="few">Pocas (1-5 puntos)</option>
-                      <option value="medium">Media (6-15 puntos)</option>
-                      <option value="many">Muchas (+15 puntos)</option>
-                    </select>
-                  </div>
-
-                  <div className="filter-section">
                     <div className="filter-label">Distancia</div>
                     <div className="filter-chip-group">
                       {[
@@ -334,41 +335,19 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   </div>
 
                   <div className="filter-section">
-                    <div className="filter-label">Tipo de ruta (opcional)</div>
-                    <div className="filter-chip-group">
-                      {[
-                        { label: "Todas", value: "all" as RouteTypeFilter },
-                        { label: "Circular", value: "loop" as RouteTypeFilter },
-                        {
-                          label: "Punto a punto",
-                          value: "pointToPoint" as RouteTypeFilter,
-                        },
-                        {
-                          label: "Ida y vuelta",
-                          value: "outAndBack" as RouteTypeFilter,
-                        },
-                      ].map((option) => (
-                        <button
-                          key={option.value}
-                          className={`filter-chip ${
-                            localFilters.routeType === option.value ? "active" : ""
-                          }`}
-                          onClick={() => updateFilters({ routeType: option.value })}
-                        >
-                          {option.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="filter-section">
                     <div className="filter-label">Categoría temática</div>
                     <div className="filter-chip-group">
                       {[
                         { label: "Todas", value: "all" as ThemeFilter },
+                        { label: "Gastronomía", value: "gastronomia" as ThemeFilter },
                         { label: "Naturaleza", value: "nature" as ThemeFilter },
+                        { label: "Aventura", value: "aventura" as ThemeFilter },
+                        { label: "Deporte", value: "deporte" as ThemeFilter },
+                        { label: "Historia", value: "historia" as ThemeFilter },
+                        { label: "Entretenimiento", value: "entretenimiento" as ThemeFilter },
                         { label: "Urbana", value: "urban" as ThemeFilter },
                         { label: "Cultural", value: "cultural" as ThemeFilter },
+                        { label: "Otros", value: "otros" as ThemeFilter },
                       ].map((option) => (
                         <button
                           key={option.value}

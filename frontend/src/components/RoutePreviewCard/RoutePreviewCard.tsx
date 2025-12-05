@@ -126,6 +126,25 @@ const RoutePreviewCard: React.FC<Props> = ({
       }[difficulty.toLowerCase()] ?? difficulty
     : null;
 
+  const formatCategory = (cat: string) => {
+    if (!cat) return "Sin categoría";
+    const lower = cat.toLowerCase();
+    if (lower === "trabajo") return "Sin categoría";
+    const labels: Record<string, string> = {
+      gastronomia: "Gastronomía",
+      "exploracion-urbana": "Exploración urbana",
+      naturaleza: "Naturaleza",
+      aventura: "Aventura",
+      cultura: "Cultura",
+      deporte: "Deporte",
+      historia: "Historia",
+      relajacion: "Relajación",
+      entretenimiento: "Entretenimiento",
+      otros: "Otros",
+    };
+    return labels[lower] ?? cat.charAt(0).toUpperCase() + cat.slice(1);
+  };
+
   return (
     <div
       className="route-preview-card"
@@ -138,7 +157,9 @@ const RoutePreviewCard: React.FC<Props> = ({
       <div className="route-preview-content">
         <div className="route-preview-texts">
           <h3 className="route-preview-title">{name}</h3>
-          <p className="route-preview-category">Categoría: {category}</p>
+          <p className="route-preview-category">
+            Categoría: {formatCategory(category)}
+          </p>
           <p className="route-preview-points">
             {points.length} punto{points.length === 1 ? "" : "s"}
           </p>

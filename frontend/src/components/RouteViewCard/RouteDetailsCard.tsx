@@ -82,6 +82,25 @@ function estimateDifficulty(
   return "easy";
 }
 
+const formatCategory = (cat: string) => {
+  if (!cat) return "Sin categoría";
+  const lower = cat.toLowerCase();
+  if (lower === "trabajo") return "Sin categoría";
+  const labels: Record<string, string> = {
+    gastronomia: "Gastronomía",
+    "exploracion-urbana": "Exploración urbana",
+    naturaleza: "Naturaleza",
+    aventura: "Aventura",
+    cultura: "Cultura",
+    deporte: "Deporte",
+    historia: "Historia",
+    relajacion: "Relajación",
+    entretenimiento: "Entretenimiento",
+    otros: "Otros",
+  };
+  return labels[lower] ?? cat.charAt(0).toUpperCase() + cat.slice(1);
+};
+
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   name,
   description,
@@ -375,7 +394,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
           <div className="route-details-card__info">
             <span className="route-details-card__category">
-              🏷️ Categoría: <strong>{category}</strong>
+              🏷️ Categoría: <strong>{formatCategory(category)}</strong>
             </span>
             <span className="route-details-card__privacy">
               🔒 {isPrivate ? "Privada" : "Pública"}

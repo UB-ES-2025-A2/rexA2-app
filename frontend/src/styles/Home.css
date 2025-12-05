@@ -255,6 +255,36 @@ button {
   transform: translateY(-1px);
 }
 
+.category-chip-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 12px;
+}
+
+.category-chip {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--close-border);
+  background: #fff;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-chip:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+}
+
+.category-chip.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+}
+
 .routes-empty {
   padding: 24px;
   background: #f8fafc;
