@@ -12,7 +12,13 @@ import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
 import { useAlert } from "../context/AlertContext";
 import CommentsModal from "../components/CommentsModal";
-import RouteSearchBar from "../components/RouteSearchBar/RouteSearchBar";
+import RouteSearchBar, {
+  type FiltersState,
+  type DistanceFilter,
+  type DurationFilter,
+  type DifficultyFilter,
+  type ThemeFilter,
+} from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
 import { useNavigate, useLocation, Link } from "react-router-dom";
@@ -28,7 +34,7 @@ type RouteItem = {
   points: Array<[number, number]>;
   distanceKm?: number | null;
   durationMinutes?: number | null;
-  difficulty?: string;
+  difficulty?: string | null;
   theme?: string;
   visibility: boolean;
   is_owner?: boolean;
@@ -44,12 +50,10 @@ type RouteItem = {
   createdAt?: string;
   popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
-  difficulty?: string;
-  distanceKm?: number;
-  durationMinutes?: number;
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
+  images?: string[];
 };
 
 type SelectedUser = {
@@ -60,14 +64,7 @@ type SelectedUser = {
   avatar_url?: string | null;
 };
 
-type AppliedFilters = {
-  category: string;
-  pointsFilter: string;
-  distance: DistanceFilter;
-  duration: DurationFilter;
-  difficulty: DifficultyFilter;
-  theme: ThemeFilter;
-};
+
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
@@ -140,23 +137,9 @@ const formatRouteFromApi = (route: any): RouteItem => ({
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
 });
-type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
-type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
-type DifficultyFilter = "all" | "easy" | "medium" | "hard";
-type ThemeFilter =
-  | "all"
-  | "nature"
-  | "urban"
-  | "cultural"
-  | "gastronomia"
-  | "exploracion-urbana"
-  | "aventura"
-  | "deporte"
-  | "historia"
-  | "entretenimiento"
-  | "otros";
 
-const DEFAULT_FILTERS: AppliedFilters = {
+
+const DEFAULT_FILTERS: FiltersState = {
   category: "all",
   pointsFilter: "all",
   distance: "all",
@@ -313,7 +296,7 @@ export default function Home() {
   const [selectedUser, setSelectedUser] = useState<SelectedUser | null>(null);
 
   // Estados para filtros aplicados
-  const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
+  const [appliedFilters, setAppliedFilters] = useState<FiltersState>({
     ...DEFAULT_FILTERS,
   });
 
@@ -806,7 +789,7 @@ export default function Home() {
     });
   };
 
-  const handleApplyFilters = (filters: AppliedFilters) => {
+  const handleApplyFilters = (filters: FiltersState) => {
     setAppliedFilters({ ...filters });
   };
 
@@ -836,7 +819,6 @@ export default function Home() {
         {/* Buscador de rutas */}
         {!routeCardOpen && !selectedRoute && !selectedUser && (
           <RouteSearchBar
-            routes={routes}
             mode={searchMode}
             query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
             onQueryChange={(q) =>
@@ -957,239 +939,239 @@ export default function Home() {
                   : selectedRoute;
                 setEditingRoute(payload as RouteItem);
               }}
-                onRatingChange = {({ average, count }) => {
-            setSelectedRoute((prev) =>
-              prev && prev.id === selectedRoute.id
-                ? { ...prev, rating: average, rating_count: count }
-                : prev
-            );
+              onRatingChange={({ average, count }) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
                 setRoutes((prev) =>
                   prev.map((r) =>
-          r.id === selectedRoute.id
-          ? {...r, rating: average, rating_count: count }
-          : r
-          )
-          );
+                    r.id === selectedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
               }}
-          onClose={() => {
-            setSelectedRoute(null);
-            setSelectedRoutePoints([]);
-            setShowComments(false);
-            if (userInitialCenterRef.current) {
-              setMapCenter(userInitialCenterRef.current);
-              setMapZoom(GEO_ZOOM);
-            } else {
-              setMapCenter(DEFAULT_CENTER);
-              setMapZoom(DEFAULT_ZOOM);
-            }
-          }}
-          onShowComments={() => setShowComments(true)}
-          onDelete={async (routeId) => {
-            const res = await fetch(`${API}/routes/${routeId}`, {
-              method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error("No se pudo eliminar");
-            setRoutes((prev) => prev.filter((r) => r.id !== routeId));
-          }}
+              onClose={() => {
+                setSelectedRoute(null);
+                setSelectedRoutePoints([]);
+                setShowComments(false);
+                if (userInitialCenterRef.current) {
+                  setMapCenter(userInitialCenterRef.current);
+                  setMapZoom(GEO_ZOOM);
+                } else {
+                  setMapCenter(DEFAULT_CENTER);
+                  setMapZoom(DEFAULT_ZOOM);
+                }
+              }}
+              onShowComments={() => setShowComments(true)}
+              onDelete={async (routeId) => {
+                const res = await fetch(`${API}/routes/${routeId}`, {
+                  method: "DELETE",
+                  headers: { Authorization: `Bearer ${token}` },
+                });
+                if (!res.ok) throw new Error("No se pudo eliminar");
+                setRoutes((prev) => prev.filter((r) => r.id !== routeId));
+              }}
             />
           ) : selectedUser ? (
-          <UserCardView
-            userId={selectedUser.id}
-            username={selectedUser.username}
-            email={selectedUser.email}
-            avatarUrl={selectedUser.avatar_url}
-            onClose={() => setSelectedUser(null)}
-            onRouteClick={(route) => {
-              setSelectedRoute(route);
-              setSelectedRoutePoints(route.points);
-              setShowComments(false);
-            }}
-          />
+            <UserCardView
+              userId={selectedUser.id}
+              username={selectedUser.username}
+              email={selectedUser.email}
+              avatarUrl={selectedUser.avatar_url}
+              onClose={() => setSelectedUser(null)}
+              onRouteClick={(route) => {
+                setSelectedRoute(route);
+                setSelectedRoutePoints(route.points);
+                setShowComments(false);
+              }}
+            />
           ) : (
-          <div>
-            <div className="container">
-              <div className="tabs">
-                <input
-                  type="radio"
-                  id="radio-1"
-                  name="tabs"
-                  checked={searchMode === "routes"}
-                  onChange={() => setSearchMode("routes")}
-                />
-                <label className="tab" htmlFor="radio-1">
-                  Rutas
-                </label>
+            <div>
+              <div className="container">
+                <div className="tabs">
+                  <input
+                    type="radio"
+                    id="radio-1"
+                    name="tabs"
+                    checked={searchMode === "routes"}
+                    onChange={() => setSearchMode("routes")}
+                  />
+                  <label className="tab" htmlFor="radio-1">
+                    Rutas
+                  </label>
 
-                <input
-                  type="radio"
-                  id="radio-2"
-                  name="tabs"
-                  checked={searchMode === "users"}
-                  onChange={() => setSearchMode("users")}
-                />
-                <label className="tab" htmlFor="radio-2">
-                  Usuarios
-                </label>
+                  <input
+                    type="radio"
+                    id="radio-2"
+                    name="tabs"
+                    checked={searchMode === "users"}
+                    onChange={() => setSearchMode("users")}
+                  />
+                  <label className="tab" htmlFor="radio-2">
+                    Usuarios
+                  </label>
 
-                <span className="glider"></span>
+                  <span className="glider"></span>
+                </div>
               </div>
-            </div>
 
-            {searchMode === "routes" ? (
-              <>
-                {routesLoading ? (
-                  renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
-                ) : routesError ? (
-                  renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
-                ) : (() => {
-                  const filteredRoutes = getFilteredRoutes();
-                  const hasFiltersApplied =
-                    appliedFilters.category !== "all" ||
-                    appliedFilters.pointsFilter !== "all" ||
-                    appliedFilters.distance !== "all" ||
-                    appliedFilters.duration !== "all" ||
-                    appliedFilters.difficulty !== "all" ||
-                    appliedFilters.theme !== "all";
-                  const hasSearch = Boolean(routeSearchQuery.trim());
-                  const resultCount = filteredRoutes.length;
+              {searchMode === "routes" ? (
+                <>
+                  {routesLoading ? (
+                    renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
+                  ) : routesError ? (
+                    renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
+                  ) : (() => {
+                    const filteredRoutes = getFilteredRoutes();
+                    const hasFiltersApplied =
+                      appliedFilters.category !== "all" ||
+                      appliedFilters.pointsFilter !== "all" ||
+                      appliedFilters.distance !== "all" ||
+                      appliedFilters.duration !== "all" ||
+                      appliedFilters.difficulty !== "all" ||
+                      appliedFilters.theme !== "all";
+                    const hasSearch = Boolean(routeSearchQuery.trim());
+                    const resultCount = filteredRoutes.length;
 
-                  return (
-                    <>
-                      <div className="category-chip-bar" aria-label="Filtrar por categoría">
-                        {CATEGORY_OPTIONS.map((cat) => (
-                          <button
-                            key={cat}
-                            className={`category-chip ${appliedFilters.category === cat ? "active" : ""
-                              }`}
-                            onClick={() => handleCategorySelect(cat)}
-                            aria-pressed={appliedFilters.category === cat}
-                          >
-                            {CATEGORY_LABELS[cat] ?? cat}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="routes-meta">
-                        <div className="routes-count">
-                          {resultCount} rutas encontradas
-                        </div>
-                        {(hasFiltersApplied || hasSearch) && (
-                          <div className="routes-active-filters">
-                            {hasSearch ? (
-                              <span className="routes-filter-chip muted">
-                                Búsqueda: "{routeSearchQuery.trim()}"
-                              </span>
-                            ) : null}
-                            {appliedFilters.category !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Categoría:{" "}
-                                {CATEGORY_LABELS[appliedFilters.category] ??
-                                  appliedFilters.category}
-                              </span>
-                            ) : null}
-                            {appliedFilters.pointsFilter !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
-                              </span>
-                            ) : null}
-                            {appliedFilters.distance !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
-                              </span>
-                            ) : null}
-                            {appliedFilters.duration !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Duración: {DURATION_LABELS[appliedFilters.duration]}
-                              </span>
-                            ) : null}
-                            {appliedFilters.difficulty !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Dificultad:{" "}
-                                {DIFFICULTY_LABELS[appliedFilters.difficulty]}
-                              </span>
-                            ) : null}
-                            {appliedFilters.theme !== "all" ? (
-                              <span className="routes-filter-chip">
-                                Temática: {THEME_LABELS[appliedFilters.theme]}
-                              </span>
-                            ) : null}
+                    return (
+                      <>
+                        <div className="category-chip-bar" aria-label="Filtrar por categoría">
+                          {CATEGORY_OPTIONS.map((cat) => (
                             <button
-                              className="routes-reset"
-                              onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                              key={cat}
+                              className={`category-chip ${appliedFilters.category === cat ? "active" : ""
+                                }`}
+                              onClick={() => handleCategorySelect(cat)}
+                              aria-pressed={appliedFilters.category === cat}
                             >
-                              Restablecer filtros
+                              {CATEGORY_LABELS[cat] ?? cat}
                             </button>
-                          </div>
-                        )}
-                      </div>
-
-                    {resultCount === 0 ? (
-                      <div className="routes-empty">
-                        <h4>
-                          {hasFiltersApplied || hasSearch
-                            ? "No hay rutas para estos filtros"
-                            : "No hay rutas disponibles"}
-                        </h4>
-                        <p className="muted">
-                          {hasFiltersApplied || hasSearch
-                            ? "Ajusta la búsqueda o prueba con filtros más amplios."
-                            : "Crea una ruta para verla aquí."}
-                        </p>
-                        <div className="routes-empty__tips">
-                          <span>• Reduce filtros activos.</span>
-                          <span>• Amplía el rango de distancia o duración.</span>
-                          <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                          ))}
                         </div>
-                        {(hasFiltersApplied || hasSearch) && (
-                          <button
-                            className="routes-reset"
-                            onClick={() => {
-                              handleApplyFilters(DEFAULT_FILTERS);
-                              setRouteSearchQuery("");
-                            }}
-                          >
-                            Restablecer filtros
-                          </button>
+
+                        <div className="routes-meta">
+                          <div className="routes-count">
+                            {resultCount} rutas encontradas
+                          </div>
+                          {(hasFiltersApplied || hasSearch) && (
+                            <div className="routes-active-filters">
+                              {hasSearch ? (
+                                <span className="routes-filter-chip muted">
+                                  Búsqueda: "{routeSearchQuery.trim()}"
+                                </span>
+                              ) : null}
+                              {appliedFilters.category !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Categoría:{" "}
+                                  {CATEGORY_LABELS[appliedFilters.category] ??
+                                    appliedFilters.category}
+                                </span>
+                              ) : null}
+                              {appliedFilters.pointsFilter !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.distance !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.duration !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Duración: {DURATION_LABELS[appliedFilters.duration]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.difficulty !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Dificultad:{" "}
+                                  {DIFFICULTY_LABELS[appliedFilters.difficulty]}
+                                </span>
+                              ) : null}
+                              {appliedFilters.theme !== "all" ? (
+                                <span className="routes-filter-chip">
+                                  Temática: {THEME_LABELS[appliedFilters.theme]}
+                                </span>
+                              ) : null}
+                              <button
+                                className="routes-reset"
+                                onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                              >
+                                Restablecer filtros
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {resultCount === 0 ? (
+                          <div className="routes-empty">
+                            <h4>
+                              {hasFiltersApplied || hasSearch
+                                ? "No hay rutas para estos filtros"
+                                : "No hay rutas disponibles"}
+                            </h4>
+                            <p className="muted">
+                              {hasFiltersApplied || hasSearch
+                                ? "Ajusta la búsqueda o prueba con filtros más amplios."
+                                : "Crea una ruta para verla aquí."}
+                            </p>
+                            <div className="routes-empty__tips">
+                              <span>• Reduce filtros activos.</span>
+                              <span>• Amplía el rango de distancia o duración.</span>
+                              <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                            </div>
+                            {(hasFiltersApplied || hasSearch) && (
+                              <button
+                                className="routes-reset"
+                                onClick={() => {
+                                  handleApplyFilters(DEFAULT_FILTERS);
+                                  setRouteSearchQuery("");
+                                }}
+                              >
+                                Restablecer filtros
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <AnimatedList
+                            items={filteredRoutes.map((r) => (
+                              <div className="route-row" key={r.id}>
+                                <RoutePreviewCard
+                                  id={r.id}
+                                  name={r.name}
+                                  category={r.category as Category}
+                                  points={r.points}
+                                  images={r.images ?? []}
+                                  distanceKm={r.distanceKm ?? null}
+                                  durationMinutes={r.durationMinutes ?? null}
+                                  difficulty={r.difficulty ?? null}
+                                  ratingAverage={r.rating ?? null}
+                                  ratingCount={r.rating_count ?? null}
+                                  initialSaved={favoriteIds.has(String(r.id))}
+                                />
+                              </div>
+                            ))}
+                            className="routes-animated-list"
+                            itemClassName="routes-animated-item"
+                            showGradients
+                            onItemSelect={(index) =>
+                              requireAuth(() => {
+                                const route = filteredRoutes[index];
+                                if (!route) return;
+                                setSelectedRoute(route);
+                                setSelectedRoutePoints(route.points);
+                              })
+                            }
+                          />
                         )}
-                      </div>
-                    ) : (
-                      <AnimatedList
-                        items={filteredRoutes.map((r) => (
-                          <div className="route-row" key={r.id}>
-                            <RoutePreviewCard
-                          id={r.id}
-                          name={r.name}
-                          category={r.category as Category}
-                          points={r.points}
-                          images={r.images ?? []}
-                          distanceKm={r.distanceKm ?? null}
-                          durationMinutes={r.durationMinutes ?? null}
-                          difficulty={r.difficulty ?? null}
-                          ratingAverage={r.rating ?? null}
-                          ratingCount={r.rating_count ?? null}
-                          initialSaved={favoriteIds.has(String(r.id))}
-                        />
-                      </div>
-                    ))}
-                        className="routes-animated-list"
-                        itemClassName="routes-animated-item"
-                        showGradients
-                        onItemSelect={(index) =>
-                          requireAuth(() => {
-                            const route = filteredRoutes[index];
-                            if (!route) return;
-                            setSelectedRoute(route);
-                            setSelectedRoutePoints(route.points);
-                          })
-                        }
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          ) : (
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
                 <>
                   {usersLoading ? (
                     renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
@@ -1216,24 +1198,24 @@ export default function Home() {
                         </div>
                       ));
 
-                    return (
-                      <AnimatedList
-                        items={userItems}
-                        className="users-animated-list"
-                        itemClassName="users-animated-item"
-                        showGradients
-                        onItemSelect={(index) => {
-                          const u = users[index];
-                          if (!u) return;
-                          handleOpenUser(u);
-                        }}
-                      />
-                    );
-                  })()
-                )}
-              </>
-            )}
-          </div>
+                      return (
+                        <AnimatedList
+                          items={userItems}
+                          className="users-animated-list"
+                          itemClassName="users-animated-item"
+                          showGradients
+                          onItemSelect={(index) => {
+                            const u = users[index];
+                            if (!u) return;
+                            handleOpenUser(u);
+                          }}
+                        />
+                      );
+                    })()
+                  )}
+                </>
+              )}
+            </div>
           )}
         </div>
 

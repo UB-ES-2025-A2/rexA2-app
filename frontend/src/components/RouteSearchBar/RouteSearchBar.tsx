@@ -12,6 +12,7 @@ export type ThemeFilter =
   | "urban"
   | "cultural"
   | "gastronomia"
+  | "exploracion-urbana"
   | "aventura"
   | "deporte"
   | "historia"

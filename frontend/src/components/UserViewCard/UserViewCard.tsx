@@ -19,6 +19,7 @@ type RouteItem = {
   distanceKm?: number | null;
   durationMinutes?: number | null;
   difficulty?: string | null;
+  images?: string[];
 };
 
 type Props = {
