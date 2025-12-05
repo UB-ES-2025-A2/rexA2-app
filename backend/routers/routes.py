@@ -4,6 +4,7 @@ from backend.db.models import user as user_crud
 from backend.db.schemas.route import (
     RouteCreate,
     RoutePublic,
+    RouteUpdate,
     CommentCreate,
     CommentThread,
     CommentCreated,
@@ -227,6 +228,35 @@ async def get_public_route_by_name(name: str, current_user: dict = Depends(get_c
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     route["_id"] = str(route["_id"])
     return route
+
+
+@router.put("/{route_id}", response_model=RoutePublic)
+async def update_route(
+    route_id: str,
+    payload: RouteUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza una ruta si pertenece al usuario autenticado.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if str(route.get("owner_id")) != str(current_user.get("_id")):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    updated = await route_crud.update_route(route_id, current_user["_id"], payload.model_dump(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=400, detail="No se pudo actualizar la ruta")
+
+    updated["_id"] = str(updated["_id"])
+    updated["is_owner"] = True
+    return updated
 
 
 @router.get(

@@ -166,6 +166,32 @@ async def delete_route(route_id: str, user_id: str) -> bool:
     return result.deleted_count == 1
 
 
+async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
+    """
+    Actualiza los campos de una ruta si pertenece al usuario.
+    Devuelve el documento actualizado o None si no existe o no pertenece al usuario.
+    """
+    # Filtra campos permitidos
+    allowed_fields = {
+        "name",
+        "description",
+        "category",
+        "visibility",
+        "duration_minutes",
+        "difficulty",
+    }
+    payload = {k: v for k, v in data.items() if v is not None and k in allowed_fields}
+    if not payload:
+        return await get_route_by_id(route_id)
+
+    result = await db_client.db["routes"].update_one(
+        {"_id": ObjectId(route_id), "owner_id": str(owner_id)},
+        {"$set": payload},
+    )
+    if result.matched_count == 0:
+        return None
+
+    return await get_route_by_id(route_id)
 # ================== HELPERS ==================
 def _to_radians(value: float) -> float:
     return (value * math.pi) / 180.0

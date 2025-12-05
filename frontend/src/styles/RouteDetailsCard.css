@@ -43,6 +43,12 @@
   gap: 12px;
 }
 
+.route-details-card__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .route-details-card__title {
   font-size: 1.4rem;
   font-weight: 800;
@@ -321,6 +327,20 @@
   opacity: 0.5;
 }
 
+.route-details-card__edit-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--close-border);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.route-details-card__edit-btn:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
 .route-details-card__meta {
   display: flex;
   gap: 8px;
