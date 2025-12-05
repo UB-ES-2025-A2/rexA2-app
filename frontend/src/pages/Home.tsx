@@ -477,6 +477,76 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const sharedRouteId = params.get("route");
+
+    if (sharedRouteId) {
+      const loadSharedRoute = async () => {
+        try {
+          // Si ya tenemos las rutas cargadas, buscamos ahí primero
+          const existing = routes.find((r) => String(r.id) === sharedRouteId);
+          if (existing) {
+            setSelectedRoute(existing);
+            setSelectedRoutePoints(existing.points);
+            if (existing.points.length > 0) {
+              setMapCenter(existing.points[0]);
+            }
+            navigate(window.location.pathname, { replace: true });
+            return;
+          }
+
+          // Si no, hacemos fetch
+          const headers: HeadersInit = {};
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+
+          const res = await fetch(`${API}/routes/${sharedRouteId}`, { headers });
+
+          if (res.ok) {
+            const data = await res.json();
+            const formattedRoute: RouteItem = {
+              id: data.id,
+              name: data.name,
+              description: data.description || "Sin descripción",
+              category: data.category || "sin categoría",
+              points: (data.points || []).map((p: any) => [p.longitude, p.latitude]),
+              visibility: data.visibility ?? false,
+              is_owner: data.is_owner,
+              ownerName: data.owner_name || data.user?.name || "",
+              ownerUsername: data.owner_username || data.user?.username || "",
+              createdAt: data.created_at || data.createdAt,
+            };
+
+            setSelectedRoute(formattedRoute);
+            setSelectedRoutePoints(formattedRoute.points);
+
+            if (formattedRoute.points.length > 0) {
+              setMapCenter(formattedRoute.points[0]);
+            }
+            navigate(window.location.pathname, { replace: true });
+          } else {
+            // Gestión de errores
+            if (res.status === 404 || res.status === 401) {
+              showAlert("La ruta compartida no existe o ha sido eliminada.", "error");
+            } else if (res.status === 403) {
+              showAlert("No tienes permiso para ver esta ruta o es privada.", "error");
+            } else {
+              showAlert("Error al cargar la ruta compartida.", "error");
+            }
+            navigate(window.location.pathname, { replace: true });
+          }
+        } catch (err) {
+          console.error("Error loading shared route:", err);
+          showAlert("Error de conexión al cargar la ruta compartida.", "error");
+          navigate(window.location.pathname, { replace: true });
+        }
+      };
+      loadSharedRoute();
+    }
+  }, [location.search, routes, showAlert, navigate, token]);
+
+  useEffect(() => {
     const fetchAll = async () => {
       setRoutesLoading(true);
       setRoutesError(null);
