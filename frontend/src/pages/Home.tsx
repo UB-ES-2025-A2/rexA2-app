@@ -21,7 +21,7 @@ import RouteSearchBar, {
 } from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
@@ -180,15 +180,15 @@ const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
 
 const CATEGORY_OPTIONS = [
   "all",
-  "gastronomia",
-  "naturaleza",
   "aventura",
   "cultura",
   "deporte",
-  "historia",
-  "urban",
   "entretenimiento",
+  "gastronomia",
+  "historia",
+  "naturaleza",
   "otros",
+  "urban",
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -336,6 +336,23 @@ export default function Home() {
     onResetPoints: () => setDrawPoints([]),
     onClose: handleCloseRouteCard,
   });
+
+  // Si venimos de Discover con una ruta a resaltar, abrir la ficha en el mapa
+  useEffect(() => {
+    const state = location.state as { highlightRouteId?: string } | null;
+    if (!state?.highlightRouteId || routes.length === 0) return;
+
+    const route = routes.find((r) => r.id === state.highlightRouteId);
+    if (route) {
+      setSelectedRoute(route);
+      setSelectedRoutePoints(route.points);
+      if (route.points.length > 0) {
+        setMapCenter(route.points[0]);
+        setMapZoom(GEO_ZOOM);
+      }
+    }
+    navigate(location.pathname, { replace: true });
+  }, [location.state, routes, navigate]);
 
   // Función para filtrar rutas según los filtros aplicados y categoría seleccionada
   const getFilteredRoutes = () => {
@@ -866,64 +883,113 @@ export default function Home() {
   return (
     <div className="home">
       <header className="home__header">
-        <div className="brand">REX</div>
+        <div className="header__start">
+          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
+            REX
+          </Link>
+          <nav className="main-nav" aria-label="Navegación principal">
+            <NavLink
+              to="/descubrir"
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Descubrir
+            </NavLink>
+            <NavLink
+              to="/mapa"
+              end
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Mapa
+            </NavLink>
+          </nav>
+        </div>
 
-        {/* Buscador de rutas */}
-        {!routeCardOpen && !selectedRoute && !selectedUser && (
-          <RouteSearchBar
-            mode={searchMode}
-            query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
-            onQueryChange={(q) =>
-              searchMode === "routes"
-                ? setRouteSearchQuery(q)
-                : setUserSearchQuery(q)
-            }
-            onApplyFilters={handleApplyFilters}
-            filters={appliedFilters}
-            isLoading={searchMode === "users" ? usersLoading : routesLoading}
-          />
-        )}
+        <div className="header__search">
+          {/* Buscador de rutas */}
+          {!routeCardOpen && !selectedRoute && !selectedUser && (
+            <RouteSearchBar
+              mode={searchMode}
+              query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
+              onQueryChange={(q) =>
+                searchMode === "routes"
+                  ? setRouteSearchQuery(q)
+                  : setUserSearchQuery(q)
+              }
+              onApplyFilters={handleApplyFilters}
+              filters={appliedFilters}
+              isLoading={searchMode === "users" ? usersLoading : routesLoading}
+            />
+          )}
+        </div>
 
         <div className="profile-menu-container">
           <button
             className="profile-menu-btn"
             onClick={() => {
-              if (user || token) toggleProfileMenu();
-              else openAuth("login");
+              toggleProfileMenu();
             }}
             aria-label="Profile"
-            aria-haspopup={user || token ? "menu" : undefined}
-            aria-expanded={user || token ? profileMenuOpen : undefined}
+            aria-haspopup="menu"
+            aria-expanded={profileMenuOpen}
           >
             <span>👤</span>
           </button>
 
-          {user || token ? (
-            <div
-              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
-              role="menu"
-              aria-label="Profile menu"
-            >
-              <Link
-                className="profile-menu__item"
-                role="menuitem"
-                to="/perfil"
-                onClick={() => setProfileMenuOpen(false)}
-              >
-                Mi perfil
-              </Link>
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => {
-                  logout();
-                  setProfileMenuOpen(false);
-                }}
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          ) : null}
+          <div
+            className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+            role="menu"
+            aria-label="Profile menu"
+          >
+            {user || token ? (
+              <>
+                <Link
+                  className="profile-menu__item"
+                  role="menuitem"
+                  to="/perfil"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  Mi perfil
+                </Link>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    logout();
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    openAuth("login");
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    openAuth("signup");
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Crear cuenta
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 

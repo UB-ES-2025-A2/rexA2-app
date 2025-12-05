@@ -50,6 +50,16 @@ class RouteBase(BaseModel):
     visibility: bool = False        # Visibilidad de la ruta públicamente (por defecto, no)
     description: str # | None = None  # Descripción de la ruta (opcional)
     category: str # | None = None     # Categoría opcional de la ruta
+    country_code: str | None = Field(
+        default=None,
+        description="Código ISO del país (ej. ES, FR, IT)",
+        max_length=3,
+    )
+    country_name: str | None = Field(
+        default=None,
+        description="Nombre legible del país (ej. España, Francia)",
+        max_length=80,
+    )
     images: List[str] = Field(        # URLs opcionales de imágenes asociadas a la ruta
         default_factory=list,
         description="Lista opcional de URLs de imágenes",
@@ -158,6 +168,8 @@ class RouteUpdate(BaseModel):
     visibility: bool | None = None
     duration_minutes: int | None = Field(default=None, ge=0)
     difficulty: str | None = None
+    country_code: str | None = Field(default=None, max_length=3)
+    country_name: str | None = Field(default=None, max_length=80)
 
     @field_validator("name")
     @classmethod
@@ -187,3 +199,33 @@ class RouteUpdate(BaseModel):
         if not v.strip():
             raise ValueError("No se ha seleccionado ninguna categoría")
         return v
+
+
+class DiscoverRoute(BaseModel):
+    id: str = Field(
+        validation_alias=AliasChoices("_id", "id"),
+        serialization_alias="id",
+    )
+    name: str
+    country: str | None = None
+    country_code: str | None = None
+    country_name: str | None = None
+    category: str | None = None
+    theme: str | None = None
+    distance_km: float | None = None
+    duration_minutes: int | None = None
+    rating: float | None = None
+    rating_count: int | None = None
+    difficulty: str | None = None
+    images: List[str] = Field(default_factory=list)
+    points: List[list[float]] = Field(default_factory=list)
+
+
+class CountryDiscoverBlock(BaseModel):
+    country: str
+    routes: List[DiscoverRoute] = Field(default_factory=list)
+
+
+class ThemeDiscoverBlock(BaseModel):
+    theme: str
+    routes: List[DiscoverRoute] = Field(default_factory=list)
