@@ -6,6 +6,7 @@ import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
 import AnimatedList from "../components/AnimatedList";
+import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 
@@ -50,6 +51,7 @@ type FavoriteRouteApi = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
+  images?: string[];
 };
 type FavoriteRoute = {
   id: string;
@@ -64,6 +66,7 @@ type FavoriteRoute = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
+  images: string[];
 };
 
 const API_BASE = (
@@ -906,6 +909,7 @@ function normalizeFavoriteRoute(
           : null,
     user_rating:
       typeof route.user_rating === "number" ? route.user_rating : null,
+    images: Array.isArray(route.images) ? route.images : [],
   };
 }
 
@@ -1199,15 +1203,16 @@ function FavoritesPanel({
 
   const favoriteItems = favorites.map((route) => (
     <div className="route-row" key={route.id}>
-      <div className="route-row-main">
-        <div className="route-row-title">{route.name}</div>
-        <div className="route-row-meta">
-          <span>{route.ownerName || route.ownerId}</span>
-          <span>· {route.category}</span>
-          <span>· {formatDateLabel(route.createdAt)}</span>
-        </div>
-      </div>
-      <div className="route-row-cta">Ver detalles</div>
+      <RoutePreviewCard
+        id={route.id}
+        name={route.name}
+        category={route.category as Category}
+        points={route.points}
+        images={route.images}
+        ratingAverage={route.rating ?? null}
+        ratingCount={route.rating_count ?? null}
+        onClick={() => onViewRoute(route)}
+      />
     </div>
   ));
 
@@ -1292,15 +1297,16 @@ function CreatedRoutesPanel({
 
   const createdItems = routes.map((route) => (
     <div className="route-row" key={route.id}>
-      <div className="route-row-main">
-        <div className="route-row-title">{route.name}</div>
-        <div className="route-row-meta">
-          <span>{route.ownerName || route.ownerId}</span>
-          <span>· {route.category}</span>
-          <span>· {formatDateLabel(route.createdAt)}</span>
-        </div>
-      </div>
-      <div className="route-row-cta">Ver detalles</div>
+      <RoutePreviewCard
+        id={route.id}
+        name={route.name}
+        category={route.category as Category}
+        points={route.points}
+        images={route.images}
+        ratingAverage={route.rating ?? null}
+        ratingCount={route.rating_count ?? null}
+        onClick={() => onViewRoute(route)}
+      />
     </div>
   ));
 

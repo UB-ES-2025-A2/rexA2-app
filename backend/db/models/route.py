@@ -12,6 +12,9 @@ def _normalize(doc: dict) -> dict:
     d = dict(doc)
     if "_id" in d:
         d["_id"] = str(d["_id"])
+    # Normaliza campos opcionales para evitar None en la capa API
+    if "images" not in d or d.get("images") is None:
+        d["images"] = []
     return d
 
 # ============ CREATE OPERATIONS ============
@@ -36,6 +39,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "difficulty": difficulty,
         "rating": route_data.get("rating"),
         "rating_count": route_data.get("rating_count") or 0,
+        "images": route_data.get("images") or [],
         "comments": [],
     }
 
@@ -63,16 +67,15 @@ async def get_routes_by_ids(route_ids: list[str]) -> list[dict]:
     curr = db_client.db["routes"].find({"_id": {"$in": oids}})
     out = []
     async for d in curr:
-        d["_id"] = str(d["_id"])
-        out.append(d)
+        out.append(_normalize(d))
 
     return out
 
 async def get_all_routes(public_only: bool = False) -> list[dict]:
     """Obtiene todas las rutas (públicas o todas si admin)."""
     query = {"visibility": True} if public_only else {}
-    routes = db_client.db["routes"].find(query).to_list(length=None)
-    return await routes
+    routes = await db_client.db["routes"].find(query).to_list(length=None)
+    return [_normalize(r) for r in routes]
 
 # ---- Aquí obtenemos la lista de rutas que crea un usuario ---
 async def get_routes_by_owner(owner_id: str, *, public_only: bool | None = None,
@@ -99,10 +102,41 @@ async def get_public_route_by_name(name: str) -> dict | None:
     """
     Busca una ruta por su nombre sin importar el propietario.
     """
-    return await db_client.db["routes"].find_one({
+    found = await db_client.db["routes"].find_one({
         "name": name,
         "visibility": True,
     })
+    return _normalize(found) if found else None
+
+
+async def update_route(
+    route_id: str,
+    owner_id: str,
+    route_data: dict,
+) -> dict | None:
+    """
+    Actualiza una ruta si pertenece al owner. Devuelve el documento actualizado o None
+    si no existe o no pertenece al usuario.
+    """
+    filter_ = {"_id": ObjectId(route_id), "owner_id": str(owner_id)}
+    update_fields = {
+        "name": route_data["name"],
+        "points": route_data["points"],
+        "visibility": route_data.get("visibility", False),
+        "description": route_data["description"],
+        "category": route_data["category"],
+        "duration_minutes": route_data.get("duration_minutes"),
+        "rating": route_data.get("rating"),
+        "images": route_data.get("images") or [],
+    }
+    result = await db_client.db["routes"].update_one(
+        filter_, {"$set": update_fields}
+    )
+    if result.matched_count == 0:
+        return None
+    # Devuelve la versión actualizada
+    updated = await get_route_by_id(route_id)
+    return _normalize(updated) if updated else None
 
 
 async def add_comment(

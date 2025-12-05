@@ -136,6 +136,129 @@ async def test_create_route_ok_201(ac, monkeypatch):
     assert body["visibility"] is True
     assert body["duration_minutes"] == 60
     assert body["rating"] == 4.5
+    assert body["images"] == []
+
+
+@pytest.mark.anyio
+async def test_update_route_ok_with_images(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+            "images": [],
+        }
+
+    async def fake_get_route_by_name(owner_id, name):
+        # Devuelve la misma ruta => no debe considerarse duplicado
+        return {"_id": "route-1", "name": name}
+
+    called = {}
+
+    async def fake_update_route(route_id: str, owner_id: str, data: dict):
+        called["route_id"] = route_id
+        called["owner_id"] = owner_id
+        called["data"] = data
+        return {
+            "_id": route_id,
+            "owner_id": owner_id,
+            **data,
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
+    monkeypatch.setattr(route_crud, "update_route", fake_update_route, raising=True)
+
+    payload = {
+        "name": "Ruta editada",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": False,
+        "description": "Nueva desc",
+        "category": "c",
+        "images": ["https://cdn.test/img.png"],
+    }
+    res = await ac.put("/routes/route-1", json=payload)
+    assert res.status_code == 200
+    body = res.json()
+    assert body["images"] == ["https://cdn.test/img.png"]
+    assert called["data"]["images"] == ["https://cdn.test/img.png"]
+
+
+@pytest.mark.anyio
+async def test_update_route_duplicate_name_returns_409(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+            "images": [],
+        }
+
+    async def fake_get_route_by_name(owner_id, name):
+        # Simula otra ruta del mismo owner con el mismo nombre
+        return {"_id": "other-route", "owner_id": owner_id, "name": name}
+
+    def fake_update_route(*args, **kwargs):
+        pytest.fail("update_route no debe llamarse si hay duplicado")
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
+    monkeypatch.setattr(route_crud, "update_route", fake_update_route, raising=True)
+
+    payload = {
+        "name": "Duplicada",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": True,
+        "description": "d",
+        "category": "c",
+        "images": [],
+    }
+    res = await ac.put("/routes/route-1", json=payload)
+    assert res.status_code == 409
+    assert res.json()["detail"] == "Este nombre de ruta ya existe"
+
+
+@pytest.mark.anyio
+async def test_update_route_forbidden_if_not_owner(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "other",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+            "images": [],
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    payload = {
+        "name": "Intento",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": True,
+        "description": "d",
+        "category": "c",
+        "images": [],
+    }
+    res = await ac.put("/routes/route-1", json=payload)
+    assert res.status_code == 403
 
 
 @pytest.mark.anyio
