@@ -16,6 +16,9 @@ interface RouteDetailsCardProps {
   description: string;
   category: Category;
   points: Array<[number, number]>;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string | null;
   isPrivate?: boolean;
   onClose: () => void;
   routeId: string;
@@ -29,11 +32,64 @@ interface RouteDetailsCardProps {
   onRatingChange?: (stats: { average: number | null; count: number }) => void;
 }
 
+const AVERAGE_WALKING_SPEED_KMH = 4;
+
+function calculateSegmentDistanceKm(a: [number, number], b: [number, number]) {
+  const [lng1, lat1] = a;
+  const [lng2, lat2] = b;
+  const toRadians = (v: number) => (v * Math.PI) / 180;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lng2 - lng1);
+  const rLat1 = toRadians(lat1);
+  const rLat2 = toRadians(lat2);
+  const haversine =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(rLat1) * Math.cos(rLat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  const earthRadiusKm = 6371;
+  return earthRadiusKm * c;
+}
+
+function calculateRouteDistanceKm(points: Array<[number, number]>): number | null {
+  if (!points || points.length < 2) return null;
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += calculateSegmentDistanceKm(points[i - 1], points[i]);
+  }
+  return Number.isFinite(total) ? Number(total.toFixed(2)) : null;
+}
+
+function estimateDurationMinutes(
+  minutes: number | null | undefined,
+  distanceKm: number | null | undefined
+) {
+  if (minutes != null) return minutes;
+  if (!distanceKm) return null;
+  return Math.round((distanceKm / AVERAGE_WALKING_SPEED_KMH) * 60);
+}
+
+function estimateDifficulty(
+  difficulty: string | null | undefined,
+  distanceKm: number | null | undefined,
+  durationMinutes: number | null | undefined
+) {
+  if (difficulty) return difficulty;
+  const distance = distanceKm || 0;
+  const duration = durationMinutes || 0;
+  if (distance > 20 || duration > 360) return "hard";
+  if (distance > 10 || duration > 180) return "medium";
+  if (distance === 0 && duration === 0) return null;
+  return "easy";
+}
+
 const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   name,
   description,
   category,
   points,
+  distanceKm,
+  durationMinutes,
+  difficulty,
   isPrivate = false,
   onClose,
   routeId,
@@ -272,6 +328,37 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   };
 
   const canDelete = isOwnRoute || routeData?.is_owner;
+  const displayDistance =
+    routeData?.distance_km ??
+    routeData?.distanceKm ??
+    distanceKm ??
+    calculateRouteDistanceKm(points);
+  const displayDuration = estimateDurationMinutes(
+    routeData?.duration_minutes ?? routeData?.durationMinutes ?? durationMinutes,
+    displayDistance
+  );
+  const displayDifficulty = estimateDifficulty(
+    routeData?.difficulty ?? difficulty,
+    displayDistance,
+    displayDuration
+  );
+
+  const formatDuration = (minutes?: number | null) => {
+    if (minutes == null) return null;
+    if (minutes < 60) return "<1h";
+    const hours = Math.floor(minutes / 60);
+    const remaining = Math.round(minutes % 60);
+    if (remaining === 0) return `${hours}h`;
+    return `${hours}h ${remaining}m`;
+  };
+
+  const difficultyLabel = displayDifficulty
+    ? {
+        easy: "Fácil",
+        medium: "Media",
+        hard: "Alta",
+      }[displayDifficulty.toLowerCase()] ?? displayDifficulty
+    : null;
 
   return (
     <>
@@ -296,6 +383,27 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             <span className="route-details-card__points">
               📍 {points.length} puntos en la ruta
             </span>
+          </div>
+
+          <div className="route-details-card__meta">
+            {typeof displayDistance === "number" ? (
+              <span className="route-details-pill">
+                <span className="pill-dot distance" />
+                {displayDistance} km
+              </span>
+            ) : null}
+            {formatDuration(displayDuration) ? (
+              <span className="route-details-pill">
+                <span className="pill-dot duration" />
+                {formatDuration(displayDuration)}
+              </span>
+            ) : null}
+            {difficultyLabel ? (
+              <span className="route-details-pill">
+                <span className="pill-dot difficulty" />
+                {difficultyLabel}
+              </span>
+            ) : null}
           </div>
 
           <div className="route-details-card__points-list">

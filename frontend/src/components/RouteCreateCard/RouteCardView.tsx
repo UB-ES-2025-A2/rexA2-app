@@ -7,6 +7,7 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
+  difficulty: "" | "easy" | "medium" | "hard";
 
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
@@ -16,6 +17,7 @@ type Props = {
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
+  onChangeDifficulty: (v: "" | "easy" | "medium" | "hard") => void;
   onChangeMode: (m: Mode) => void;
   onAddSearchPoint: () => void;
   onClearSearchPoints: () => void;
@@ -30,6 +32,7 @@ const RouteCardView: React.FC<Props> = ({
   name,
   isPrivate,
   category,
+  difficulty,
   geocoderRef,
   searchPoints,
   drawPoints,
@@ -39,6 +42,7 @@ const RouteCardView: React.FC<Props> = ({
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
+  onChangeDifficulty,
   onChangeMode,
   onAddSearchPoint,
   onClearSearchPoints,
@@ -93,6 +97,28 @@ const RouteCardView: React.FC<Props> = ({
                 <option value="entretenimiento">Entretenimiento</option>
                 <option value="trabajo">Trabajo</option>
               </select>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="difficulty">Dificultad</label>
+              <select
+                id="difficulty"
+                value={difficulty}
+                onChange={(e) =>
+                  onChangeDifficulty(e.target.value as "" | "easy" | "medium" | "hard")
+                }
+              >
+                <option value="" disabled>
+                  Selecciona dificultad…
+                </option>
+                <option value="easy">Fácil</option>
+                <option value="medium">Media</option>
+                <option value="hard">Alta</option>
+              </select>
+              <p className="route-card__helper">
+                Puedes ajustar la dificultad manualmente; la distancia y duración se calculan
+                automáticamente al guardar.
+              </p>
             </div>
 
             <div className="input-group">
