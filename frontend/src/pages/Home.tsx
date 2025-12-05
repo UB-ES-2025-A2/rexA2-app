@@ -288,6 +288,7 @@ export default function Home() {
     east: number;
     west: number;
   } | null>(null);
+  const [filterByBounds, setFilterByBounds] = useState(true);
 
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -466,6 +467,22 @@ export default function Home() {
 
         return searchBucket.some((value) =>
           value.includes(normalizedSearch)
+        );
+      });
+    }
+
+
+
+    // Filtro por zona del mapa (US-29)
+    if (filterByBounds && mapBounds) {
+      filtered = filtered.filter((r) => {
+        if (r.points.length === 0) return false;
+        const [lng, lat] = r.points[0];
+        return (
+          lat >= mapBounds.south &&
+          lat <= mapBounds.north &&
+          lng >= mapBounds.west &&
+          lng <= mapBounds.east
         );
       });
     }
@@ -1139,6 +1156,17 @@ export default function Home() {
                               </button>
                             </div>
                           )}
+
+                          <div className="routes-bounds-filter">
+                            <label className="checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={filterByBounds}
+                                onChange={(e) => setFilterByBounds(e.target.checked)}
+                              />
+                              Buscar en esta zona
+                            </label>
+                          </div>
                         </div>
 
                         {resultCount === 0 ? (
