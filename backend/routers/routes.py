@@ -8,6 +8,8 @@ from backend.db.schemas.route import (
     CommentCreate,
     CommentThread,
     CommentCreated,
+    CountryDiscoverBlock,
+    ThemeDiscoverBlock,
 )
 from backend.core.security import get_current_user, get_current_user_optional
 from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
@@ -133,6 +135,45 @@ async def list_user_public_routes(
         u["_id"], public_only=True, skip=skip, limit=limit
     )
     return routes
+
+
+@router.get("/discover/countries", response_model=list[CountryDiscoverBlock])
+async def discover_by_countries(
+    limit_per_country: int = Query(6, ge=1, le=10),
+    max_countries: int = Query(10, ge=1, le=20),
+    country: str | None = Query(None, description="Filtra por país/region (case-insensitive)"),
+    theme: str | None = Query(None, description="Filtra por temática"),
+):
+    """
+    Rutas destacadas agrupadas por país/región.
+    Criterio: rating desc, luego recencia.
+    """
+    blocks = await route_crud.get_featured_by_country(
+        limit_per_country=limit_per_country,
+        max_countries=max_countries,
+        country_filter=country,
+        theme_filter=theme,
+    )
+    return blocks
+
+
+@router.get("/discover/themes", response_model=list[ThemeDiscoverBlock])
+async def discover_by_themes(
+    limit_per_theme: int = Query(6, ge=1, le=10),
+    max_themes: int = Query(10, ge=1, le=20),
+    country: str | None = Query(None, description="Filtra por país/region (case-insensitive)"),
+    theme: str | None = Query(None, description="Filtra por temática"),
+):
+    """
+    Rutas destacadas agrupadas por temática (theme/category).
+    """
+    blocks = await route_crud.get_featured_by_theme(
+        limit_per_theme=limit_per_theme,
+        max_themes=max_themes,
+        country_filter=country,
+        theme_filter=theme,
+    )
+    return blocks
 
 @router.get("/{route_id}", response_model=RoutePublic)
 async def get_route(route_id: str, current_user: dict | None = Depends(get_current_user_optional)):

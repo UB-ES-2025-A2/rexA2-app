@@ -20,6 +20,31 @@ def _normalize(doc: dict) -> dict:
         d["duration_minutes"] = int(round(d["duration_minutes"]))
     return d
 
+
+def _discover_projection(doc: dict) -> dict:
+    """
+    Proyección simplificada para bloques de descubrimiento.
+    """
+    d = _normalize(doc)
+    d["country"] = (
+        doc.get("country")
+        or doc.get("region")
+        or doc.get("country_name")
+        or "Desconocido"
+    )
+    d["theme"] = doc.get("theme") or doc.get("category") or "otros"
+    return {
+        "id": d.get("_id") or d.get("id"),
+        "name": d.get("name"),
+        "country": d.get("country"),
+        "theme": d.get("theme"),
+        "distance_km": d.get("distance_km"),
+        "duration_minutes": d.get("duration_minutes"),
+        "rating": d.get("rating"),
+        "rating_count": d.get("rating_count"),
+        "images": d.get("images") or [],
+    }
+
 # ============ CREATE OPERATIONS ============
 async def create_route(owner_id: str, route_data:dict) -> dict:
     '''
@@ -308,3 +333,196 @@ def _normalize_difficulty(value) -> str | None:
     if v in {"facil", "fácil"}:
         return "easy"
     return v
+
+
+async def get_featured_by_country(
+    *,
+    limit_per_country: int = 6,
+    max_countries: int = 10,
+    country_filter: str | None = None,
+    theme_filter: str | None = None,
+) -> list[dict]:
+    """
+    Devuelve rutas destacadas agrupadas por país/region.
+    Criterio de destacado: rating desc, rating_count desc, created_at desc.
+    """
+    country_filter_norm = country_filter.lower().strip() if country_filter else None
+    theme_filter_norm = theme_filter.lower().strip() if theme_filter else None
+
+    pipeline = [
+        {
+            "$addFields": {
+                "effective_rating": {"$ifNull": ["$rating", 0]},
+                "effective_rating_count": {"$ifNull": ["$rating_count", 0]},
+                "country": {
+                    "$ifNull": [
+                        "$country",
+                        {"$ifNull": ["$region", {"$ifNull": ["$country_name", "Desconocido"]}]},
+                    ]
+                },
+                "theme": {"$ifNull": ["$theme", {"$ifNull": ["$category", "otros"]}]},
+            }
+        },
+        {"$match": {"visibility": True}},
+    ]
+
+    if country_filter_norm:
+        pipeline.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$eq": [
+                            {"$toLower": "$country"},
+                            country_filter_norm,
+                        ]
+                    }
+                }
+            }
+        )
+
+    if theme_filter_norm:
+        pipeline.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$eq": [
+                            {"$toLower": "$theme"},
+                            theme_filter_norm,
+                        ]
+                    }
+                }
+            }
+        )
+
+    pipeline.extend(
+        [
+            {
+                "$sort": {
+                    "effective_rating": -1,
+                    "effective_rating_count": -1,
+                    "created_at": -1,
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$country",
+                    "routes": {"$push": "$$ROOT"},
+                }
+            },
+            {"$limit": int(max_countries)},
+            {
+                "$project": {
+                    "_id": 0,
+                    "country": "$_id",
+                    "routes": {"$slice": ["$routes", int(limit_per_country)]},
+                }
+            },
+        ]
+    )
+
+    cursor = db_client.db["routes"].aggregate(pipeline)
+    blocks: list[dict] = []
+    async for doc in cursor:
+        blocks.append(
+            {
+                "country": doc.get("country") or "Desconocido",
+                "routes": [_discover_projection(r) for r in doc.get("routes", [])],
+            }
+        )
+    return blocks
+
+
+async def get_featured_by_theme(
+    *,
+    limit_per_theme: int = 6,
+    max_themes: int = 10,
+    country_filter: str | None = None,
+    theme_filter: str | None = None,
+) -> list[dict]:
+    """
+    Devuelve rutas destacadas agrupadas por temática (theme/category).
+    """
+    country_filter_norm = country_filter.lower().strip() if country_filter else None
+    theme_filter_norm = theme_filter.lower().strip() if theme_filter else None
+
+    pipeline = [
+        {
+            "$addFields": {
+                "effective_rating": {"$ifNull": ["$rating", 0]},
+                "effective_rating_count": {"$ifNull": ["$rating_count", 0]},
+                "theme": {"$ifNull": ["$theme", {"$ifNull": ["$category", "otros"]}]},
+                "country": {
+                    "$ifNull": [
+                        "$country",
+                        {"$ifNull": ["$region", {"$ifNull": ["$country_name", "Desconocido"]}]},
+                    ]
+                },
+            }
+        },
+        {"$match": {"visibility": True}},
+    ]
+
+    if country_filter_norm:
+        pipeline.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$eq": [
+                            {"$toLower": "$country"},
+                            country_filter_norm,
+                        ]
+                    }
+                }
+            }
+        )
+
+    if theme_filter_norm:
+        pipeline.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$eq": [
+                            {"$toLower": "$theme"},
+                            theme_filter_norm,
+                        ]
+                    }
+                }
+            }
+        )
+
+    pipeline.extend(
+        [
+            {
+                "$sort": {
+                    "effective_rating": -1,
+                    "effective_rating_count": -1,
+                    "created_at": -1,
+                }
+            },
+            {
+                "$group": {
+                    "_id": "$theme",
+                    "routes": {"$push": "$$ROOT"},
+                }
+            },
+            {"$limit": int(max_themes)},
+            {
+                "$project": {
+                    "_id": 0,
+                    "theme": "$_id",
+                    "routes": {"$slice": ["$routes", int(limit_per_theme)]},
+                }
+            },
+        ]
+    )
+
+    cursor = db_client.db["routes"].aggregate(pipeline)
+    blocks: list[dict] = []
+    async for doc in cursor:
+        blocks.append(
+            {
+                "theme": doc.get("theme") or "otros",
+                "routes": [_discover_projection(r) for r in doc.get("routes", [])],
+            }
+        )
+    return blocks

@@ -5,216 +5,96 @@ import "../styles/Discover.css";
 
 type DiscoverRoute = {
   id: string;
-  title: string;
-  location: string;
-  country: string;
-  theme: "costa" | "montana" | "ciudad" | "selva" | "desierto";
-  distance: string;
-  duration: string;
-  rating: number;
-  gradient: string;
-  accent: string;
+  name: string;
+  country?: string | null;
+  theme?: string | null;
+  distance_km?: number | null;
+  duration_minutes?: number | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  images?: string[];
 };
 
-const FEATURED_ROUTES: DiscoverRoute[] = [
-  // España
-  {
-    id: "costa-luz",
-    title: "Costa de la Luz",
-    location: "Cádiz, España",
-    country: "España",
-    theme: "costa",
-    distance: "12 km",
-    duration: "3 h",
-    rating: 4.8,
-    gradient: "linear-gradient(135deg, #22d3ee, #0ea5e9)",
-    accent: "Arena dorada y faros infinitos",
-  },
-  {
-    id: "tramuntana",
-    title: "Serra de Tramuntana",
-    location: "Mallorca, España",
-    country: "España",
-    theme: "montana",
-    distance: "18 km",
-    duration: "5 h",
-    rating: 4.9,
-    gradient: "linear-gradient(135deg, #4f46e5, #22c55e)",
-    accent: "Miradores al Mediterráneo",
-  },
-  {
-    id: "camino-norte",
-    title: "Camino del Norte",
-    location: "País Vasco, España",
-    country: "España",
-    theme: "costa",
-    distance: "24 km",
-    duration: "7 h",
-    rating: 4.7,
-    gradient: "linear-gradient(135deg, #0ea5e9, #6366f1)",
-    accent: "Acantilados verdes y pueblos marineros",
-  },
-  {
-    id: "picos-europa",
-    title: "Picos de Europa",
-    location: "Asturias, España",
-    country: "España",
-    theme: "montana",
-    distance: "16 km",
-    duration: "5 h",
-    rating: 4.8,
-    gradient: "linear-gradient(135deg, #22c55e, #0ea5e9)",
-    accent: "Lagos glaciares y miradores naturales",
-  },
-  {
-    id: "albufera",
-    title: "Atardecer en la Albufera",
-    location: "Valencia, España",
-    country: "España",
-    theme: "costa",
-    distance: "9 km",
-    duration: "2 h",
-    rating: 4.5,
-    gradient: "linear-gradient(135deg, #f97316, #facc15)",
-    accent: "Arrozales y paseos en barca",
-  },
-  // Francia
-  {
-    id: "calanques-marsella",
-    title: "Calanques de Marsella",
-    location: "Provenza, Francia",
-    country: "Francia",
-    theme: "costa",
-    distance: "11 km",
-    duration: "3 h",
-    rating: 4.6,
-    gradient: "linear-gradient(135deg, #06b6d4, #0ea5e9)",
-    accent: "Aguas turquesa y acantilados de caliza",
-  },
-  {
-    id: "chamonix",
-    title: "Chamonix Panorámica",
-    location: "Alpes, Francia",
-    country: "Francia",
-    theme: "montana",
-    distance: "14 km",
-    duration: "5 h",
-    rating: 4.9,
-    gradient: "linear-gradient(135deg, #4f46e5, #22c55e)",
-    accent: "Glaciares y vistas al Mont Blanc",
-  },
-  {
-    id: "normandia",
-    title: "Costa de Normandía",
-    location: "Étretat, Francia",
-    country: "Francia",
-    theme: "costa",
-    distance: "10 km",
-    duration: "3 h",
-    rating: 4.5,
-    gradient: "linear-gradient(135deg, #22c55e, #14b8a6)",
-    accent: "Arcos de piedra y playas infinitas",
-  },
-  {
-    id: "loira",
-    title: "Castillos del Loira",
-    location: "Valle del Loira, Francia",
-    country: "Francia",
-    theme: "ciudad",
-    distance: "28 km",
-    duration: "6 h",
-    rating: 4.7,
-    gradient: "linear-gradient(135deg, #f43f5e, #fb923c)",
-    accent: "Viñedos y palacios renacentistas",
-  },
-  {
-    id: "paris-sena",
-    title: "Orillas del Sena",
-    location: "París, Francia",
-    country: "Francia",
-    theme: "ciudad",
-    distance: "8 km",
-    duration: "2 h",
-    rating: 4.4,
-    gradient: "linear-gradient(135deg, #6366f1, #a855f7)",
-    accent: "Museos, puentes y cafés emblemáticos",
-  },
-  // Italia
-  {
-    id: "cinque-terre",
-    title: "Cinque Terre Azul",
-    location: "Liguria, Italia",
-    country: "Italia",
-    theme: "costa",
-    distance: "12 km",
-    duration: "4 h",
-    rating: 4.8,
-    gradient: "linear-gradient(135deg, #0ea5e9, #22c55e)",
-    accent: "Pueblos de colores sobre el mar",
-  },
-  {
-    id: "dolomitas",
-    title: "Dolomitas Seceda",
-    location: "Tirol del Sur, Italia",
-    country: "Italia",
-    theme: "montana",
-    distance: "15 km",
-    duration: "5 h",
-    rating: 4.9,
-    gradient: "linear-gradient(135deg, #4f46e5, #0ea5e9)",
-    accent: "Praderas alpinas y picos afilados",
-  },
-  {
-    id: "amalfi",
-    title: "Costa Amalfitana",
-    location: "Campania, Italia",
-    country: "Italia",
-    theme: "costa",
-    distance: "9 km",
-    duration: "3 h",
-    rating: 4.7,
-    gradient: "linear-gradient(135deg, #f97316, #facc15)",
-    accent: "Miradores al Tirreno y limoneros",
-  },
-  {
-    id: "roma-nocturna",
-    title: "Roma Nocturna",
-    location: "Roma, Italia",
-    country: "Italia",
-    theme: "ciudad",
-    distance: "7 km",
-    duration: "2 h",
-    rating: 4.5,
-    gradient: "linear-gradient(135deg, #a855f7, #6366f1)",
-    accent: "Fuentes, plazas y trattorias escondidas",
-  },
-  {
-    id: "toscana",
-    title: "Val d'Orcia",
-    location: "Toscana, Italia",
-    country: "Italia",
-    theme: "montana",
-    distance: "18 km",
-    duration: "5 h",
-    rating: 4.6,
-    gradient: "linear-gradient(135deg, #22c55e, #14b8a6)",
-    accent: "Colinas onduladas y cipreses infinitos",
-  },
+type CountryBlock = { country: string; routes: DiscoverRoute[] };
+type ThemeBlock = { theme: string; routes: DiscoverRoute[] };
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL?.trim() ||
+  (typeof window !== "undefined" ? window.location.origin : "")
+).replace(/\/$/, "");
+
+const CATEGORY_LABELS: Record<string, string> = {
+  gastronomia: "Gastronomía",
+  naturaleza: "Naturaleza",
+  aventura: "Aventura",
+  cultura: "Cultura",
+  deporte: "Deporte",
+  historia: "Historia",
+  urban: "Urbana",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
+};
+
+const CATEGORY_ORDER = [
+  "aventura",
+  "cultura",
+  "deporte",
+  "entretenimiento",
+  "gastronomia",
+  "historia",
+  "naturaleza",
+  "otros",
+  "urban",
 ];
 
-const THEME_OPTIONS = [
-  { key: "costa", label: "Costa", helper: "Playas, acantilados y puertos" },
-  { key: "montana", label: "Montaña", helper: "Cumbres, lagos y miradores" },
-  { key: "ciudad", label: "Ciudades", helper: "Barrios vibrantes y cultura" },
-  { key: "desierto", label: "Desierto", helper: "Dunas, salares y cielos limpios" },
-];
+const THEME_GRADIENTS: Record<string, string> = {
+  costa: "linear-gradient(135deg, #22d3ee, #0ea5e9)",
+  montana: "linear-gradient(135deg, #4f46e5, #22c55e)",
+  ciudad: "linear-gradient(135deg, #f43f5e, #fb923c)",
+  desierto: "linear-gradient(135deg, #f97316, #facc15)",
+  otros: "linear-gradient(135deg, #6366f1, #a855f7)",
+};
 
-const COUNTRIES = ["Todos", ...new Set(FEATURED_ROUTES.map((r) => r.country))];
+const formatDistance = (distanceKm?: number | null) => {
+  if (distanceKm == null) return "Distancia N/D";
+  return `${distanceKm.toFixed(1)} km`;
+};
+
+const formatDuration = (minutes?: number | null) => {
+  if (minutes == null) return "Duración N/D";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return mins ? `${hours} h ${mins} min` : `${hours} h`;
+};
+
+const normalizeTheme = (theme?: string | null) => {
+  if (!theme) return "otros";
+  return theme.toLowerCase();
+};
+
+const normalizeCategory = normalizeTheme;
+
+const coverStyle = (route: DiscoverRoute) => {
+  const img = route.images?.[0];
+  if (img) {
+    return {
+      backgroundImage: `url(${img})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    };
+  }
+  return { background: THEME_GRADIENTS[normalizeTheme(route.theme)] || THEME_GRADIENTS.otros };
+};
 
 export default function Discover() {
   const [country, setCountry] = useState<string>("Todos");
   const [theme, setTheme] = useState<string>("todos");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [countryBlocks, setCountryBlocks] = useState<CountryBlock[]>([]);
+  const [themeBlocks, setThemeBlocks] = useState<ThemeBlock[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -227,41 +107,120 @@ export default function Discover() {
     };
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    async function fetchDiscover() {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (country !== "Todos") params.set("country", country);
+        if (theme !== "todos") params.set("theme", theme);
+
+        const query = params.toString() ? `?${params.toString()}` : "";
+
+        const [countriesRes, themesRes] = await Promise.all([
+          fetch(`${API_BASE}/routes/discover/countries${query}`, {
+            signal: controller.signal,
+          }),
+          fetch(`${API_BASE}/routes/discover/themes${query}`, {
+            signal: controller.signal,
+          }),
+        ]);
+
+        if (!countriesRes.ok) {
+          throw new Error(`No se pudo cargar países (${countriesRes.status})`);
+        }
+        if (!themesRes.ok) {
+          throw new Error(`No se pudo cargar temáticas (${themesRes.status})`);
+        }
+
+        const countriesData = (await countriesRes.json()) as CountryBlock[];
+        const themesData = (await themesRes.json()) as ThemeBlock[];
+
+        if (!controller.signal.aborted) {
+          setCountryBlocks(countriesData || []);
+          setThemeBlocks(themesData || []);
+        }
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        const message =
+          err instanceof Error ? err.message : "No se pudo cargar descubrimiento.";
+        setError(message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+
+    fetchDiscover();
+    return () => controller.abort();
+  }, [country, theme]);
+
+  const allRoutes = useMemo(() => {
+    const fromCountries = countryBlocks.flatMap((block) => block.routes || []);
+    if (fromCountries.length > 0) return fromCountries;
+    return themeBlocks.flatMap((block) => block.routes || []);
+  }, [countryBlocks, themeBlocks]);
+
+  const countryOptions = useMemo(() => {
+    const fromBlocks = countryBlocks.map((c) => c.country || "Desconocido");
+    const fromThemes = themeBlocks.flatMap((t) =>
+      (t.routes || []).map((r) => r.country || "Desconocido")
+    );
+    const unique = Array.from(new Set([...fromBlocks, ...fromThemes]));
+    return ["Todos", ...unique];
+  }, [countryBlocks, themeBlocks]);
+
+  const themeOptions = useMemo(() => {
+    return ["todos", ...CATEGORY_ORDER];
+  }, []);
+
   const filteredRoutes = useMemo(
     () =>
-      FEATURED_ROUTES.filter(
-        (route) =>
-          (country === "Todos" || route.country === country) &&
-          (theme === "todos" || route.theme === theme)
-      ),
-    [country, theme]
+      allRoutes.filter((route) => {
+        const routeCountry = route.country || "Desconocido";
+        const routeTheme = normalizeTheme(route.theme);
+        if (country !== "Todos" && routeCountry !== country) return false;
+        if (theme !== "todos" && routeTheme !== theme) return false;
+        return true;
+      }),
+    [allRoutes, country, theme]
   );
 
   const countryGroups = useMemo(() => {
-    const grouped = new Map<string, DiscoverRoute[]>();
-    filteredRoutes.forEach((route) => {
-      const current = grouped.get(route.country) || [];
-      current.push(route);
-      grouped.set(route.country, current);
-    });
-    return Array.from(grouped.entries()).map(([countryName, routes]) => ({
-      country: countryName,
-      routes: routes.slice(0, 10),
-    }));
-  }, [filteredRoutes]);
+    if (countryBlocks.length === 0) return [];
+    return countryBlocks
+      .map((block) => ({
+        country: block.country || "Desconocido",
+        routes: (block.routes || []).filter((route) => {
+          const routeTheme = normalizeTheme(route.theme);
+          if (country !== "Todos" && block.country !== country) return false;
+          if (theme !== "todos" && routeTheme !== theme) return false;
+          return true;
+        }),
+      }))
+      .filter((block) => block.routes.length > 0);
+  }, [countryBlocks, country, theme]);
 
   const themedCollections = useMemo(
     () =>
-      THEME_OPTIONS.map((option) => ({
-        ...option,
-        routes: FEATURED_ROUTES.filter(
-          (route) =>
-            (country === "Todos" || route.country === country) &&
-            route.theme === option.key &&
-            (theme === "todos" || route.theme === theme)
-        ).slice(0, 3),
-      })),
-    [country, theme]
+      CATEGORY_ORDER.map((key) => {
+        const label = CATEGORY_LABELS[key] || key;
+        const block = themeBlocks.find(
+          (b) => normalizeCategory(b.theme) === key
+        );
+        const routes = (block?.routes || [])
+          .filter((route) => {
+            const routeCountry = route.country || "Desconocido";
+            const routeTheme = normalizeCategory(route.theme);
+            if (country !== "Todos" && routeCountry !== country) return false;
+            if (theme !== "todos" && routeTheme !== theme) return false;
+            return true;
+          })
+          .slice(0, 10);
+        return { key, label, helper: label, routes };
+      }).filter((option) => option.routes.length > 0),
+    [themeBlocks, country, theme]
   );
 
   return (
@@ -398,11 +357,12 @@ export default function Discover() {
                 <h3>Elige dónde empezar</h3>
               </div>
               <div className="panel-card__chips">
-                {COUNTRIES.slice(1, 4).map((c) => (
+                {countryOptions.slice(1, 4).map((c) => (
                   <button
                     key={c}
                     className={`filter-chip ${country === c ? "active" : ""}`}
                     onClick={() => setCountry(c)}
+                    disabled={loading}
                   >
                     {c}
                   </button>
@@ -410,6 +370,7 @@ export default function Discover() {
                 <button
                   className={`filter-chip subtle ${country === "Todos" ? "active" : ""}`}
                   onClick={() => setCountry("Todos")}
+                  disabled={loading}
                 >
                   Cualquier destino
                 </button>
@@ -425,11 +386,12 @@ export default function Discover() {
           <div className="filters__group">
             <span className="label">País o región</span>
             <div className="filters__chips">
-              {COUNTRIES.map((c) => (
+              {countryOptions.map((c) => (
                 <button
                   key={c}
                   className={`filter-chip ${country === c ? "active" : ""}`}
                   onClick={() => setCountry(c)}
+                  disabled={loading}
                 >
                   {c}
                 </button>
@@ -443,16 +405,20 @@ export default function Discover() {
               <button
                 className={`filter-chip ${theme === "todos" ? "active" : ""}`}
                 onClick={() => setTheme("todos")}
+                disabled={loading}
               >
                 Todas
               </button>
-              {THEME_OPTIONS.map((option) => (
+              {themeOptions
+                .filter((t) => t !== "todos")
+                .map((option) => (
                 <button
-                  key={option.key}
-                  className={`filter-chip ${theme === option.key ? "active" : ""}`}
-                  onClick={() => setTheme(option.key)}
+                  key={option}
+                  className={`filter-chip ${theme === option ? "active" : ""}`}
+                  onClick={() => setTheme(option)}
+                  disabled={loading}
                 >
-                  {option.label}
+                  {CATEGORY_LABELS[option] || option}
                 </button>
               ))}
             </div>
@@ -469,11 +435,19 @@ export default function Discover() {
               </p>
             </div>
             <span className="pill muted">
-              {filteredRoutes.length} resultados
+              {loading ? "Cargando..." : `${filteredRoutes.length} resultados`}
             </span>
           </div>
 
-          {filteredRoutes.length === 0 ? (
+          {loading ? (
+            <div className="empty">
+              <p className="muted">Cargando rutas destacadas...</p>
+            </div>
+          ) : error ? (
+            <div className="empty">
+              <p className="muted">{error}</p>
+            </div>
+          ) : filteredRoutes.length === 0 ? (
             <div className="empty">
               <p className="muted">
                 No hay rutas en esta combinación todavía. Prueba otro país o
@@ -487,28 +461,29 @@ export default function Discover() {
                   key={route.id}
                   className="discover-card"
                   onClick={() =>
-                    navigate("/mapa", {
-                      state: { fromDiscover: true, highlightRouteId: route.id },
+                    navigate(`/routes/${route.id}`, {
+                      state: { fallbackRoute: route },
                     })
                   }
                 >
                   <div
                     className="discover-card__cover"
-                    style={{ background: route.gradient }}
+                    style={coverStyle(route)}
                   >
-                    <span className="pill">{route.country}</span>
-                    <span className="pill muted">{route.theme}</span>
+                    <span className="pill">{route.country || "Desconocido"}</span>
+                    <span className="pill muted">{normalizeTheme(route.theme)}</span>
                   </div>
                   <div className="discover-card__body">
                     <div className="discover-card__title">
-                      <h3>{route.title}</h3>
-                      <p>{route.location}</p>
+                      <h3>{route.name}</h3>
+                      <p>{route.country || "Ruta destacada"}</p>
                     </div>
-                    <p className="muted">{route.accent}</p>
                     <div className="discover-card__meta">
-                      <span>{route.distance}</span>
-                      <span>{route.duration}</span>
-                      <span>⭐ {route.rating.toFixed(1)}</span>
+                      <span>{formatDistance(route.distance_km)}</span>
+                      <span>{formatDuration(route.duration_minutes)}</span>
+                      <span>
+                        ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
+                      </span>
                     </div>
                   </div>
                 </button>
@@ -528,7 +503,15 @@ export default function Discover() {
             </div>
           </div>
 
-          {countryGroups.length === 0 ? (
+          {loading ? (
+            <div className="empty">
+              <p className="muted">Cargando rutas por país...</p>
+            </div>
+          ) : error ? (
+            <div className="empty">
+              <p className="muted">{error}</p>
+            </div>
+          ) : countryGroups.length === 0 ? (
             <div className="empty">
               <p className="muted">No hay rutas disponibles para este país todavía.</p>
             </div>
@@ -557,27 +540,28 @@ export default function Discover() {
                           key={route.id}
                           className="country-tile"
                           onClick={() =>
-                            navigate("/mapa", {
-                              state: {
-                                fromDiscover: true,
-                                highlightRouteId: route.id,
-                              },
+                            navigate(`/routes/${route.id}`, {
+                              state: { fallbackRoute: route },
                             })
                           }
                         >
                           <div
                             className="country-tile__cover"
-                            style={{ background: route.gradient }}
+                            style={coverStyle(route)}
                           ></div>
                           <div className="country-tile__body">
                             <div>
-                              <strong>{route.title}</strong>
-                              <p className="muted">{route.location}</p>
+                              <strong>{route.name}</strong>
+                              <p className="muted">
+                                {route.country || "Ruta destacada"}
+                              </p>
                             </div>
                             <div className="country-tile__meta">
-                              <span>{route.distance}</span>
-                              <span>{route.duration}</span>
-                              <span>⭐ {route.rating.toFixed(1)}</span>
+                              <span>{formatDistance(route.distance_km)}</span>
+                              <span>{formatDuration(route.duration_minutes)}</span>
+                              <span>
+                                ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
+                              </span>
                             </div>
                           </div>
                         </button>
@@ -598,10 +582,17 @@ export default function Discover() {
             </div>
           </div>
 
-          <div className="collections__grid">
-            {themedCollections
-              .filter((collection) => collection.routes.length > 0)
-              .map((collection) => (
+          {loading ? (
+            <div className="empty">
+              <p className="muted">Cargando colecciones...</p>
+            </div>
+          ) : error ? (
+            <div className="empty">
+              <p className="muted">{error}</p>
+            </div>
+          ) : (
+            <div className="collections__grid">
+              {themedCollections.map((collection) => (
                 <div className="collection-card" key={collection.key}>
                   <div className="collection-card__head">
                     <div>
@@ -612,43 +603,49 @@ export default function Discover() {
                       {collection.routes.length} rutas
                     </span>
                   </div>
-                  <div className="collection-card__routes">
-                    {collection.routes.map((route) => (
-                      <button
-                        key={route.id}
-                        className="collection-card__route"
-                        onClick={() =>
-                          navigate("/mapa", {
-                            state: {
-                              fromDiscover: true,
-                              highlightRouteId: route.id,
-                            },
-                          })
-                        }
-                      >
-                        <div
-                          className="collection-card__thumb"
-                          style={{ background: route.gradient }}
-                        ></div>
-                        <div className="collection-card__copy">
-                          <strong>{route.title}</strong>
-                          <span className="muted">{route.location}</span>
-                        </div>
-                        <span className="pill mini">
-                          ⭐ {route.rating.toFixed(1)}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  {collection.routes.length === 0 ? (
+                    <div className="empty">
+                      <p className="muted">
+                        No hay rutas disponibles en esta categoría.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="collection-card__routes">
+                      {collection.routes.map((route) => (
+                        <button
+                          key={route.id}
+                          className="collection-card__route"
+                          onClick={() =>
+                            navigate(`/routes/${route.id}`, {
+                              state: { fallbackRoute: route },
+                            })
+                          }
+                        >
+                          <div
+                            className="collection-card__thumb"
+                            style={coverStyle(route)}
+                          ></div>
+                          <div className="collection-card__copy">
+                            <strong>{route.name}</strong>
+                            <span className="muted">{route.country || "Ruta destacada"}</span>
+                          </div>
+                          <span className="pill mini">
+                            ⭐ {route.rating != null ? route.rating.toFixed(1) : "N/D"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
 
-            {themedCollections.every((collection) => collection.routes.length === 0) ? (
-              <div className="empty">
-                <p className="muted">No hay colecciones disponibles para este país todavía.</p>
-              </div>
-            ) : null}
-          </div>
+              {themedCollections.every((collection) => collection.routes.length === 0) ? (
+                <div className="empty">
+                  <p className="muted">No hay colecciones disponibles para este país todavía.</p>
+                </div>
+              ) : null}
+            </div>
+          )}
         </section>
       </main>
     </div>

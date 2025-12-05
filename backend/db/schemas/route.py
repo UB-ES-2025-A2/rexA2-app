@@ -187,3 +187,28 @@ class RouteUpdate(BaseModel):
         if not v.strip():
             raise ValueError("No se ha seleccionado ninguna categoría")
         return v
+
+
+class DiscoverRoute(BaseModel):
+    id: str = Field(
+        validation_alias=AliasChoices("_id", "id"),
+        serialization_alias="id",
+    )
+    name: str
+    country: str | None = None
+    theme: str | None = None
+    distance_km: float | None = None
+    duration_minutes: int | None = None
+    rating: float | None = None
+    rating_count: int | None = None
+    images: List[str] = Field(default_factory=list)
+
+
+class CountryDiscoverBlock(BaseModel):
+    country: str
+    routes: List[DiscoverRoute] = Field(default_factory=list)
+
+
+class ThemeDiscoverBlock(BaseModel):
+    theme: str
+    routes: List[DiscoverRoute] = Field(default_factory=list)
