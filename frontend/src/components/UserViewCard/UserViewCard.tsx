@@ -360,6 +360,7 @@ const UserViewCard: React.FC<Props> = ({
               name={r.name}
               category={r.category as Category}
               points={r.points}
+              images={r.images ?? []}
               ratingAverage={r.rating ?? null}
               ratingCount={r.rating_count ?? null}
               initialSaved={false}

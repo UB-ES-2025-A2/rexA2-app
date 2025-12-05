@@ -118,13 +118,19 @@ export function useRouteCard({
   };
 
   useEffect(() => {
-    setImages(
-      (initialImages ?? []).map((url, idx) => ({
-        id: `initial-${idx}`,
-        url,
-        name: `Imagen ${idx + 1}`,
-      }))
-    );
+    const normalized = (initialImages ?? []).map((url, idx) => ({
+      id: `initial-${idx}`,
+      url,
+      name: `Imagen ${idx + 1}`,
+    }));
+    // Evita bucles de render si el contenido no cambia (p.ej. cuando se pasa [] inline)
+    setImages((prev) => {
+      const sameLength = prev.length === normalized.length;
+      const sameUrls =
+        sameLength &&
+        prev.every((img, i) => img.url === normalized[i]?.url && img.id.startsWith("initial-"));
+      return sameUrls ? prev : normalized;
+    });
   }, [initialImages]);
 
   const checkRouteNameExists = async (routeName: string) => {

@@ -14,7 +14,7 @@ import CommentsModal from "../components/CommentsModal";
 import RouteSearchBar from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
@@ -470,16 +470,14 @@ export default function Home() {
               role="menu"
               aria-label="Profile menu"
             >
-              <button
+              <Link
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  navigate("/perfil");
-                }}
+                to="/perfil"
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Mi perfil
-              </button>
+              </Link>
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -630,6 +628,7 @@ export default function Home() {
                           name={r.name}
                           category={r.category as Category}
                           points={r.points}
+                          images={r.images ?? []}
                           ratingAverage={r.rating ?? null}
                           ratingCount={r.rating_count ?? null}
                           initialSaved={favoriteIds.has(String(r.id))}

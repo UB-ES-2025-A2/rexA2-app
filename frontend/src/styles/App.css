@@ -447,7 +447,8 @@ root {
   border-radius: 50%;
 }
 
-.profile-menu button {
+.profile-menu button,
+.profile-menu a.profile-menu__item {
   background: none;
   border: none;
   padding: 12px;
@@ -458,9 +459,11 @@ root {
   width: 100%;
   font-weight: 600;
   transition: all 0.2s ease;
+  text-decoration: none;
 }
 
-.profile-menu button:hover {
+.profile-menu button:hover,
+.profile-menu a.profile-menu__item:hover {
   background-color: var(--surface-soft);
   color: var(--primary);
 }

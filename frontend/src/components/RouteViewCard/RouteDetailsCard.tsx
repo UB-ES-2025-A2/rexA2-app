@@ -60,6 +60,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       count: typeof ratingCount === "number" ? ratingCount : 0,
     })
   );
+  const [imageIndex, setImageIndex] = useState(0);
   const useExternalComments = Boolean(onShowComments);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         if (res.ok) {
           const data = await res.json();
           setRouteData(data);
+          setImageIndex(0);
           if (typeof data?.user_rating === "number") {
             setUserRating(data.user_rating);
           } else if (typeof data?.rating === "number") {
@@ -192,6 +194,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       : waitingPerms
         ? "Cargando permisos de valoración..."
         : "Haz clic en una estrella para valorar.";
+  const images: string[] =
+    Array.isArray(routeData?.images) && routeData.images.length
+      ? routeData.images
+      : [];
+  const hasImages = images.length > 0;
+  const currentImage = hasImages ? images[Math.min(imageIndex, images.length - 1)] : null;
 
   const handleDeleteConfirm = async () => {
     if (onDelete) {
@@ -284,6 +292,52 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         </header>
 
         <section className="route-details-card__body">
+          <div className="route-details-card__media">
+            {currentImage ? (
+              <div className="route-details-card__image-wrapper">
+                <img src={currentImage} alt={`Imagen de ${name}`} loading="lazy" />
+                {images.length > 1 && (
+                  <div className="route-details-card__image-controls" aria-label="Galería de imágenes">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setImageIndex((prev) => (prev - 1 + images.length) % images.length)
+                      }
+                      aria-label="Imagen anterior"
+                    >
+                      ←
+                    </button>
+                    <div className="route-details-card__image-dots">
+                      {images.map((_, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className={idx === imageIndex ? "active" : ""}
+                          aria-label={`Ver imagen ${idx + 1}`}
+                          onClick={() => setImageIndex(idx)}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setImageIndex((prev) => (prev + 1) % images.length)}
+                      aria-label="Imagen siguiente"
+                    >
+                      →
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="route-details-card__placeholder">
+                <span role="img" aria-label="Ruta sin imagen">
+                  🗺️
+                </span>
+                <p>Esta ruta no tiene imágenes aún.</p>
+              </div>
+            )}
+          </div>
+
           <p className="route-details-card__description">{description}</p>
 
           <div className="route-details-card__info">
