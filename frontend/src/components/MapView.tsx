@@ -15,6 +15,7 @@ type Props = {
   onPickPoint?: (lng: number, lat: number) => void;
   highlightPoints?: Array<[number, number]>;
   fitOnHighlight?: boolean;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
 };
 
 async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
@@ -52,6 +53,7 @@ export default function MapView({
   onPickPoint,
   highlightPoints = [],
   fitOnHighlight = true,
+  onBoundsChange,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -270,6 +272,29 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapLoaded || !onBoundsChange) return;
+
+    const handleMoveEnd = () => {
+      const bounds = map.getBounds();
+      if (!bounds) return;
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      });
+    };
+
+    map.on("moveend", handleMoveEnd);
+    handleMoveEnd();
+
+    return () => {
+      map.off("moveend", handleMoveEnd);
+    };
+  }, [mapLoaded, onBoundsChange]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapLoaded) return;
     map.resize();
   }, [allowPickPoint, mapLoaded]);
@@ -294,23 +319,23 @@ export default function MapView({
         features:
           routedPoints.length > 0
             ? [
-                {
-                  type: "Feature",
-                  geometry: {
-                    type: "LineString",
-                    coordinates: routedPoints,
-                  },
-                  properties: {},
-                } as Feature<LineString>,
-                ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
-                  type: "Feature",
-                  geometry: {
-                    type: "Point",
-                    coordinates: coord,
-                  },
-                  properties: { order: idx + 1 },
-                })),
-              ]
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: routedPoints,
+                },
+                properties: {},
+              } as Feature<LineString>,
+              ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: coord,
+                },
+                properties: { order: idx + 1 },
+              })),
+            ]
             : [],
       };
 

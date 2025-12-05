@@ -282,6 +282,13 @@ export default function Home() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
   const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
   const userInitialCenterRef = useRef<[number, number] | null>(null);
+  const [mapBounds, setMapBounds] = useState<{
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  } | null>(null);
+
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
 
@@ -314,6 +321,13 @@ export default function Home() {
     setSelectedRoutePoints([]);
     setShowComments(false);
   }
+
+  const handleBoundsChange = useCallback(
+    (bounds: { north: number; south: number; east: number; west: number }) => {
+      setMapBounds(bounds);
+    },
+    []
+  );
 
   const routeCtrl = useRouteCard({
     modeDefault: "draw",
@@ -1239,6 +1253,7 @@ export default function Home() {
                 onPickPoint={handleMapClick}
                 highlightPoints={visiblePoints}
                 fitOnHighlight={!routeCardOpen}
+                onBoundsChange={handleBoundsChange}
               />
 
               <button
