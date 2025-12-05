@@ -32,6 +32,8 @@ type RouteItem = {
   theme?: string;
   visibility: boolean;
   is_owner?: boolean;
+  owner_id?: string | number;
+  user_id?: string | number;
   ownerName?: string;
   ownerUsername?: string;
   username?: string;
@@ -42,6 +44,9 @@ type RouteItem = {
   createdAt?: string;
   popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 
 type SelectedUser = {
@@ -360,27 +365,29 @@ export default function Home() {
         const data = await response.json();
 
         const formatted: RouteItem[] = data.map((route: any) => {
+          // Lógica de US32 para procesar puntos y calcular métricas si faltan
           const pointTuples = (route.points || []).map((p: any) => [
             p.longitude,
             p.latitude,
           ]);
+
           const distanceKm =
             route.distance_km ||
             route.distanceKm ||
             calculateRouteDistanceKm(pointTuples);
+
           const durationMinutes = normalizeDurationMinutes(
             route.duration_minutes ??
               route.durationMinutes ??
-              route.duration ??
-              route.durationMinutes,
+              route.duration,
             distanceKm
           );
 
           return {
             id: route.id,
             name: route.name,
-            description: route.description || "Sin descripci?n",
-            category: route.category || "sin categor?a",
+            description: route.description || "Sin descripción",
+            category: route.category || "sin categoría",
             points: pointTuples,
             distanceKm,
             durationMinutes,
@@ -389,6 +396,25 @@ export default function Home() {
             routeType: route.route_type || route.routeType || route.type,
             theme: route.theme || route.topic || route.themedCategory,
             visibility: route.visibility ?? false,
+            // Campos de Rating (Traídos de Develop)
+            rating:
+              route.rating ??
+              route.average_rating ??
+              route.averageRating ??
+              null,
+            rating_count:
+              typeof route.rating_count === "number"
+                ? route.rating_count
+                : typeof route.ratingCount === "number"
+                ? route.ratingCount
+                : null,
+            user_rating:
+              typeof route.user_rating === "number"
+                ? route.user_rating
+                : typeof route.userRating === "number"
+                ? route.userRating
+                : null,
+            // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
             user_id: route.user_id,
             city:
@@ -443,7 +469,6 @@ export default function Home() {
             username: route.username,
           };
         });
-
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
@@ -668,20 +693,36 @@ export default function Home() {
               onClose={handleCloseRouteCard}
             />
           ) : selectedRoute ? (
-              <RouteDetailsCard
-                routeId={selectedRoute.id}
-                name={selectedRoute.name}
-                description={selectedRoute.description}
-                category={selectedRoute.category as Category}
-                points={selectedRoute.points}
-                distanceKm={selectedRoute.distanceKm}
-                durationMinutes={selectedRoute.durationMinutes}
-                difficulty={selectedRoute.difficulty}
-                isPrivate={!selectedRoute.visibility}
-                isOwnRoute={selectedRoute.is_owner || false}
-                onClose={() => {
-                  setSelectedRoute(null);
-                  setSelectedRoutePoints([]);
+            <RouteDetailsCard
+              routeId={selectedRoute.id}
+              name={selectedRoute.name}
+              description={selectedRoute.description}
+              category={selectedRoute.category as Category}
+              points={selectedRoute.points}
+              distanceKm={selectedRoute.distanceKm}
+              durationMinutes={selectedRoute.durationMinutes}
+              difficulty={selectedRoute.difficulty}
+              isPrivate={!selectedRoute.visibility}
+              rating={selectedRoute.rating ?? null}
+              ratingCount={selectedRoute.rating_count ?? null}
+              isOwnRoute={selectedRoute.is_owner || false}
+              onRatingChange={({ average, count }) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+              }}
+              onClose={() => {
+                setSelectedRoute(null);
+                setSelectedRoutePoints([]);
                 setShowComments(false);
                 if (userInitialCenterRef.current) {
                   setMapCenter(userInitialCenterRef.current);
@@ -863,6 +904,8 @@ export default function Home() {
                           distanceKm={r.distanceKm ?? null}
                           durationMinutes={r.durationMinutes ?? null}
                           difficulty={r.difficulty ?? null}
+                          ratingAverage={r.rating ?? null}
+                          ratingCount={r.rating_count ?? null}
                           initialSaved={favoriteIds.has(String(r.id))}
                         />
                       </div>

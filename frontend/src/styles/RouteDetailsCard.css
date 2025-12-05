@@ -108,14 +108,115 @@
   font-weight: 600;
 }
 
+.route-details-card__rating-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 2px solid #dfe7ff;
+  background: linear-gradient(135deg, #f5f7ff, #eef3ff);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  width: 100%;
+}
+
+.route-details-card__rating-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.route-details-card__rating-label {
+  font-size: 1rem;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.route-details-card__rating-count {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.route-details-card__rating-number {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: #fff7ec;
+  color: var(--ink);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+}
+
+.route-details-card__rating-average {
+  font-size: 1.6rem;
+  font-weight: 900;
+}
+
+.route-details-card__rating-scale {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.route-details-card__rating-star-inline {
+  color: #f59e0b;
+  margin-left: 4px;
+  font-size: 0.95rem;
+  position: relative;
+  top: -1px;
+}
+
 .route-details-card__points-list {
   margin-top: 1rem;
   background: var(--surface-soft);
   padding: 1.1rem;
   border-radius: 14px;
   border: 2px solid var(--border);
-  max-height: 260px;
+  min-height: 300px;
+  max-height: 460px;
   overflow: auto;
+}
+
+.route-details-card__rating {
+  padding: 1.1rem 1.2rem;
+  border-radius: 16px;
+  border: 2px dashed #d9e2ff;
+  background: linear-gradient(135deg, #f9fbff, #f4f7ff);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+
+.route-details-card__rating-hint {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.route-details-card__rating-divider {
+  border-top: 1px dashed #e4e7ee;
+  width: 100%;
+}
+
+.route-details-card__rating-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.route-details-card__rating-title {
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.route-details-card__rating-value {
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .route-details-card__points-list h4 {

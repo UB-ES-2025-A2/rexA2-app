@@ -468,6 +468,189 @@ async def test_create_route_invalid_rating_returns_422(ac):
     res = await ac.post("/routes", json=payload)
     assert res.status_code == 422
 
+
+@pytest.mark.anyio
+async def test_get_route_includes_user_rating(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+    from backend.db.models import rating as rating_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "name": "Publica",
+            "owner_id": "otro",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    async def fake_get_user_rating(user_id: str, route_id: str):
+        assert user_id == "user123"
+        assert route_id == "R1"
+        return 4.0
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(rating_crud, "get_user_rating", fake_get_user_rating, raising=True)
+
+    res = await ac.get("/routes/R1")
+    assert res.status_code == 200
+    assert res.json()["user_rating"] == 4.0
+
+
+@pytest.mark.anyio
+async def test_rate_route_not_found(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return None
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.post("/routes/NOPE/rating", json={"rating": 4})
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Ruta no encontrada"
+
+
+@pytest.mark.anyio
+async def test_rate_route_owner_forbidden(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.post("/routes/R1/rating", json={"rating": 4})
+    assert res.status_code == 403
+    assert res.json()["detail"] == "No puedes valorar tu propia ruta"
+
+
+@pytest.mark.anyio
+async def test_rate_route_private_forbidden(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "otro",
+            "visibility": False,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.post("/routes/R2/rating", json={"rating": 4})
+    assert res.status_code == 403
+    assert res.json()["detail"] == "No autorizado o ruta inexistente"
+
+
+@pytest.mark.anyio
+async def test_rate_route_success(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+    from backend.db.models import rating as rating_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "ownerX",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    called = {}
+
+    async def fake_set_user_rating(user_id: str, route_id: str, rating: float):
+        called["user_id"] = user_id
+        called["route_id"] = route_id
+        called["rating"] = rating
+        return {"user_rating": rating, "average": 4.2, "count": 6}
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(rating_crud, "set_user_rating", fake_set_user_rating, raising=True)
+
+    res = await ac.post("/routes/R3/rating", json={"rating": 5})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["user_rating"] == 5
+    assert body["average"] == 4.2
+    assert body["count"] == 6
+    assert called == {"user_id": "user123", "route_id": "R3", "rating": 5}
+
+
+@pytest.mark.anyio
+async def test_check_route_ownership_true(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "user123",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.get("/routes/route-1/ownership")
+    assert res.status_code == 200
+    assert res.json() == {"is_owner": True}
+
+
+@pytest.mark.anyio
+async def test_check_route_ownership_false(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return {
+            "_id": route_id,
+            "owner_id": "other",
+            "visibility": True,
+            "points": [{"latitude": 1, "longitude": 1}] * 3,
+            "description": "d",
+            "category": "c",
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.get("/routes/route-2/ownership")
+    assert res.status_code == 200
+    assert res.json() == {"is_owner": False}
+
+
+@pytest.mark.anyio
+async def test_check_route_ownership_not_found(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        return None
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+
+    res = await ac.get("/routes/route-404/ownership")
+    assert res.status_code == 404
+    assert res.json()["detail"] == "Ruta no encontrada"
+
+
 @pytest.mark.anyio
 async def test_delete_route_calls_crud_with_correct_ids(ac, monkeypatch):
     """

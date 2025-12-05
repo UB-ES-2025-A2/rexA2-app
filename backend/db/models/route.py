@@ -35,6 +35,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "duration_minutes": duration_minutes,
         "difficulty": difficulty,
         "rating": route_data.get("rating"),
+        "rating_count": route_data.get("rating_count") or 0,
         "comments": [],
     }
 
