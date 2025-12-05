@@ -337,6 +337,23 @@ export default function Home() {
     onClose: handleCloseRouteCard,
   });
 
+  // Si venimos de Discover con una ruta a resaltar, abrir la ficha en el mapa
+  useEffect(() => {
+    const state = location.state as { highlightRouteId?: string } | null;
+    if (!state?.highlightRouteId || routes.length === 0) return;
+
+    const route = routes.find((r) => r.id === state.highlightRouteId);
+    if (route) {
+      setSelectedRoute(route);
+      setSelectedRoutePoints(route.points);
+      if (route.points.length > 0) {
+        setMapCenter(route.points[0]);
+        setMapZoom(GEO_ZOOM);
+      }
+    }
+    navigate(location.pathname, { replace: true });
+  }, [location.state, routes, navigate]);
+
   // Función para filtrar rutas según los filtros aplicados y categoría seleccionada
   const getFilteredRoutes = () => {
     let filtered = routes;

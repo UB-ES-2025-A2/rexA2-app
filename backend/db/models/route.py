@@ -142,6 +142,18 @@ def _discover_projection(doc: dict) -> dict:
     )
     country_code = doc.get("country_code")
     d["theme"] = doc.get("theme") or doc.get("category") or "otros"
+    def _project_points(pts: list) -> list[list[float]]:
+        out: list[list[float]] = []
+        for p in pts:
+            if isinstance(p, (list, tuple)) and len(p) >= 2:
+                out.append([float(p[0]), float(p[1])])
+            elif isinstance(p, dict):
+                lon = p.get("longitude", p.get("lng"))
+                lat = p.get("latitude", p.get("lat"))
+                if lon is None or lat is None:
+                    continue
+                out.append([float(lon), float(lat)])
+        return out
     return {
         "id": d.get("_id") or d.get("id"),
         "name": d.get("name"),
@@ -149,11 +161,14 @@ def _discover_projection(doc: dict) -> dict:
         "country_code": country_code,
         "country_name": country_name,
         "theme": d.get("theme"),
+        "category": d.get("category"),
         "distance_km": d.get("distance_km"),
         "duration_minutes": d.get("duration_minutes"),
         "rating": d.get("rating"),
         "rating_count": d.get("rating_count"),
+        "difficulty": d.get("difficulty"),
         "images": d.get("images") or [],
+        "points": _project_points(d.get("points") or []),
     }
 
 # ============ CREATE OPERATIONS ============

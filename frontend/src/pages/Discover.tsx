@@ -9,12 +9,15 @@ type DiscoverRoute = {
   country?: string | null;
   country_name?: string | null;
   country_code?: string | null;
+  category?: string | null;
   theme?: string | null;
   distance_km?: number | null;
   duration_minutes?: number | null;
   rating?: number | null;
   rating_count?: number | null;
+  difficulty?: string | null;
   images?: string[];
+  points?: Array<[number, number]> | Array<number[]>;
 };
 
 type CountryBlock = { country: string; routes: DiscoverRoute[] };
@@ -77,19 +80,117 @@ const normalizeTheme = (theme?: string | null) => {
 
 const normalizeCategory = normalizeTheme;
 
-const coverStyle = (route: DiscoverRoute) => {
-  const img = route.images?.[0];
-  if (img) {
-    return {
-      backgroundImage: `url(${img})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    };
-  }
-  return {
-    background:
-      THEME_GRADIENTS[normalizeTheme(route.theme)] || THEME_GRADIENTS.otros,
+const RouteMiniMap = ({
+  points,
+  className,
+}: {
+  points: Array<[number, number]>;
+  className?: string;
+}) => {
+  if (!points || points.length < 2)
+    return (
+      <div
+        className={["discover-card__cover map", className]
+          .filter(Boolean)
+          .join(" ")}
+        style={{ background: THEME_GRADIENTS.otros }}
+      />
+    );
+
+  const xs = points.map((p) => p[0]);
+  const ys = points.map((p) => p[1]);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const width = maxX - minX || 1;
+  const height = maxY - minY || 1;
+
+  const mapPoint = (p: [number, number]) => {
+    const x = ((p[0] - minX) / width) * 100;
+    const y = 100 - ((p[1] - minY) / height) * 100;
+    return [x, y];
   };
+
+  const mapped = points.map(mapPoint);
+  const path = mapped.map((p) => p.join(",")).join(" ");
+
+  return (
+    <div className={["discover-card__cover map", className].filter(Boolean).join(" ")}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="mapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e0f2fe" />
+            <stop offset="100%" stopColor="#d9f99d" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="100" height="100" rx="12" fill="url(#mapGrad)" />
+        <g opacity="0.25" stroke="#94a3b8" strokeWidth="0.5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <line key={`v${i}`} x1={(i + 1) * 20} y1="0" x2={(i + 1) * 20} y2="100" />
+          ))}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <line key={`h${i}`} x1="0" y1={(i + 1) * 20} x2="100" y2={(i + 1) * 20} />
+          ))}
+        </g>
+        <polyline
+          points={path}
+          fill="none"
+          stroke="#6366f1"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          filter="url(#shadow)"
+        />
+        {mapped.map((p, idx) => (
+          <circle
+            key={idx}
+            cx={p[0]}
+            cy={p[1]}
+            r={2.8}
+            fill={idx === 0 ? "#22c55e" : "#10b981"}
+            stroke="#0f172a"
+            strokeWidth="0.6"
+          />
+        ))}
+        <defs>
+          <filter id="shadow" x="-10" y="-10" width="120" height="120">
+            <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#312e81" floodOpacity="0.4" />
+          </filter>
+        </defs>
+      </svg>
+    </div>
+  );
+};
+
+const formatCategoryLabel = (category?: string | null, fallback?: string | null) => {
+  const source = category || fallback || "";
+  if (!source) return "Sin categoría";
+  const normalized = source.toLowerCase();
+  const labels: Record<string, string> = {
+    gastronomia: "Gastronomía",
+    "exploracion-urbana": "Exploración urbana",
+    naturaleza: "Naturaleza",
+    aventura: "Aventura",
+    cultura: "Cultura",
+    deporte: "Deporte",
+    historia: "Historia",
+    relajacion: "Relajación",
+    entretenimiento: "Entretenimiento",
+    otros: "Otros",
+  };
+  return labels[normalized] ?? source.charAt(0).toUpperCase() + source.slice(1);
+};
+
+const formatDifficulty = (difficulty?: string | null) => {
+  if (!difficulty) return null;
+  const normalized = difficulty.toLowerCase();
+  const labels: Record<string, string> = {
+    easy: "Fácil",
+    medium: "Media",
+    hard: "Alta",
+  };
+  return labels[normalized] ?? difficulty;
 };
 
 export default function Discover() {
@@ -120,6 +221,7 @@ export default function Discover() {
   const [durationFilter, setDurationFilter] = useState<
     "any" | "lt1" | "1to3" | "3to6" | "gt6"
   >("any");
+  const [sortBy] = useState<"relevance" | "rating" | "duration">("relevance");
 
   useEffect(() => {
     document.documentElement.classList.add("discover-html");
@@ -181,12 +283,6 @@ export default function Discover() {
     return () => controller.abort();
   }, [country, theme]);
 
-  const allRoutes = useMemo(() => {
-    const fromCountries = countryBlocks.flatMap((block) => block.routes || []);
-    if (fromCountries.length > 0) return fromCountries;
-    return themeBlocks.flatMap((block) => block.routes || []);
-  }, [countryBlocks, themeBlocks]);
-
   const countryOptions = useMemo(() => {
     const fromBlocks = countryBlocks.map(
       (c) => c.country || (c as any).country_name || "Desconocido"
@@ -207,6 +303,48 @@ export default function Discover() {
   const themeOptions = useMemo(() => {
     return ["todos", ...CATEGORY_ORDER];
   }, []);
+
+  const filteredRoutes = useMemo(() => {
+    const base = countryBlocks.length
+      ? countryBlocks.flatMap((block) => block.routes || [])
+      : themeBlocks.flatMap((block) => block.routes || []);
+
+    const filtered = base.filter((route) => {
+      const routeCountry =
+        route.country_name || route.country || route.country_code || "Desconocido";
+      const routeTheme = normalizeTheme(route.theme);
+      if (country !== "Todos" && routeCountry !== country) return false;
+      if (theme !== "todos" && routeTheme !== theme) return false;
+      if (ratingFilter > 0 && (route.rating ?? 0) < ratingFilter) return false;
+      const dur = route.duration_minutes ?? null;
+      if (durationFilter !== "any" && dur != null) {
+        if (durationFilter === "lt1" && dur >= 60) return false;
+        if (durationFilter === "1to3" && (dur < 60 || dur > 180)) return false;
+        if (durationFilter === "3to6" && (dur <= 180 || dur > 360)) return false;
+        if (durationFilter === "gt6" && dur <= 360) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      if (sortBy === "rating") {
+        return (b.rating ?? 0) - (a.rating ?? 0);
+      }
+      if (sortBy === "duration") {
+        const da = a.duration_minutes ?? Number.POSITIVE_INFINITY;
+        const db = b.duration_minutes ?? Number.POSITIVE_INFINITY;
+        return da - db;
+      }
+      // relevance fallback: rating, luego duracion
+      const rDiff = (b.rating ?? 0) - (a.rating ?? 0);
+      if (rDiff !== 0) return rDiff;
+      const da = a.duration_minutes ?? Number.POSITIVE_INFINITY;
+      const db = b.duration_minutes ?? Number.POSITIVE_INFINITY;
+      return da - db;
+    });
+
+    return sorted;
+  }, [countryBlocks, themeBlocks, country, theme, ratingFilter, durationFilter, sortBy]);
 
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
@@ -247,6 +385,83 @@ export default function Discover() {
       }).filter((option) => option.routes.length > 0),
     [themeBlocks, country, theme]
   );
+
+  const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = "default") => {
+    const points = (route.points as Array<[number, number]>) || [];
+    const difficultyLabel = formatDifficulty(route.difficulty);
+    const ratingDisplay =
+      route.rating != null && Number.isFinite(route.rating)
+        ? (Math.round(route.rating * 10) / 10).toFixed(1)
+        : null;
+
+    return (
+      <div className={`route-preview-card discover-route-card ${variant}`}>
+        <div className="route-preview-content">
+          <div className="route-preview-thumb">
+            {points.length > 0 ? (
+              <RouteMiniMap points={points} className="route-preview-thumb__map" />
+            ) : (
+              <div className="route-preview-thumb__placeholder" aria-label="Ruta sin imagen">
+                <span>🗺️</span>
+              </div>
+            )}
+          </div>
+
+          <div className="route-preview-texts">
+            <h3 className="route-preview-title">{route.name}</h3>
+            <p className="route-preview-category">
+              Categoría: {formatCategoryLabel(route.category, route.theme)}
+            </p>
+            <p className="route-preview-points">
+              {(route.country_name || route.country || route.country_code || "Origen desconocido") +
+                " · " +
+                `${points.length} punto${points.length === 1 ? "" : "s"}`}
+            </p>
+
+            <div className="route-preview-meta">
+              {typeof route.distance_km === "number" ? (
+                <span className="route-preview-pill" title="Distancia aproximada">
+                  <span className="pill-dot distance" />
+                  {formatDistance(route.distance_km)}
+                </span>
+              ) : null}
+              {route.duration_minutes != null ? (
+                <span className="route-preview-pill" title="Duración aproximada">
+                  <span className="pill-dot duration" />
+                  {formatDuration(route.duration_minutes)}
+                </span>
+              ) : null}
+              {difficultyLabel ? (
+                <span className="route-preview-pill" title="Dificultad estimada">
+                  <span className="pill-dot difficulty" />
+                  {difficultyLabel}
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="route-preview-actions">
+            {ratingDisplay ? (
+              <div className="route-preview-rating-badge">
+                <span className="route-preview-rating__star">★</span>
+                <span className="route-preview-rating__value">{ratingDisplay}</span>
+              </div>
+            ) : null}
+            <button
+              className="ghost-btn small"
+              onClick={() =>
+                navigate("/mapa", {
+                  state: { fromDiscover: true, highlightRouteId: route.id },
+                })
+              }
+            >
+              Ver en mapa
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="discover">
@@ -474,6 +689,43 @@ export default function Discover() {
           </div>
         </section>
 
+        <section className="featured">
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Destacadas</p>
+              <h2>Rutas listas para abrir en el mapa</h2>
+              <p className="muted">
+                Usa los filtros para acotar y abre directamente la ficha con mapa.
+              </p>
+            </div>
+            <span className="pill muted">
+              {loading ? "Cargando..." : `${filteredRoutes.length} rutas`}
+            </span>
+          </div>
+
+          {loading ? (
+            <div className="empty">
+              <p className="muted">Cargando rutas...</p>
+            </div>
+          ) : error ? (
+            <div className="empty">
+              <p className="muted">{error}</p>
+            </div>
+          ) : filteredRoutes.length === 0 ? (
+            <div className="empty">
+              <p className="muted">
+                No hay rutas para esta combinación. Cambia los filtros o explora otro país.
+              </p>
+            </div>
+          ) : (
+            <div className="discover-grid">
+              {filteredRoutes.slice(0, 12).map((route) => (
+                <div key={route.id}>{renderRouteCard(route)}</div>
+              ))}
+            </div>
+          )}
+        </section>
+
         <section className="country-sections">
           <div className="section-head">
             <div>
@@ -521,43 +773,7 @@ export default function Discover() {
                   ) : (
                     <div className="country-block__grid">
                       {group.routes.map((route) => (
-                        <button
-                          key={route.id}
-                          className="country-tile"
-                          onClick={() =>
-                            navigate(`/routes/${route.id}`, {
-                              state: { fallbackRoute: route },
-                            })
-                          }
-                        >
-                          <div
-                            className="country-tile__cover"
-                            style={coverStyle(route)}
-                          ></div>
-                          <div className="country-tile__body">
-                            <div>
-                              <strong>{route.name}</strong>
-                              <p className="muted">
-                                {route.country_name ||
-                                  route.country ||
-                                  route.country_code ||
-                                  "Ruta destacada"}
-                              </p>
-                            </div>
-                            <div className="country-tile__meta">
-                              <span>{formatDistance(route.distance_km)}</span>
-                              <span>
-                                {formatDuration(route.duration_minutes)}
-                              </span>
-                              <span>
-                                ⭐{" "}
-                                {route.rating != null
-                                  ? route.rating.toFixed(1)
-                                  : "N/D"}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
+                        <div key={route.id}>{renderRouteCard(route)}</div>
                       ))}
                     </div>
                   )}
@@ -605,35 +821,7 @@ export default function Discover() {
                   ) : (
                     <div className="collection-card__routes">
                       {collection.routes.map((route) => (
-                        <button
-                          key={route.id}
-                          className="collection-card__route"
-                          onClick={() =>
-                            navigate(`/routes/${route.id}`, {
-                              state: { fallbackRoute: route },
-                            })
-                          }
-                        >
-                          <div
-                            className="collection-card__thumb"
-                            style={coverStyle(route)}
-                          ></div>
-                          <div className="collection-card__copy">
-                            <strong>{route.name}</strong>
-                            <span className="muted">
-                              {route.country_name ||
-                                route.country ||
-                                route.country_code ||
-                                "Ruta destacada"}
-                            </span>
-                          </div>
-                          <span className="pill mini">
-                            ⭐{" "}
-                            {route.rating != null
-                              ? route.rating.toFixed(1)
-                              : "N/D"}
-                          </span>
-                        </button>
+                        <div key={route.id}>{renderRouteCard(route, "compact")}</div>
                       ))}
                     </div>
                   )}

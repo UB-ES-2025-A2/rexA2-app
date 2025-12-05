@@ -210,12 +210,15 @@ class DiscoverRoute(BaseModel):
     country: str | None = None
     country_code: str | None = None
     country_name: str | None = None
+    category: str | None = None
     theme: str | None = None
     distance_km: float | None = None
     duration_minutes: int | None = None
     rating: float | None = None
     rating_count: int | None = None
+    difficulty: str | None = None
     images: List[str] = Field(default_factory=list)
+    points: List[list[float]] = Field(default_factory=list)
 
 
 class CountryDiscoverBlock(BaseModel):
