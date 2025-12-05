@@ -50,10 +50,23 @@ class RouteBase(BaseModel):
     visibility: bool = False        # Visibilidad de la ruta públicamente (por defecto, no)
     description: str # | None = None  # Descripción de la ruta (opcional)
     category: str # | None = None     # Categoría opcional de la ruta
+    images: List[str] = Field(        # URLs opcionales de imágenes asociadas a la ruta
+        default_factory=list,
+        description="Lista opcional de URLs de imágenes",
+    )
+    distance_km: float | None = Field(
+        default=None,
+        ge=0,
+        description="Distancia aproximada en kilómetros (calculada automáticamente)",
+    )
     duration_minutes: int | None = Field(   #Duración estimada en minutos, aun no implementado en el front
         default=None,
         ge=0,                           # >= 0
         description="Duración estimada en minutos (>= 0)",
+    )
+    difficulty: str | None = Field(
+        default=None,
+        description="Dificultad estimada (easy, medium, hard) calculada automáticamente",
     )
     rating: float | None = Field(          #Nota media de la ruta, aun no implemnentado en el front
         default=None,
@@ -93,6 +106,31 @@ class RouteBase(BaseModel):
         if not v.strip():
             raise ValueError("No se ha seleccionado ninguna categoría")
         return v
+
+    @field_validator("images", mode="before")
+    @classmethod
+    def _images_valid(cls, v: list[str] | None):
+        """
+        Limpia y valida la lista de imágenes opcionales.
+        - Si viene None, se normaliza a [].
+        - Cada elemento debe ser un string no vacío (URL ya subida).
+        - Se limita la cantidad máxima para evitar payloads enormes.
+        """
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            raise ValueError("Las imágenes deben enviarse como una lista de URLs")
+        cleaned: list[str] = []
+        for item in v:
+            if not isinstance(item, str):
+                raise ValueError("Cada imagen debe ser una URL en formato texto")
+            item = item.strip()
+            if not item:
+                raise ValueError("Las imágenes no pueden estar vacías")
+            cleaned.append(item)
+        if len(cleaned) > 10:
+            raise ValueError("Máximo 10 imágenes por ruta")
+        return cleaned
                 
 # Payload para crer una ruta: usa exactamente los campos de RouteBase
 class RouteCreate(RouteBase):
@@ -108,3 +146,44 @@ class RoutePublic(RouteBase):
     created_at: datetime            # Fecha y hora de la creación
     owner_username: str | None = None
     comments: List[CommentThread] = Field(default_factory=list)
+    rating_count: int | None = None
+    user_rating: float | None = None
+    images: List[str] = Field(default_factory=list)
+
+
+class RouteUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    visibility: bool | None = None
+    duration_minutes: int | None = Field(default=None, ge=0)
+    difficulty: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir nombre a la ruta")
+        if len(v) > 30:
+            raise ValueError("El nombre de la ruta debe tener menos de 30 caracteres")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def _desc_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir una descripción a la ruta")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _cat_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("No se ha seleccionado ninguna categoría")
+        return v

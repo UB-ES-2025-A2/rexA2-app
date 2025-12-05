@@ -7,15 +7,20 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
+  images: { id: string; url: string; name: string; size?: number }[];
+  difficulty: "" | "easy" | "medium" | "hard";
+  categoryOptions?: Category[];
 
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
   drawPoints: Array<[number, number]>;
   selectedCoord: [number, number] | null;
+  nameTooLong: boolean;
 
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
+  onChangeDifficulty: (v: "" | "easy" | "medium" | "hard") => void;
   onChangeMode: (m: Mode) => void;
   onAddSearchPoint: () => void;
   onClearSearchPoints: () => void;
@@ -23,6 +28,8 @@ type Props = {
   onResetDrawPoints?: () => void;
   onSave: () => void | Promise<void>;
   onChangeDescription: (v: string) => void;
+  onSelectImages: (files: FileList | null) => void | Promise<void>;
+  onRemoveImage: (id: string) => void;
 };
 
 const RouteCardView: React.FC<Props> = ({
@@ -30,15 +37,20 @@ const RouteCardView: React.FC<Props> = ({
   name,
   isPrivate,
   category,
+  images,
+  difficulty,
+  categoryOptions = [],
   geocoderRef,
   searchPoints,
   drawPoints,
   selectedCoord,
+  nameTooLong, // reservado para futuras ayudas visuales
   description,
 
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
+  onChangeDifficulty,
   onChangeMode,
   onAddSearchPoint,
   onClearSearchPoints,
@@ -46,7 +58,21 @@ const RouteCardView: React.FC<Props> = ({
   onResetDrawPoints,
   onSave,
   onChangeDescription,
+  onSelectImages,
+  onRemoveImage,
 }) => {
+  const formatCategory = (cat: string) => {
+    if (!cat) return "";
+    const labels: Record<string, string> = {
+      urban: "Urbana",
+      gastronomia: "Gastronomía",
+    };
+    if (labels[cat]) return labels[cat];
+    return cat
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <div className="route-card-panel">
       <div className="route-card__header">
@@ -76,8 +102,13 @@ const RouteCardView: React.FC<Props> = ({
                 type="text"
                 value={name}
                 onChange={(e) => onChangeName(e.target.value)}
-                placeholder="Ej: Ruta al trabajo"
+                placeholder="Ej: Ruta gastronómica"
               />
+              {nameTooLong && (
+                <p className="route-card__helper" style={{ color: "#dc2626" }}>
+                  Máximo 30 caracteres.
+                </p>
+              )}
             </div>
 
             <div className="input-group">
@@ -90,9 +121,34 @@ const RouteCardView: React.FC<Props> = ({
                 <option value="" disabled>
                   Selecciona una categoría…
                 </option>
-                <option value="entretenimiento">Entretenimiento</option>
-                <option value="trabajo">Trabajo</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {formatCategory(cat)}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="difficulty">Dificultad</label>
+              <select
+                id="difficulty"
+                value={difficulty}
+                onChange={(e) =>
+                  onChangeDifficulty(e.target.value as "" | "easy" | "medium" | "hard")
+                }
+              >
+                <option value="" disabled>
+                  Selecciona dificultad…
+                </option>
+                <option value="easy">Fácil</option>
+                <option value="medium">Media</option>
+                <option value="hard">Alta</option>
+              </select>
+              <p className="route-card__helper">
+                Puedes ajustar la dificultad manualmente; la distancia y duración se calculan
+                automáticamente al guardar.
+              </p>
             </div>
 
             <div className="input-group">
@@ -220,6 +276,54 @@ const RouteCardView: React.FC<Props> = ({
               </div>
             </>
           )}
+        </div>
+
+        <div className="route-card__section">
+          <div className="route-card__section-head">
+            <span className="route-card__section-title">Imágenes (opcional)</span>
+            <span className="route-card__helper">
+              Añade hasta 10 imágenes JPG/PNG (máx. 2 MB). No es obligatorio para guardar la ruta.
+            </span>
+          </div>
+          <div className="route-card__images">
+            <label className="btn" htmlFor="route-images-input">
+              Seleccionar imágenes
+            </label>
+            <input
+              id="route-images-input"
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                onSelectImages(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <p className="route-card__helper">Puedes omitirlas y guardar la ruta igual.</p>
+            {images.length === 0 ? (
+              <p className="muted">No has añadido imágenes.</p>
+            ) : (
+              <div className="route-card__image-grid">
+                {images.map((img) => (
+                  <div key={img.id} className="route-card__image-item">
+                    <button
+                      type="button"
+                      className="route-card__image-remove"
+                      onClick={() => onRemoveImage(img.id)}
+                      title="Eliminar imagen"
+                    >
+                      ✕
+                    </button>
+                    <img src={img.url} alt={img.name} loading="lazy" />
+                    <div className="route-card__image-meta">
+                      <span title={img.name}>{img.name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="route-card__section">

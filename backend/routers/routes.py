@@ -4,15 +4,28 @@ from backend.db.models import user as user_crud
 from backend.db.schemas.route import (
     RouteCreate,
     RoutePublic,
+    RouteUpdate,
     CommentCreate,
     CommentThread,
     CommentCreated,
 )
 from backend.core.security import get_current_user, get_current_user_optional
+from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
+from backend.core.security import get_current_user
+from backend.db.models import rating as rating_crud
 from pymongo.errors import DuplicateKeyError
 from bson.errors import InvalidId
 
 router = APIRouter(prefix="/routes", tags=["routes"])
+
+def _with_images(route: dict | None) -> dict | None:
+    """
+    Normaliza el campo opcional de imágenes para no propagar None a los response_model.
+    """
+    if route is None:
+        return None
+    route["images"] = route.get("images") or []
+    return route
 
 
 async def _ensure_route_access(route_id: str, current_user: dict | None) -> dict:
@@ -25,6 +38,7 @@ async def _ensure_route_access(route_id: str, current_user: dict | None) -> dict
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    route = _with_images(route)
 
     is_public = bool(route.get("visibility"))
     # Si no hay usuario, is_owner es False
@@ -58,6 +72,7 @@ async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depen
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Este nombre de ruta ya existe")
     
+    route = _with_images(route)
     # Normalización _id para el response model (alias "_id" -> "id")
     route["_id"] = str(route["_id"])
     return route
@@ -84,6 +99,7 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
             owner_usernames[oid] = None
 
     for route in routes:
+        route = _with_images(route)
         route["_id"] = str(route["_id"])
         if route.get("owner_id"):
             route["owner_username"] = owner_usernames.get(str(route["owner_id"]))
@@ -123,7 +139,7 @@ async def get_route(route_id: str, current_user: dict | None = Depends(get_curre
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
-    route = await route_crud.get_route_by_id(route_id)
+    route = _with_images(await route_crud.get_route_by_id(route_id))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     
@@ -137,7 +153,120 @@ async def get_route(route_id: str, current_user: dict | None = Depends(get_curre
     
     route["_id"] = str(route["_id"])
     route["is_owner"] = is_owner  # ← NUEVO
+    try:
+        user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
+    except Exception:
+        user_rating = None
+    if user_rating is not None:
+        route["user_rating"] = user_rating
     return route
+
+@router.put("/{route_id}", response_model=RoutePublic)
+async def update_route_endpoint(
+    route_id: str,
+    payload: RouteCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza una ruta propia. Mantiene compatibilidad con clients que no envían imágenes (se normalizan a []).
+    """
+    try:
+        existing = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if str(existing.get("owner_id")) != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    # Evita duplicar nombres dentro del mismo owner (salvo que sea la misma ruta)
+    duplicate = await route_crud.get_route_by_name(current_user["_id"], payload.name)
+    if duplicate and str(duplicate.get("_id")) != str(route_id):
+        raise HTTPException(status_code=409, detail="Este nombre de ruta ya existe")
+
+    updated = await route_crud.update_route(route_id, current_user["_id"], payload.model_dump())
+    if not updated:
+        # No coincide el owner o no existe
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    updated = _with_images(updated)
+    updated["_id"] = str(updated["_id"])
+    return updated
+
+@router.get("/{route_id}/ownership")
+async def check_route_ownership(
+    route_id: str, current_user: dict = Depends(get_current_user)
+) -> dict:
+    """
+    Devuelve si la ruta pertenece al usuario autenticado.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_owner = str(route.get("owner_id")) == str(current_user.get("_id"))
+    return {"is_owner": is_owner}
+
+@router.post(
+    "/{route_id}/rating",
+    response_model=RatingResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def rate_route(
+    route_id: str,
+    payload: RatingPayload,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Guarda o actualiza la valoración de una ruta (1-5) para el usuario autenticado.
+    - No permite valorar rutas privadas de otros usuarios.
+    - No permite que el autor valore su propia ruta.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    is_owner = str(route.get("owner_id")) == str(current_user["_id"])
+    if is_owner:
+        raise HTTPException(status_code=403, detail="No puedes valorar tu propia ruta")
+
+    if not route.get("visibility", False):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    result = await rating_crud.set_user_rating(
+        str(current_user["_id"]), route_id, payload.rating
+    )
+    return result
+
+
+@router.get(
+    "/{route_id}/rating",
+    response_model=RatingStatsResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def get_route_rating_stats(
+    route_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Devuelve la media (redondeada a 1 decimal) y el total de valoraciones de una ruta.
+    Requiere que la ruta sea pública o pertenezca al usuario autenticado.
+    """
+    await _ensure_route_access(route_id, current_user)
+    stats = await rating_crud.get_route_rating_stats(route_id)
+    avg = stats.get("average")
+    stats["average"] = round(float(avg), 1) if avg is not None else None
+    return stats
 
 @router.get("/by-name/{name}", response_model=RoutePublic)
 async def get_public_route_by_name(name: str, current_user: dict = Depends(get_current_user)):
@@ -146,11 +275,40 @@ async def get_public_route_by_name(name: str, current_user: dict = Depends(get_c
     - 200 si existe (pública)
     - 404 si no existe o es privada
     """
-    route = await route_crud.get_public_route_by_name(name)
+    route = _with_images(await route_crud.get_public_route_by_name(name))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     route["_id"] = str(route["_id"])
     return route
+
+
+@router.put("/{route_id}", response_model=RoutePublic)
+async def update_route(
+    route_id: str,
+    payload: RouteUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza una ruta si pertenece al usuario autenticado.
+    """
+    try:
+        route = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not route:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if str(route.get("owner_id")) != str(current_user.get("_id")):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    updated = await route_crud.update_route(route_id, current_user["_id"], payload.model_dump(exclude_unset=True))
+    if not updated:
+        raise HTTPException(status_code=400, detail="No se pudo actualizar la ruta")
+
+    updated["_id"] = str(updated["_id"])
+    updated["is_owner"] = True
+    return updated
 
 
 @router.get(

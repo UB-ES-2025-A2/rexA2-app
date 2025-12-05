@@ -5,6 +5,7 @@ import MapView from "../components/MapView";
 import RouteCard from "../components/RouteCreateCard/RouteCard";
 import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
+import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
@@ -14,7 +15,7 @@ import CommentsModal from "../components/CommentsModal";
 import RouteSearchBar from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
@@ -25,8 +26,14 @@ type RouteItem = {
   description: string;
   category: string;
   points: Array<[number, number]>;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string;
+  theme?: string;
   visibility: boolean;
   is_owner?: boolean;
+  owner_id?: string | number;
+  user_id?: string | number;
   ownerName?: string;
   ownerUsername?: string;
   username?: string;
@@ -37,6 +44,12 @@ type RouteItem = {
   createdAt?: string;
   popularity?: number | null;
   user?: { id?: string | number; username?: string; name?: string; email?: string };
+  difficulty?: string;
+  distanceKm?: number;
+  durationMinutes?: number;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 
 type SelectedUser = {
@@ -50,6 +63,10 @@ type SelectedUser = {
 type AppliedFilters = {
   category: string;
   pointsFilter: string;
+  distance: DistanceFilter;
+  duration: DurationFilter;
+  difficulty: DifficultyFilter;
+  theme: ThemeFilter;
 };
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
@@ -57,6 +74,206 @@ const API = import.meta.env.VITE_API_URL || window.location.origin;
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
+
+const formatRouteFromApi = (route: any): RouteItem => ({
+  id: route.id,
+  name: route.name,
+  description: route.description || "Sin descripción",
+  category: route.category || "sin categoría",
+  points: (route.points || []).map((p: any) => [
+    p.longitude ?? p.lng ?? p[0],
+    p.latitude ?? p.lat ?? p[1],
+  ]),
+  visibility: route.visibility ?? false,
+  is_owner: route.is_owner ?? route.isOwner ?? false,
+  ownerName:
+    route.owner_name ||
+    route.ownerName ||
+    route.user?.name ||
+    route.username ||
+    "",
+  ownerUsername:
+    route.owner_username ||
+    route.ownerUsername ||
+    route.user?.username ||
+    route.username ||
+    "",
+  username: route.username,
+  email: route.user?.email || route.email,
+  ownerId:
+    route.owner_id ||
+    route.user_id ||
+    route.user?.id ||
+    route.ownerId ||
+    route.userId ||
+    null,
+  userId: route.user_id || route.userId || route.user?.id || null,
+  city:
+    route.city ||
+    route.city_name ||
+    route.cityName ||
+    route.location?.city ||
+    "",
+  createdAt: route.created_at || route.createdAt || route.creation_date,
+  popularity:
+    route.popularity ??
+    route.relevance ??
+    route.popularity_score ??
+    route.popularityScore ??
+    null,
+  user: route.user
+    ? {
+      id: route.user._id || route.user.id,
+      username: route.user.username,
+      name: route.user.name,
+      email: route.user.email,
+    }
+    : route.username || route.ownerName || route.ownerUsername
+      ? {
+        id: route.user_id || route.owner_id,
+        username: route.username,
+        name: route.ownerName,
+        email: route.email,
+      }
+      : undefined,
+  difficulty: route.difficulty,
+  distanceKm: route.distance_km ?? route.distanceKm,
+  durationMinutes: route.duration_minutes ?? route.durationMinutes,
+});
+type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+type ThemeFilter =
+  | "all"
+  | "nature"
+  | "urban"
+  | "cultural"
+  | "gastronomia"
+  | "exploracion-urbana"
+  | "aventura"
+  | "deporte"
+  | "historia"
+  | "entretenimiento"
+  | "otros";
+
+const DEFAULT_FILTERS: AppliedFilters = {
+  category: "all",
+  pointsFilter: "all",
+  distance: "all",
+  duration: "all",
+  difficulty: "all",
+  theme: "all",
+};
+
+const DISTANCE_LABELS: Record<DistanceFilter, string> = {
+  all: "Todas las distancias",
+  lt5: "<5 km",
+  "5to10": "5–10 km",
+  "10to20": "10–20 km",
+  gt20: ">20 km",
+};
+
+const DURATION_LABELS: Record<DurationFilter, string> = {
+  all: "Todas las duraciones",
+  lt1: "<1h",
+  "1to3": "1–3h",
+  "3to6": "3–6h",
+  gt6: ">6h",
+};
+
+const POINTS_LABELS: Record<string, string> = {
+  all: "Todos los puntos",
+  few: "1-5 puntos",
+  medium: "6-15 puntos",
+  many: "+15 puntos",
+};
+
+const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
+  all: "Todas las dificultades",
+  easy: "Fácil",
+  medium: "Media",
+  hard: "Alta",
+};
+
+const CATEGORY_OPTIONS = [
+  "all",
+  "gastronomia",
+  "naturaleza",
+  "aventura",
+  "cultura",
+  "deporte",
+  "historia",
+  "urban",
+  "entretenimiento",
+  "otros",
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  all: "Todas",
+  gastronomia: "Gastronomía",
+  naturaleza: "Naturaleza",
+  aventura: "Aventura",
+  cultura: "Cultura",
+  deporte: "Deporte",
+  historia: "Historia",
+  urban: "Urbana",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
+};
+
+const THEME_LABELS: Record<ThemeFilter, string> = {
+  all: "Todas las temáticas",
+  nature: "Naturaleza",
+  urban: "Urbana",
+  cultural: "Cultural",
+  gastronomia: "Gastronomía",
+  "exploracion-urbana": "Exploración urbana",
+  aventura: "Aventura",
+  deporte: "Deporte",
+  historia: "Historia",
+  entretenimiento: "Entretenimiento",
+  otros: "Otros",
+};
+
+const AVERAGE_WALKING_SPEED_KMH = 4; // Aproximación para estimar duración cuando no viene del backend
+
+function toRadians(value: number) {
+  return (value * Math.PI) / 180;
+}
+
+function calculateSegmentDistanceKm(a: [number, number], b: [number, number]) {
+  const [lng1, lat1] = a;
+  const [lng2, lat2] = b;
+  const dLat = toRadians(lat2 - lat1);
+  const dLon = toRadians(lng2 - lng1);
+  const rLat1 = toRadians(lat1);
+  const rLat2 = toRadians(lat2);
+
+  const haversine =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(rLat1) * Math.cos(rLat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+  const earthRadiusKm = 6371;
+  return earthRadiusKm * c;
+}
+
+function calculateRouteDistanceKm(points: Array<[number, number]>): number | null {
+  if (!points || points.length < 2) return null;
+  let total = 0;
+  for (let i = 1; i < points.length; i++) {
+    total += calculateSegmentDistanceKm(points[i - 1], points[i]);
+  }
+  return Number.isFinite(total) ? Number(total.toFixed(2)) : null;
+}
+
+function normalizeDurationMinutes(
+  rawDuration: number | null | undefined,
+  distanceKm: number | null | undefined
+): number | null {
+  if (rawDuration != null) return rawDuration;
+  if (!distanceKm) return null;
+  return Math.round((distanceKm / AVERAGE_WALKING_SPEED_KMH) * 60);
+}
 
 export default function Home() {
   const { user, token, logout } = useAuth();
@@ -76,6 +293,7 @@ export default function Home() {
   const [routesError, setRoutesError] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [editingRoute, setEditingRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
 
   const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
@@ -96,8 +314,7 @@ export default function Home() {
 
   // Estados para filtros aplicados
   const [appliedFilters, setAppliedFilters] = useState<AppliedFilters>({
-    category: "all",
-    pointsFilter: "all",
+    ...DEFAULT_FILTERS,
   });
 
   const openAuth = (m: "login" | "signup" = "login") => {
@@ -142,6 +359,90 @@ export default function Home() {
         if (appliedFilters.pointsFilter === "many") return pointCount > 15;
         return true;
       });
+    }
+
+    if (appliedFilters.distance !== "all") {
+      filtered = filtered.filter((r) => {
+        const d = r.distanceKm;
+        if (d == null) return false;
+        if (appliedFilters.distance === "lt5") return d < 5;
+        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
+        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
+        if (appliedFilters.distance === "gt20") return d > 20;
+        return true;
+      });
+    }
+
+    if (appliedFilters.duration !== "all") {
+      filtered = filtered.filter((r) => {
+        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
+        if (minutes == null) return false;
+
+        if (appliedFilters.duration === "lt1") return minutes < 60;
+        if (appliedFilters.duration === "1to3")
+          return minutes >= 60 && minutes < 180;
+        if (appliedFilters.duration === "3to6")
+          return minutes >= 180 && minutes <= 360;
+        if (appliedFilters.duration === "gt6") return minutes > 360;
+        return true;
+      });
+    }
+
+    if (appliedFilters.difficulty !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.difficulty &&
+          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.theme !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.distance !== "all") {
+      filtered = filtered.filter((r) => {
+        const d = r.distanceKm;
+        if (d == null) return false;
+        if (appliedFilters.distance === "lt5") return d < 5;
+        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
+        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
+        if (appliedFilters.distance === "gt20") return d > 20;
+        return true;
+      });
+    }
+
+    if (appliedFilters.duration !== "all") {
+      filtered = filtered.filter((r) => {
+        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
+        if (minutes == null) return false;
+
+        if (appliedFilters.duration === "lt1") return minutes < 60;
+        if (appliedFilters.duration === "1to3")
+          return minutes >= 60 && minutes < 180;
+        if (appliedFilters.duration === "3to6")
+          return minutes >= 180 && minutes <= 360;
+        if (appliedFilters.duration === "gt6") return minutes > 360;
+        return true;
+      });
+    }
+
+    if (appliedFilters.difficulty !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.difficulty &&
+          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
+      );
+    }
+
+    if (appliedFilters.theme !== "all") {
+      filtered = filtered.filter(
+        (r) =>
+          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
+      );
     }
 
     if (normalizedSearch) {
@@ -270,67 +571,113 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
         const data = await response.json();
 
-        const formatted: RouteItem[] = data.map((route: any) => ({
-          id: route.id,
-          name: route.name,
-          description: route.description || "Sin descripci?n",
-          category: route.category || "sin categor?a",
-          points: route.points.map((p: any) => [p.longitude, p.latitude]),
-          visibility: route.visibility ?? false,
-          owner_id: route.owner_id,
-          user_id: route.user_id,
-          city:
-            route.city ||
-            route.city_name ||
-            route.cityName ||
-            route.location?.city ||
-            "",
-          createdAt: route.created_at || route.createdAt || route.creation_date,
-          popularity:
-            route.popularity ??
-            route.relevance ??
-            route.popularity_score ??
-            route.popularityScore ??
-            null,
-          ownerName:
-            route.owner_name ||
-            route.ownerName ||
-            route.user?.name ||
-            route.username ||
-            "",
-          ownerUsername:
-            route.owner_username ||
-            route.ownerUsername ||
-            route.user?.username ||
-            route.username ||
-            "",
-          ownerId:
-            route.owner_id ||
-            route.user_id ||
-            route.user?.id ||
-            route.ownerId ||
-            route.userId ||
-            null,
-          userId: route.user_id || route.userId || route.user?.id || null,
-          email: route.user?.email || route.email,
-          user: route.user
-            ? {
-              id: route.user._id || route.user.id,
-              username: route.user.username,
-              name: route.user.name,
-              email: route.user.email,
-            }
-            : route.username || route.ownerName || route.ownerUsername
-              ? {
-                id: route.user_id || route.owner_id,
-                username: route.username,
-                name: route.ownerName,
-                email: route.email,
-              }
-              : undefined,
-          username: route.username,
-        }));
 
+
+        const formatted: RouteItem[] = data.map((route: any) => {
+          formatRouteFromApi(route)
+          // Lógica de US32 para procesar puntos y calcular métricas si faltan
+          const pointTuples = (route.points || []).map((p: any) => [
+            p.longitude,
+            p.latitude,
+          ]);
+
+          const distanceKm =
+            route.distance_km ||
+            route.distanceKm ||
+            calculateRouteDistanceKm(pointTuples);
+
+          const durationMinutes = normalizeDurationMinutes(
+            route.duration_minutes ??
+            route.durationMinutes ??
+            route.duration,
+            distanceKm
+          );
+
+          return {
+            id: route.id,
+            name: route.name,
+            description: route.description || "Sin descripción",
+            category: route.category || "sin categoría",
+            points: pointTuples,
+            distanceKm,
+            durationMinutes,
+            difficulty:
+              route.difficulty || route.difficulty_level || route.difficultyLevel,
+            theme: route.theme || route.topic || route.themedCategory,
+            visibility: route.visibility ?? false,
+            // Campos de Rating (Traídos de Develop)
+            rating:
+              route.rating ??
+              route.average_rating ??
+              route.averageRating ??
+              null,
+            rating_count:
+              typeof route.rating_count === "number"
+                ? route.rating_count
+                : typeof route.ratingCount === "number"
+                  ? route.ratingCount
+                  : null,
+            user_rating:
+              typeof route.user_rating === "number"
+                ? route.user_rating
+                : typeof route.userRating === "number"
+                  ? route.userRating
+                  : null,
+            // Campos de Usuario y Propietario (Lógica unificada)
+            owner_id: route.owner_id,
+            user_id: route.user_id,
+            city:
+              route.city ||
+              route.city_name ||
+              route.cityName ||
+              route.location?.city ||
+              "",
+            createdAt: route.created_at || route.createdAt || route.creation_date,
+            popularity:
+              route.popularity ??
+              route.relevance ??
+              route.popularity_score ??
+              route.popularityScore ??
+              null,
+            ownerName:
+              route.owner_name ||
+              route.ownerName ||
+              route.user?.name ||
+              route.username ||
+              "",
+            ownerUsername:
+              route.owner_username ||
+              route.ownerUsername ||
+              route.user?.username ||
+              route.username ||
+              "",
+            ownerId:
+              route.owner_id ||
+              route.user_id ||
+              route.user?.id ||
+              route.ownerId ||
+              route.userId ||
+              null,
+            userId: route.user_id || route.userId || route.user?.id || null,
+            email: route.user?.email || route.email,
+            user: route.user
+              ? {
+                id: route.user._id || route.user.id,
+                username: route.user.username,
+                name: route.user.name,
+                email: route.user.email,
+              }
+              : route.username || route.ownerName || route.ownerUsername
+                ? {
+                  id: route.user_id || route.owner_id,
+                  username: route.username,
+                  name: route.ownerName,
+                  email: route.email,
+                }
+                : undefined,
+            username: route.username,
+          };
+        });
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
@@ -460,7 +807,11 @@ export default function Home() {
   };
 
   const handleApplyFilters = (filters: AppliedFilters) => {
-    setAppliedFilters(filters);
+    setAppliedFilters({ ...filters });
+  };
+
+  const handleCategorySelect = (category: string) => {
+    setAppliedFilters((prev) => ({ ...prev, category }));
   };
 
   // Controlar qué puntos se ven en el mapa según el modo actual
@@ -494,6 +845,7 @@ export default function Home() {
                 : setUserSearchQuery(q)
             }
             onApplyFilters={handleApplyFilters}
+            filters={appliedFilters}
             isLoading={searchMode === "users" ? usersLoading : routesLoading}
           />
         )}
@@ -518,16 +870,14 @@ export default function Home() {
               role="menu"
               aria-label="Profile menu"
             >
-              <button
+              <Link
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  navigate("/perfil");
-                }}
+                to="/perfil"
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Mi perfil
-              </button>
+              </Link>
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -553,6 +903,29 @@ export default function Home() {
               onResetPoints={() => setDrawPoints([])}
               onClose={handleCloseRouteCard}
             />
+          ) : editingRoute ? (
+            <RouteEditForm
+              data={{
+                id: editingRoute.id,
+                name: editingRoute.name,
+                description: editingRoute.description,
+                category: editingRoute.category || "otros",
+                difficulty: editingRoute.difficulty,
+              }}
+              onCancel={() => setEditingRoute(null)}
+              onSaved={(updated) => {
+                const formatted = formatRouteFromApi(updated);
+                setRoutes((prev) => {
+                  const exists = prev.some((r) => r.id === formatted.id);
+                  if (!exists) return [formatted, ...prev];
+                  return prev.map((r) => (r.id === formatted.id ? formatted : r));
+                });
+                setSelectedRoute(formatted);
+                setSelectedRoutePoints(formatted.points);
+                setEditingRoute(null);
+                setShowComments(false);
+              }}
+            />
           ) : selectedRoute ? (
             <RouteDetailsCard
               routeId={selectedRoute.id}
@@ -560,116 +933,245 @@ export default function Home() {
               description={selectedRoute.description}
               category={selectedRoute.category as Category}
               points={selectedRoute.points}
+              distanceKm={selectedRoute.distanceKm}
+              durationMinutes={selectedRoute.durationMinutes}
+              difficulty={selectedRoute.difficulty}
               isPrivate={!selectedRoute.visibility}
+              rating={selectedRoute.rating ?? null}
+              ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
-              onClose={() => {
-                setSelectedRoute(null);
-                setSelectedRoutePoints([]);
-                setShowComments(false);
-                if (userInitialCenterRef.current) {
-                  setMapCenter(userInitialCenterRef.current);
-                  setMapZoom(GEO_ZOOM);
-                } else {
-                  setMapCenter(DEFAULT_CENTER);
-                  setMapZoom(DEFAULT_ZOOM);
-                }
+              onEdit={(rd) => {
+                const payload = rd
+                  ? {
+                    id: rd.id ?? selectedRoute.id,
+                    name: rd.name ?? selectedRoute.name,
+                    description: rd.description ?? selectedRoute.description,
+                    category: rd.category ?? selectedRoute.category,
+                    difficulty: rd.difficulty ?? selectedRoute.difficulty,
+                    distanceKm: rd.distance_km ?? rd.distanceKm ?? selectedRoute.distanceKm,
+                    durationMinutes:
+                      rd.duration_minutes ??
+                      rd.durationMinutes ??
+                      selectedRoute.durationMinutes,
+                  }
+                  : selectedRoute;
+                setEditingRoute(payload as RouteItem);
               }}
-              onShowComments={() => setShowComments(true)}
-              onDelete={async (routeId) => {
-                const res = await fetch(`${API}/routes/${routeId}`, {
-                  method: "DELETE",
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) throw new Error("No se pudo eliminar");
-                setRoutes((prev) => prev.filter((r) => r.id !== routeId));
+                onRatingChange = {({ average, count }) => {
+            setSelectedRoute((prev) =>
+              prev && prev.id === selectedRoute.id
+                ? { ...prev, rating: average, rating_count: count }
+                : prev
+            );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+          r.id === selectedRoute.id
+          ? {...r, rating: average, rating_count: count }
+          : r
+          )
+          );
               }}
+          onClose={() => {
+            setSelectedRoute(null);
+            setSelectedRoutePoints([]);
+            setShowComments(false);
+            if (userInitialCenterRef.current) {
+              setMapCenter(userInitialCenterRef.current);
+              setMapZoom(GEO_ZOOM);
+            } else {
+              setMapCenter(DEFAULT_CENTER);
+              setMapZoom(DEFAULT_ZOOM);
+            }
+          }}
+          onShowComments={() => setShowComments(true)}
+          onDelete={async (routeId) => {
+            const res = await fetch(`${API}/routes/${routeId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("No se pudo eliminar");
+            setRoutes((prev) => prev.filter((r) => r.id !== routeId));
+          }}
             />
           ) : selectedUser ? (
-            <UserCardView
-              userId={selectedUser.id}
-              username={selectedUser.username}
-              email={selectedUser.email}
-              avatarUrl={selectedUser.avatar_url}
-              onClose={() => setSelectedUser(null)}
-              onRouteClick={(route) => {
-                setSelectedRoute(route);
-                setSelectedRoutePoints(route.points);
-                setShowComments(false);
-              }}
-            />
+          <UserCardView
+            userId={selectedUser.id}
+            username={selectedUser.username}
+            email={selectedUser.email}
+            avatarUrl={selectedUser.avatar_url}
+            onClose={() => setSelectedUser(null)}
+            onRouteClick={(route) => {
+              setSelectedRoute(route);
+              setSelectedRoutePoints(route.points);
+              setShowComments(false);
+            }}
+          />
           ) : (
-            <div>
-              <div className="container">
-                <div className="tabs">
-                  <input
-                    type="radio"
-                    id="radio-1"
-                    name="tabs"
-                    checked={searchMode === "routes"}
-                    onChange={() => setSearchMode("routes")}
-                  />
-                  <label className="tab" htmlFor="radio-1">
-                    Rutas
-                  </label>
+          <div>
+            <div className="container">
+              <div className="tabs">
+                <input
+                  type="radio"
+                  id="radio-1"
+                  name="tabs"
+                  checked={searchMode === "routes"}
+                  onChange={() => setSearchMode("routes")}
+                />
+                <label className="tab" htmlFor="radio-1">
+                  Rutas
+                </label>
 
-                  <input
-                    type="radio"
-                    id="radio-2"
-                    name="tabs"
-                    checked={searchMode === "users"}
-                    onChange={() => setSearchMode("users")}
-                  />
-                  <label className="tab" htmlFor="radio-2">
-                    Usuarios
-                  </label>
+                <input
+                  type="radio"
+                  id="radio-2"
+                  name="tabs"
+                  checked={searchMode === "users"}
+                  onChange={() => setSearchMode("users")}
+                />
+                <label className="tab" htmlFor="radio-2">
+                  Usuarios
+                </label>
 
-                  <span className="glider"></span>
-                </div>
+                <span className="glider"></span>
               </div>
+            </div>
 
-              {searchMode === "routes" ? (
-                <>
-                  {routesLoading ? (
-                    renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
-                  ) : routesError ? (
-                    renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
-                  ) : routes.length === 0 ? (
-                    renderEmptyState("No hay rutas disponibles")
-                  ) : (() => {
-                    const filteredRoutes = getFilteredRoutes();
+            {searchMode === "routes" ? (
+              <>
+                {routesLoading ? (
+                  renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
+                ) : routesError ? (
+                  renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
+                ) : (() => {
+                  const filteredRoutes = getFilteredRoutes();
+                  const hasFiltersApplied =
+                    appliedFilters.category !== "all" ||
+                    appliedFilters.pointsFilter !== "all" ||
+                    appliedFilters.distance !== "all" ||
+                    appliedFilters.duration !== "all" ||
+                    appliedFilters.difficulty !== "all" ||
+                    appliedFilters.theme !== "all";
+                  const hasSearch = Boolean(routeSearchQuery.trim());
+                  const resultCount = filteredRoutes.length;
 
-                    if (filteredRoutes.length === 0) {
-                      const hasFilters =
-                        appliedFilters.category !== "all" ||
-                        appliedFilters.pointsFilter !== "all";
-                      const hasSearch = Boolean(routeSearchQuery.trim());
-                      return (
-                        renderEmptyState(
-                          hasFilters || hasSearch
-                            ? "Sin coincidencias"
-                            : "No hay rutas disponibles",
-                          hasFilters || hasSearch
-                            ? "Prueba ajustar la búsqueda o los filtros"
-                            : undefined
-                        )
-                      );
-                    }
+                  return (
+                    <>
+                      <div className="category-chip-bar" aria-label="Filtrar por categoría">
+                        {CATEGORY_OPTIONS.map((cat) => (
+                          <button
+                            key={cat}
+                            className={`category-chip ${appliedFilters.category === cat ? "active" : ""
+                              }`}
+                            onClick={() => handleCategorySelect(cat)}
+                            aria-pressed={appliedFilters.category === cat}
+                          >
+                            {CATEGORY_LABELS[cat] ?? cat}
+                          </button>
+                        ))}
+                      </div>
 
-                    const routeItems = filteredRoutes.map((r) => (
-                      <div className="route-row" key={r.id}>
-                        <RoutePreviewCard
+                      <div className="routes-meta">
+                        <div className="routes-count">
+                          {resultCount} rutas encontradas
+                        </div>
+                        {(hasFiltersApplied || hasSearch) && (
+                          <div className="routes-active-filters">
+                            {hasSearch ? (
+                              <span className="routes-filter-chip muted">
+                                Búsqueda: "{routeSearchQuery.trim()}"
+                              </span>
+                            ) : null}
+                            {appliedFilters.category !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Categoría:{" "}
+                                {CATEGORY_LABELS[appliedFilters.category] ??
+                                  appliedFilters.category}
+                              </span>
+                            ) : null}
+                            {appliedFilters.pointsFilter !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.distance !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.duration !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Duración: {DURATION_LABELS[appliedFilters.duration]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.difficulty !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Dificultad:{" "}
+                                {DIFFICULTY_LABELS[appliedFilters.difficulty]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.theme !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Temática: {THEME_LABELS[appliedFilters.theme]}
+                              </span>
+                            ) : null}
+                            <button
+                              className="routes-reset"
+                              onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                            >
+                              Restablecer filtros
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                    {resultCount === 0 ? (
+                      <div className="routes-empty">
+                        <h4>
+                          {hasFiltersApplied || hasSearch
+                            ? "No hay rutas para estos filtros"
+                            : "No hay rutas disponibles"}
+                        </h4>
+                        <p className="muted">
+                          {hasFiltersApplied || hasSearch
+                            ? "Ajusta la búsqueda o prueba con filtros más amplios."
+                            : "Crea una ruta para verla aquí."}
+                        </p>
+                        <div className="routes-empty__tips">
+                          <span>• Reduce filtros activos.</span>
+                          <span>• Amplía el rango de distancia o duración.</span>
+                          <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                        </div>
+                        {(hasFiltersApplied || hasSearch) && (
+                          <button
+                            className="routes-reset"
+                            onClick={() => {
+                              handleApplyFilters(DEFAULT_FILTERS);
+                              setRouteSearchQuery("");
+                            }}
+                          >
+                            Restablecer filtros
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <AnimatedList
+                        items={filteredRoutes.map((r) => (
+                          <div className="route-row" key={r.id}>
+                            <RoutePreviewCard
                           id={r.id}
                           name={r.name}
                           category={r.category as Category}
                           points={r.points}
+                          images={r.images ?? []}
+                          distanceKm={r.distanceKm ?? null}
+                          durationMinutes={r.durationMinutes ?? null}
+                          difficulty={r.difficulty ?? null}
+                          ratingAverage={r.rating ?? null}
+                          ratingCount={r.rating_count ?? null}
                           initialSaved={favoriteIds.has(String(r.id))}
                         />
                       </div>
-                    ));
-
-                    return (
-                      <AnimatedList
-                        items={routeItems}
+                    ))}
                         className="routes-animated-list"
                         itemClassName="routes-animated-item"
                         showGradients
@@ -682,10 +1184,12 @@ export default function Home() {
                           })
                         }
                       />
-                    );
-                  })()}
-                </>
-              ) : (
+                    )}
+                  </>
+                );
+              })()}
+            </>
+          ) : (
                 <>
                   {usersLoading ? (
                     renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
@@ -712,24 +1216,24 @@ export default function Home() {
                         </div>
                       ));
 
-                      return (
-                        <AnimatedList
-                          items={userItems}
-                          className="users-animated-list"
-                          itemClassName="users-animated-item"
-                          showGradients
-                          onItemSelect={(index) => {
-                            const u = users[index];
-                            if (!u) return;
-                            handleOpenUser(u);
-                          }}
-                        />
-                      );
-                    })()
-                  )}
-                </>
-              )}
-            </div>
+                    return (
+                      <AnimatedList
+                        items={userItems}
+                        className="users-animated-list"
+                        itemClassName="users-animated-item"
+                        showGradients
+                        onItemSelect={(index) => {
+                          const u = users[index];
+                          if (!u) return;
+                          handleOpenUser(u);
+                        }}
+                      />
+                    );
+                  })()
+                )}
+              </>
+            )}
+          </div>
           )}
         </div>
 

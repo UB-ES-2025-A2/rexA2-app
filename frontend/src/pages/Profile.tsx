@@ -6,6 +6,7 @@ import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
 import AnimatedList from "../components/AnimatedList";
+import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 
@@ -47,6 +48,10 @@ type FavoriteRouteApi = {
   visibility: boolean;
   points: FavoriteRoutePoint[];
   owner_username?: string | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
+  images?: string[];
 };
 type FavoriteRoute = {
   id: string;
@@ -58,6 +63,10 @@ type FavoriteRoute = {
   createdAt: string;
   visibility: boolean;
   points: Array<[number, number]>;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
+  images: string[];
 };
 
 const API_BASE = (
@@ -327,8 +336,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowers(rawItems.map(normalizeFollower));
         setFollowersStatus("idle");
@@ -396,8 +405,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowing(rawItems.map(normalizeFollower));
         setFollowingStatus("idle");
@@ -631,9 +640,8 @@ export default function Profile() {
 
       <main className="profile-layout">
         <aside
-          className={`sidebar ${
-            showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
-          }`}
+          className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
+            }`}
         >
           {showFavoriteRoute && selectedFavorite ? (
             <RouteDetailsCard
@@ -644,7 +652,34 @@ export default function Profile() {
                 (selectedFavorite.category as Category) || "entretenimiento"
               }
               points={selectedFavorite.points}
+              distanceKm={
+                (selectedFavorite as any).distanceKm ??
+                (selectedFavorite as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedFavorite as any).durationMinutes ??
+                (selectedFavorite as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedFavorite as any).difficulty ?? null}
               isPrivate={!selectedFavorite.visibility}
+              rating={selectedFavorite.rating ?? null}
+              ratingCount={selectedFavorite.rating_count ?? null}
+              onRatingChange={({ average, count }) => {
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeFavoriteView}
               initialSaved
               onSavedChange={handleFavoriteSavedChange}
@@ -660,7 +695,34 @@ export default function Profile() {
                 (selectedCreatedRoute.category as Category) || "entretenimiento"
               }
               points={selectedCreatedRoute.points}
+              distanceKm={
+                (selectedCreatedRoute as any).distanceKm ??
+                (selectedCreatedRoute as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedCreatedRoute as any).durationMinutes ??
+                (selectedCreatedRoute as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedCreatedRoute as any).difficulty ?? null}
               isPrivate={!selectedCreatedRoute.visibility}
+              rating={selectedCreatedRoute.rating ?? null}
+              ratingCount={selectedCreatedRoute.rating_count ?? null}
+              onRatingChange={({ average, count }) => {
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeCreatedView}
               initialSaved={favorites.some(
                 (route) => route.id === selectedCreatedRoute.id
@@ -809,12 +871,12 @@ function normalizeFavoriteRoute(
 ): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
-        .filter(
-          (point): point is FavoriteRoutePoint =>
-            typeof point?.longitude === "number" &&
-            typeof point?.latitude === "number"
-        )
-        .map((point) => [point.longitude, point.latitude])
+      .filter(
+        (point): point is FavoriteRoutePoint =>
+          typeof point?.longitude === "number" &&
+          typeof point?.latitude === "number"
+      )
+      .map((point) => [point.longitude, point.latitude])
     : [];
 
   const createdAt =
@@ -832,6 +894,19 @@ function normalizeFavoriteRoute(
     createdAt,
     visibility: Boolean(route.visibility),
     points: normalizedPoints,
+    rating:
+      typeof route.rating === "number"
+        ? route.rating
+        : route.user_rating ?? null,
+    rating_count:
+      typeof route.rating_count === "number"
+        ? route.rating_count
+        : typeof (route as any).ratingCount === "number"
+          ? (route as any).ratingCount
+          : null,
+    user_rating:
+      typeof route.user_rating === "number" ? route.user_rating : null,
+    images: Array.isArray(route.images) ? route.images : [],
   };
 }
 
@@ -1125,15 +1200,16 @@ function FavoritesPanel({
 
   const favoriteItems = favorites.map((route) => (
     <div className="route-row" key={route.id}>
-      <div className="route-row-main">
-        <div className="route-row-title">{route.name}</div>
-        <div className="route-row-meta">
-          <span>{route.ownerName || route.ownerId}</span>
-          <span>· {route.category}</span>
-          <span>· {formatDateLabel(route.createdAt)}</span>
-        </div>
-      </div>
-      <div className="route-row-cta">Ver detalles</div>
+      <RoutePreviewCard
+        id={route.id}
+        name={route.name}
+        category={route.category as Category}
+        points={route.points}
+        images={route.images}
+        ratingAverage={route.rating ?? null}
+        ratingCount={route.rating_count ?? null}
+        onClick={() => onViewRoute(route)}
+      />
     </div>
   ));
 
@@ -1218,15 +1294,16 @@ function CreatedRoutesPanel({
 
   const createdItems = routes.map((route) => (
     <div className="route-row" key={route.id}>
-      <div className="route-row-main">
-        <div className="route-row-title">{route.name}</div>
-        <div className="route-row-meta">
-          <span>{route.ownerName || route.ownerId}</span>
-          <span>· {route.category}</span>
-          <span>· {formatDateLabel(route.createdAt)}</span>
-        </div>
-      </div>
-      <div className="route-row-cta">Ver detalles</div>
+      <RoutePreviewCard
+        id={route.id}
+        name={route.name}
+        category={route.category as Category}
+        points={route.points}
+        images={route.images}
+        ratingAverage={route.rating ?? null}
+        ratingCount={route.rating_count ?? null}
+        onClick={() => onViewRoute(route)}
+      />
     </div>
   ));
 

@@ -1,52 +1,72 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/RouteSearchBar.css";
 
-interface Route {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  points: Array<[number, number]>;
-  visibility: boolean;
-  is_owner?: boolean;
-  ownerName?: string;
-  ownerUsername?: string;
-  username?: string;
-  email?: string;
-  owner_id?: string | number;
-  user_id?: string | number;
-  ownerId?: string | number;
-  userId?: string | number;
-  user?: { id?: string | number; username?: string; name?: string; email?: string };
-}
+export type SearchScope = "routes" | "users";
 
-type SearchScope = "routes" | "users";
+export type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+export type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+export type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+export type ThemeFilter =
+  | "all"
+  | "nature"
+  | "urban"
+  | "cultural"
+  | "gastronomia"
+  | "aventura"
+  | "deporte"
+  | "historia"
+  | "entretenimiento"
+  | "otros";
+
+export type FiltersState = {
+  category: string;
+  pointsFilter: string;
+  distance: DistanceFilter;
+  duration: DurationFilter;
+  difficulty: DifficultyFilter;
+  theme: ThemeFilter;
+};
+
+const DEFAULT_FILTERS: FiltersState = {
+  category: "all",
+  pointsFilter: "all",
+  distance: "all",
+  duration: "all",
+  difficulty: "all",
+  theme: "all",
+};
 
 interface RouteSearchBarProps {
-  routes: Route[];
   mode: SearchScope;
   query: string;
   onQueryChange: (query: string) => void;
-  onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
+  onApplyFilters?: (filters: FiltersState) => void;
+  filters?: FiltersState;
   isLoading?: boolean;
 }
 
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
-  routes,
   mode,
   query,
   onQueryChange,
   onApplyFilters,
+  filters = DEFAULT_FILTERS,
   isLoading = false,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [pointsFilter, setPointsFilter] = useState<string>("all");
+  const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
   const [showFilterModal, setShowFilterModal] = useState(false);
 
-  const categories = useMemo(() => {
-    const cats = new Set(routes.map((r) => r.category));
-    return Array.from(cats).sort();
-  }, [routes]);
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
+
+  const updateFilters = (partial: Partial<FiltersState>) => {
+    setLocalFilters((prev) => {
+      const next = { ...prev, ...partial };
+      if (mode === "routes" && onApplyFilters) onApplyFilters(next);
+      return next;
+    });
+  };
 
   const handleFilterClick = () => {
     setShowFilterModal(!showFilterModal);
@@ -54,23 +74,12 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
   const handleApplyFilters = () => {
     setShowFilterModal(false);
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: selectedCategory,
-        pointsFilter: pointsFilter,
-      });
-    }
+    if (onApplyFilters) onApplyFilters(localFilters);
   };
 
   const handleResetFilters = () => {
-    setSelectedCategory("all");
-    setPointsFilter("all");
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: "all",
-        pointsFilter: "all",
-      });
-    }
+    setLocalFilters(DEFAULT_FILTERS);
+    if (onApplyFilters) onApplyFilters(DEFAULT_FILTERS);
   };
 
   const handleCloseModal = () => {
@@ -78,7 +87,12 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   };
 
   const hasActiveFilters =
-    selectedCategory !== "all" || pointsFilter !== "all";
+    localFilters.category !== "all" ||
+    localFilters.pointsFilter !== "all" ||
+    localFilters.distance !== "all" ||
+    localFilters.duration !== "all" ||
+    localFilters.difficulty !== "all" ||
+    localFilters.theme !== "all";
 
   useEffect(() => {
     if (mode !== "routes") {
@@ -195,33 +209,95 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                   </div>
 
                   <div className="filter-section">
-                    <label className="filter-label">Categoria</label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todas las categorias</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </option>
+                    <div className="filter-label">Distancia</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Cualquiera", value: "all" as DistanceFilter },
+                        { label: "<5 km", value: "lt5" as DistanceFilter },
+                        { label: "5–10 km", value: "5to10" as DistanceFilter },
+                        { label: "10–20 km", value: "10to20" as DistanceFilter },
+                        { label: ">20 km", value: "gt20" as DistanceFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${localFilters.distance === option.value ? "active" : ""
+                            }`}
+                          onClick={() => updateFilters({ distance: option.value })}
+                        >
+                          {option.label}
+                        </button>
                       ))}
-                    </select>
+                    </div>
                   </div>
 
                   <div className="filter-section">
-                    <label className="filter-label">Numero de puntos</label>
-                    <select
-                      value={pointsFilter}
-                      onChange={(e) => setPointsFilter(e.target.value)}
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todos los puntos</option>
-                      <option value="few">Pocas (1-5 puntos)</option>
-                      <option value="medium">Media (6-15 puntos)</option>
-                      <option value="many">Muchas (+15 puntos)</option>
-                    </select>
+                    <div className="filter-label">Duración aproximada</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Cualquiera", value: "all" as DurationFilter },
+                        { label: "<1h", value: "lt1" as DurationFilter },
+                        { label: "1–3h", value: "1to3" as DurationFilter },
+                        { label: "3–6h", value: "3to6" as DurationFilter },
+                        { label: ">6h", value: "gt6" as DurationFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${localFilters.duration === option.value ? "active" : ""
+                            }`}
+                          onClick={() => updateFilters({ duration: option.value })}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Dificultad (opcional)</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Todas", value: "all" as DifficultyFilter },
+                        { label: "Fácil", value: "easy" as DifficultyFilter },
+                        { label: "Media", value: "medium" as DifficultyFilter },
+                        { label: "Alta", value: "hard" as DifficultyFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${localFilters.difficulty === option.value ? "active" : ""
+                            }`}
+                          onClick={() => updateFilters({ difficulty: option.value })}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="filter-section">
+                    <div className="filter-label">Categoría temática</div>
+                    <div className="filter-chip-group">
+                      {[
+                        { label: "Todas", value: "all" as ThemeFilter },
+                        { label: "Gastronomía", value: "gastronomia" as ThemeFilter },
+                        { label: "Naturaleza", value: "nature" as ThemeFilter },
+                        { label: "Aventura", value: "aventura" as ThemeFilter },
+                        { label: "Deporte", value: "deporte" as ThemeFilter },
+                        { label: "Historia", value: "historia" as ThemeFilter },
+                        { label: "Entretenimiento", value: "entretenimiento" as ThemeFilter },
+                        { label: "Urbana", value: "urban" as ThemeFilter },
+                        { label: "Cultural", value: "cultural" as ThemeFilter },
+                        { label: "Otros", value: "otros" as ThemeFilter },
+                      ].map((option) => (
+                        <button
+                          key={option.value}
+                          className={`filter-chip ${localFilters.theme === option.value ? "active" : ""
+                            }`}
+                          onClick={() => updateFilters({ theme: option.value })}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   <div className="filter-modal-actions">
@@ -229,7 +305,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       className="filter-modal-btn reset"
                       onClick={handleResetFilters}
                     >
-                      Limpiar
+                      Restablecer
                     </button>
                     <button
                       className="filter-modal-btn apply"
