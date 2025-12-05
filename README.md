@@ -33,6 +33,12 @@ La aplicación combina **descubrimiento, interacción y comunidad**, ofreciendo 
 - Despliegue en **Microsoft Azure**
 - API REST segura con autenticación JWT
 
+## API: imágenes opcionales de rutas
+
+- Los endpoints `POST /routes` y `PUT /routes/{route_id}` aceptan el campo opcional `images`, una lista de URLs (por ejemplo, tras subir el fichero a un CDN). No se usa `multipart/form-data`; se envían y reciben como JSON.
+- Cada elemento de `images` debe ser un string no vacío. Se admiten hasta 10 URLs por ruta. Si no se envía el campo, el backend lo normaliza a `[]`.
+- Las respuestas de rutas incluyen siempre `images` (lista vacía cuando no hay imágenes), manteniendo compatibilidad con rutas existentes.
+
 ### Prerequisits
 
 En el dir rexa2-app:
