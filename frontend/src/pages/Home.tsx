@@ -36,6 +36,12 @@ type RouteItem = {
   durationMinutes?: number | null;
   difficulty?: string | null;
   theme?: string;
+  images?: string[];
+  image_urls?: string[];
+  imageUrls?: string[];
+  image?: string;
+  cover_image?: string;
+  thumbnail?: string;
   visibility: boolean;
   is_owner?: boolean;
   owner_id?: string | number;
@@ -53,7 +59,6 @@ type RouteItem = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
-  images?: string[];
 };
 
 type SelectedUser = {
@@ -120,10 +125,10 @@ const formatRouteFromApi = (route: any): RouteItem => ({
     null,
   user: route.user
     ? {
-      id: route.user._id || route.user.id,
-      username: route.user.username,
-      name: route.user.name,
-      email: route.user.email,
+        id: route.user._id || route.user.id,
+        username: route.user.username,
+        name: route.user.name,
+        email: route.user.email,
     }
     : route.username || route.ownerName || route.ownerUsername
       ? {
@@ -133,6 +138,32 @@ const formatRouteFromApi = (route: any): RouteItem => ({
         email: route.email,
       }
       : undefined,
+  images: (() => {
+    const fromImages = Array.isArray(route.images) ? route.images.filter(Boolean) : [];
+    const fromImageUrls = Array.isArray(route.image_urls)
+      ? route.image_urls.filter(Boolean)
+      : Array.isArray(route.imageUrls)
+        ? route.imageUrls.filter(Boolean)
+        : [];
+    const single = route.image || route.cover_image || route.thumbnail;
+    if (fromImages.length > 0) return fromImages;
+    if (fromImageUrls.length > 0) return fromImageUrls;
+    if (single) return [single];
+    return [];
+  })(),
+  image_urls: Array.isArray(route.image_urls)
+    ? route.image_urls.filter(Boolean)
+    : Array.isArray(route.imageUrls)
+      ? route.imageUrls.filter(Boolean)
+      : [],
+  imageUrls: Array.isArray(route.imageUrls)
+    ? route.imageUrls.filter(Boolean)
+    : Array.isArray(route.image_urls)
+      ? route.image_urls.filter(Boolean)
+      : [],
+  image: route.image,
+  cover_image: route.cover_image,
+  thumbnail: route.thumbnail,
   difficulty: route.difficulty,
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
@@ -1268,17 +1299,30 @@ export default function Home() {
                           <AnimatedList
                             items={filteredRoutes.map((r) => (
                               <div className="route-row" key={r.id}>
-                                <RoutePreviewCard
-                                  id={r.id}
-                                  name={r.name}
-                                  category={r.category as Category}
-                                  points={r.points}
-                                  images={r.images ?? []}
-                                  distanceKm={r.distanceKm ?? null}
-                                  durationMinutes={r.durationMinutes ?? null}
-                                  difficulty={r.difficulty ?? null}
-                                  ratingAverage={r.rating ?? null}
-                                  ratingCount={r.rating_count ?? null}
+                            <RoutePreviewCard
+                              id={r.id}
+                              name={r.name}
+                              category={r.category as Category}
+                              points={r.points}
+                              images={
+                                (Array.isArray((r as any).images) &&
+                                  (r as any).images.length > 0 &&
+                                  (r as any).images) ||
+                                (Array.isArray((r as any).image_urls) &&
+                                  (r as any).image_urls.length > 0 &&
+                                  (r as any).image_urls) ||
+                                (Array.isArray((r as any).imageUrls) &&
+                                  (r as any).imageUrls.length > 0 &&
+                                  (r as any).imageUrls) ||
+                                []
+                              }
+                              image_urls={Array.isArray((r as any).image_urls) ? (r as any).image_urls : undefined}
+                              imageUrls={Array.isArray((r as any).imageUrls) ? (r as any).imageUrls : undefined}
+                              distanceKm={r.distanceKm ?? null}
+                              durationMinutes={r.durationMinutes ?? null}
+                              difficulty={r.difficulty ?? null}
+                              ratingAverage={r.rating ?? null}
+                              ratingCount={r.rating_count ?? null}
                                   initialSaved={favoriteIds.has(String(r.id))}
                                 />
                               </div>

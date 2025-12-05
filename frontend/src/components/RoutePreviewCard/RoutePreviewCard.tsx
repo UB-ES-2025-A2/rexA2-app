@@ -4,6 +4,7 @@ import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
+import { fetchWithAuth } from "../../services/api";
 import RouteMiniMap from "./RouteMiniMap";
 
 const API = import.meta.env.VITE_API_URL as string || window.location.origin;
@@ -14,6 +15,8 @@ type Props = {
   category: Category;
   points: Array<[number, number]>;
   images?: string[];
+  image_urls?: string[];
+  imageUrls?: string[];
   distanceKm?: number | null;
   durationMinutes?: number | null;
   difficulty?: string | null;
@@ -32,6 +35,8 @@ const RoutePreviewCard: React.FC<Props> = ({
   category,
   points,
   images = [],
+  image_urls,
+  imageUrls,
   distanceKm,
   durationMinutes,
   difficulty,
@@ -45,6 +50,7 @@ const RoutePreviewCard: React.FC<Props> = ({
 }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
+  const [remoteCover, setRemoteCover] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const { token } = useAuth();
 
@@ -129,6 +135,45 @@ const RoutePreviewCard: React.FC<Props> = ({
       }[difficulty.toLowerCase()] ?? difficulty
     : null;
 
+  const baseCover =
+    (Array.isArray(images) && images.length > 0
+      ? images[0]
+      : Array.isArray(image_urls) && image_urls.length > 0
+        ? image_urls[0]
+        : Array.isArray(imageUrls) && imageUrls.length > 0
+          ? imageUrls[0]
+          : null);
+
+  const coverImage = baseCover ?? remoteCover;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (baseCover) return;
+    if (!id) return;
+
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`/routes/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const imgs =
+          (Array.isArray(data.images) && data.images.filter(Boolean)) ||
+          (Array.isArray(data.image_urls) && data.image_urls.filter(Boolean)) ||
+          (Array.isArray(data.imageUrls) && data.imageUrls.filter(Boolean)) ||
+          [];
+        const single = data.image || data.cover_image || data.thumbnail;
+        const found = imgs.length > 0 ? imgs[0] : single || null;
+        if (!cancelled) setRemoteCover(found);
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, baseCover]);
+
   const formatCategory = (cat: string) => {
     if (!cat) return "Sin categoría";
     const lower = cat.toLowerCase();
@@ -159,8 +204,8 @@ const RoutePreviewCard: React.FC<Props> = ({
     >
       <div className="route-preview-content">
         <div className="route-preview-thumb">
-          {images.length > 0 ? (
-            <img src={images[0]} alt={`Imagen de ${name}`} loading="lazy" />
+          {coverImage ? (
+            <img src={coverImage} alt={`Imagen de ${name}`} loading="lazy" />
           ) : points.length > 0 ? (
             <RouteMiniMap points={points} className="route-preview-thumb__map" />
           ) : (

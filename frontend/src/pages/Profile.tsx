@@ -906,7 +906,13 @@ function normalizeFavoriteRoute(
           : null,
     user_rating:
       typeof route.user_rating === "number" ? route.user_rating : null,
-    images: Array.isArray(route.images) ? route.images : [],
+    images: Array.isArray(route.images)
+      ? route.images
+      : Array.isArray((route as any).image_urls)
+        ? (route as any).image_urls
+        : Array.isArray((route as any).imageUrls)
+          ? (route as any).imageUrls
+          : [],
   };
 }
 

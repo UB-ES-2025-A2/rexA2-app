@@ -338,6 +338,27 @@ root {
   gap: 10px;
 }
 
+.route-card__images.is-dragging {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.route-card__dropzone-hint {
+  border: 1px dashed rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fafc;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #475569;
+}
+
+.route-card__dropzone-hint strong {
+  color: #0f172a;
+}
+
 .route-card__image-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
