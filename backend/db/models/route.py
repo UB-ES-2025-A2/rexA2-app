@@ -1,4 +1,5 @@
 # from db.client import db
+import math
 import backend.db.client as db_client
 from bson import ObjectId
 from datetime import datetime, timezone
@@ -21,6 +22,10 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
     '''
     Crea una nueva ruta asociada a un usuario
     '''
+    distance_km = _calculate_distance_km(route_data["points"])
+    duration_minutes = _estimate_duration_minutes(distance_km)
+    difficulty = _normalize_difficulty(route_data.get("difficulty")) or _estimate_difficulty(distance_km, duration_minutes)
+
     route = {
         "owner_id": str(owner_id),
         "name": route_data["name"],
@@ -29,7 +34,9 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "description": route_data["description"],
         "category": route_data["category"],
         "created_at": datetime.now(timezone.utc),
-        "duration_minutes": route_data.get("duration_minutes"),
+        "distance_km": distance_km,
+        "duration_minutes": duration_minutes,
+        "difficulty": difficulty,
         "rating": route_data.get("rating"),
         "rating_count": route_data.get("rating_count") or 0,
         "images": route_data.get("images") or [],
@@ -191,3 +198,109 @@ async def delete_route(route_id: str, user_id: str) -> bool:
     '''
     result = await db_client.db["routes"].delete_one({"_id": ObjectId(route_id), "owner_id": str(user_id)})
     return result.deleted_count == 1
+
+
+async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
+    """
+    Actualiza los campos de una ruta si pertenece al usuario.
+    Devuelve el documento actualizado o None si no existe o no pertenece al usuario.
+    """
+    # Filtra campos permitidos
+    allowed_fields = {
+        "name",
+        "description",
+        "category",
+        "visibility",
+        "duration_minutes",
+        "difficulty",
+    }
+    payload = {k: v for k, v in data.items() if v is not None and k in allowed_fields}
+    if not payload:
+        return await get_route_by_id(route_id)
+
+    result = await db_client.db["routes"].update_one(
+        {"_id": ObjectId(route_id), "owner_id": str(owner_id)},
+        {"$set": payload},
+    )
+    if result.matched_count == 0:
+        return None
+
+    return await get_route_by_id(route_id)
+# ================== HELPERS ==================
+def _to_radians(value: float) -> float:
+    return (value * math.pi) / 180.0
+
+
+def _calculate_segment_km(a: dict, b: dict) -> float:
+    """
+    Calcula la distancia Haversine entre dos puntos en kilómetros.
+    Espera diccionarios con keys latitude y longitude.
+    """
+    lat1, lon1 = float(a["latitude"]), float(a["longitude"])
+    lat2, lon2 = float(b["latitude"]), float(b["longitude"])
+    dlat = _to_radians(lat2 - lat1)
+    dlon = _to_radians(lon2 - lon1)
+    rlat1 = _to_radians(lat1)
+    rlat2 = _to_radians(lat2)
+
+    haversine = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(rlat1) * math.cos(rlat2) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine))
+    earth_radius_km = 6371
+    return earth_radius_km * c
+
+
+def _calculate_distance_km(points: list[dict]) -> float | None:
+    """
+    Calcula la distancia total de la ruta sumando los tramos consecutivos.
+    Devuelve None si no hay suficientes puntos.
+    """
+    if not points or len(points) < 2:
+        return None
+    total = 0.0
+    for idx in range(1, len(points)):
+        total += _calculate_segment_km(points[idx - 1], points[idx])
+    return round(total, 2)
+
+
+def _estimate_duration_minutes(distance_km: float | None) -> float | None:
+    """
+    Estimación sencilla de duración asumiendo 4 km/h (60 min/h).
+    """
+    if distance_km is None:
+        return None
+    avg_speed_kmh = 4
+    minutes = (distance_km / avg_speed_kmh) * 60
+    return round(minutes, 1)
+
+
+def _estimate_difficulty(distance_km: float | None, duration_minutes: float | None) -> str | None:
+    """
+    Asigna una dificultad básica en función de distancia/duración.
+    """
+    if distance_km is None and duration_minutes is None:
+        return None
+
+    distance = distance_km or 0
+    duration = duration_minutes or 0
+
+    if distance > 20 or duration > 360:
+        return "hard"
+    if distance > 10 or duration > 180:
+        return "medium"
+    return "easy"
+
+
+def _normalize_difficulty(value) -> str | None:
+    if not value:
+        return None
+    v = str(value).lower().strip()
+    if v in {"easy", "media", "medium"}:
+        return "medium" if v.startswith("m") else "easy"
+    if v in {"hard", "dificil", "difícil", "alta"}:
+        return "hard"
+    if v in {"facil", "fácil"}:
+        return "easy"
+    return v

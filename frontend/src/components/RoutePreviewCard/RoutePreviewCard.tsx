@@ -14,6 +14,9 @@ type Props = {
   category: Category;
   points: Array<[number, number]>;
   images?: string[];
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string | null;
   ratingAverage?: number | null;
   ratingCount?: number | null;
   onClick?: () => void;
@@ -29,6 +32,9 @@ const RoutePreviewCard: React.FC<Props> = ({
   category,
   points,
   images = [],
+  distanceKm,
+  durationMinutes,
+  difficulty,
   ratingAverage = null,
   ratingCount = null,
   onClick,
@@ -106,6 +112,42 @@ const RoutePreviewCard: React.FC<Props> = ({
     }
   };
 
+  const formatDuration = (minutes?: number | null) => {
+    if (minutes == null) return null;
+    if (minutes < 60) return `<1h`;
+    const hours = Math.floor(minutes / 60);
+    const remaining = Math.round(minutes % 60);
+    if (remaining === 0) return `${hours}h`;
+    return `${hours}h ${remaining}m`;
+  };
+
+  const difficultyLabel = difficulty
+    ? {
+        easy: "Fácil",
+        medium: "Media",
+        hard: "Alta",
+      }[difficulty.toLowerCase()] ?? difficulty
+    : null;
+
+  const formatCategory = (cat: string) => {
+    if (!cat) return "Sin categoría";
+    const lower = cat.toLowerCase();
+    if (lower === "trabajo") return "Sin categoría";
+    const labels: Record<string, string> = {
+      gastronomia: "Gastronomía",
+      "exploracion-urbana": "Exploración urbana",
+      naturaleza: "Naturaleza",
+      aventura: "Aventura",
+      cultura: "Cultura",
+      deporte: "Deporte",
+      historia: "Historia",
+      relajacion: "Relajación",
+      entretenimiento: "Entretenimiento",
+      otros: "Otros",
+    };
+    return labels[lower] ?? cat.charAt(0).toUpperCase() + cat.slice(1);
+  };
+
   return (
     <div
       className="route-preview-card"
@@ -129,10 +171,33 @@ const RoutePreviewCard: React.FC<Props> = ({
         </div>
         <div className="route-preview-texts">
           <h3 className="route-preview-title">{name}</h3>
-          <p className="route-preview-category">Categoría: {category}</p>
+          <p className="route-preview-category">
+            Categoría: {formatCategory(category)}
+          </p>
           <p className="route-preview-points">
             {points.length} punto{points.length === 1 ? "" : "s"}
           </p>
+
+          <div className="route-preview-meta">
+            {typeof distanceKm === "number" ? (
+              <span className="route-preview-pill" title="Distancia aproximada">
+                <span className="pill-dot distance" />
+                {distanceKm} km
+              </span>
+            ) : null}
+            {formatDuration(durationMinutes) ? (
+              <span className="route-preview-pill" title="Duración aproximada">
+                <span className="pill-dot duration" />
+                {formatDuration(durationMinutes)}
+              </span>
+            ) : null}
+            {difficultyLabel ? (
+              <span className="route-preview-pill" title="Dificultad estimada">
+                <span className="pill-dot difficulty" />
+                {difficultyLabel}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="route-preview-actions">

@@ -43,6 +43,12 @@
   gap: 12px;
 }
 
+.route-details-card__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .route-details-card__title {
   font-size: 1.4rem;
   font-weight: 800;
@@ -393,4 +399,57 @@
   background: var(--muted);
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.route-details-card__edit-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--close-border);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.route-details-card__edit-btn:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+.route-details-card__meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.route-details-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  color: #312e81;
+  font-weight: 800;
+  font-size: 12px;
+  border: 1px solid #c7d2fe;
+}
+
+.pill-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.pill-dot.distance {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+
+.pill-dot.duration {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.pill-dot.difficulty {
+  background: linear-gradient(135deg, #f97316, #ef4444);
 }

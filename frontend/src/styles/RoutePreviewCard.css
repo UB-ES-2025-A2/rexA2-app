@@ -133,6 +133,43 @@
   margin: 0;
 }
 
+.route-preview-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.route-preview-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 800;
+  font-size: 11px;
+  border: 1px solid #e0e7ff;
+}
+
+.pill-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.pill-dot.distance {
+  background: linear-gradient(135deg, #6366f1, #a855f7);
+}
+
+.pill-dot.duration {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.pill-dot.difficulty {
+  background: linear-gradient(135deg, #f97316, #ef4444);
 .route-preview-rating-badge {
   display: inline-flex;
   align-items: center;

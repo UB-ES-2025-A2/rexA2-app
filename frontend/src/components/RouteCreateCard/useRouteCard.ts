@@ -6,6 +6,17 @@ import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
+const PUBLIC_CATEGORIES: Category[] = [
+  "gastronomia",
+  "naturaleza",
+  "aventura",
+  "cultura",
+  "deporte",
+  "historia",
+  "urban",
+  "entretenimiento",
+  "otros",
+];
 
 export function useRouteCard({
   modeDefault,
@@ -26,8 +37,11 @@ export function useRouteCard({
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category | "">("");
+  const [category, setCategory] = useState<Category | "">(
+    PUBLIC_CATEGORIES[0] ?? ""
+  );
   const [isPrivate, setIsPrivate] = useState(true);
+  const [difficulty, setDifficulty] = useState<"" | "easy" | "medium" | "hard">("");
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
   const [nameTooLong, setNameTooLong] = useState(false);
@@ -181,6 +195,10 @@ export function useRouteCard({
       showAlert(`Máximo ${MAX_IMAGES} imágenes por ruta.`, "error");
       return;
     }
+    if (!difficulty) {
+      showAlert("Selecciona una dificultad para la ruta", "error");
+      return;
+    }
 
     const formattedPoints = points.map(([lng, lat]) => ({
       latitude: lat,
@@ -194,6 +212,7 @@ export function useRouteCard({
       visibility: !isPrivate,
       category: category as Category,
       images: images.map((img) => img.url),
+      difficulty,
     };
 
     try {
@@ -229,6 +248,7 @@ export function useRouteCard({
       isPrivate,
       category,
       images,
+      categoryOptions: PUBLIC_CATEGORIES,
 
       geocoderRef,
       searchPoints,
@@ -238,6 +258,8 @@ export function useRouteCard({
       onTogglePrivate: setIsPrivate,
       onChangeCategory: (v: Category | "") => setCategory(v),
       onChangeDescription: setDescription,
+      difficulty,
+      onChangeDifficulty: setDifficulty,
       onChangeMode: changeMode,
       onAddSearchPoint: addSearchPoint,
       onClearSearchPoints: clearSearchPoints,

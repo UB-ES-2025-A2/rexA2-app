@@ -54,10 +54,19 @@ class RouteBase(BaseModel):
         default_factory=list,
         description="Lista opcional de URLs de imágenes",
     )
+    distance_km: float | None = Field(
+        default=None,
+        ge=0,
+        description="Distancia aproximada en kilómetros (calculada automáticamente)",
+    )
     duration_minutes: int | None = Field(   #Duración estimada en minutos, aun no implementado en el front
         default=None,
         ge=0,                           # >= 0
         description="Duración estimada en minutos (>= 0)",
+    )
+    difficulty: str | None = Field(
+        default=None,
+        description="Dificultad estimada (easy, medium, hard) calculada automáticamente",
     )
     rating: float | None = Field(          #Nota media de la ruta, aun no implemnentado en el front
         default=None,
@@ -140,3 +149,41 @@ class RoutePublic(RouteBase):
     rating_count: int | None = None
     user_rating: float | None = None
     images: List[str] = Field(default_factory=list)
+
+
+class RouteUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    category: str | None = None
+    visibility: bool | None = None
+    duration_minutes: int | None = Field(default=None, ge=0)
+    difficulty: str | None = None
+
+    @field_validator("name")
+    @classmethod
+    def _name_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir nombre a la ruta")
+        if len(v) > 30:
+            raise ValueError("El nombre de la ruta debe tener menos de 30 caracteres")
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def _desc_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("Falta añadir una descripción a la ruta")
+        return v
+
+    @field_validator("category")
+    @classmethod
+    def _cat_present(cls, v: str | None):
+        if v is None:
+            return v
+        if not v.strip():
+            raise ValueError("No se ha seleccionado ninguna categoría")
+        return v
