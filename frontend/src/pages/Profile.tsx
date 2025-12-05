@@ -47,6 +47,9 @@ type FavoriteRouteApi = {
   visibility: boolean;
   points: FavoriteRoutePoint[];
   owner_username?: string | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 type FavoriteRoute = {
   id: string;
@@ -58,6 +61,9 @@ type FavoriteRoute = {
   createdAt: string;
   visibility: boolean;
   points: Array<[number, number]>;
+  rating?: number | null;
+  rating_count?: number | null;
+  user_rating?: number | null;
 };
 
 const API_BASE = (
@@ -644,7 +650,35 @@ export default function Profile() {
                 (selectedFavorite.category as Category) || "entretenimiento"
               }
               points={selectedFavorite.points}
+              distanceKm={
+                (selectedFavorite as any).distanceKm ??
+                (selectedFavorite as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedFavorite as any).durationMinutes ??
+                (selectedFavorite as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedFavorite as any).difficulty ?? null}
               isPrivate={!selectedFavorite.visibility}
+              rating={selectedFavorite.rating ?? null}
+              ratingCount={selectedFavorite.rating_count ?? null}
+              userRating={selectedFavorite.user_rating ?? null}
+              onRatingChange={({ average, count }) => {
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeFavoriteView}
               initialSaved
               onSavedChange={handleFavoriteSavedChange}
@@ -660,7 +694,35 @@ export default function Profile() {
                 (selectedCreatedRoute.category as Category) || "entretenimiento"
               }
               points={selectedCreatedRoute.points}
+              distanceKm={
+                (selectedCreatedRoute as any).distanceKm ??
+                (selectedCreatedRoute as any).distance_km ??
+                null
+              }
+              durationMinutes={
+                (selectedCreatedRoute as any).durationMinutes ??
+                (selectedCreatedRoute as any).duration_minutes ??
+                null
+              }
+              difficulty={(selectedCreatedRoute as any).difficulty ?? null}
               isPrivate={!selectedCreatedRoute.visibility}
+              rating={selectedCreatedRoute.rating ?? null}
+              ratingCount={selectedCreatedRoute.rating_count ?? null}
+              userRating={selectedCreatedRoute.user_rating ?? null}
+              onRatingChange={({ average, count }) => {
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
               onClose={closeCreatedView}
               initialSaved={favorites.some(
                 (route) => route.id === selectedCreatedRoute.id
@@ -832,6 +894,18 @@ function normalizeFavoriteRoute(
     createdAt,
     visibility: Boolean(route.visibility),
     points: normalizedPoints,
+    rating:
+      typeof route.rating === "number"
+        ? route.rating
+        : route.user_rating ?? null,
+    rating_count:
+      typeof route.rating_count === "number"
+        ? route.rating_count
+        : typeof (route as any).ratingCount === "number"
+          ? (route as any).ratingCount
+          : null,
+    user_rating:
+      typeof route.user_rating === "number" ? route.user_rating : null,
   };
 }
 

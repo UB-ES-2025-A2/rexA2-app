@@ -50,10 +50,19 @@ class RouteBase(BaseModel):
     visibility: bool = False        # Visibilidad de la ruta públicamente (por defecto, no)
     description: str # | None = None  # Descripción de la ruta (opcional)
     category: str # | None = None     # Categoría opcional de la ruta
+    distance_km: float | None = Field(
+        default=None,
+        ge=0,
+        description="Distancia aproximada en kilómetros (calculada automáticamente)",
+    )
     duration_minutes: int | None = Field(   #Duración estimada en minutos, aun no implementado en el front
         default=None,
         ge=0,                           # >= 0
         description="Duración estimada en minutos (>= 0)",
+    )
+    difficulty: str | None = Field(
+        default=None,
+        description="Dificultad estimada (easy, medium, hard) calculada automáticamente",
     )
     rating: float | None = Field(          #Nota media de la ruta, aun no implemnentado en el front
         default=None,

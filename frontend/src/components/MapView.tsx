@@ -74,6 +74,12 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const safeResize = () => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    };
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
@@ -86,10 +92,10 @@ export default function MapView({
     mapRef.current = map;
 
     map.on("load", () => {
-      setTimeout(() => map.resize(), 50);
-      setTimeout(() => map.resize(), 150);
-      setTimeout(() => map.resize(), 300);
-      setTimeout(() => map.resize(), 500);
+      setTimeout(safeResize, 50);
+      setTimeout(safeResize, 150);
+      setTimeout(safeResize, 300);
+      setTimeout(safeResize, 500);
 
       const trafficLayers = [
         "traffic-lines-incidents-day",

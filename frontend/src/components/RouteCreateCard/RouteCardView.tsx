@@ -7,6 +7,8 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
+  difficulty: "" | "easy" | "medium" | "hard";
+  categoryOptions?: Category[];
 
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
@@ -16,6 +18,7 @@ type Props = {
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
+  onChangeDifficulty: (v: "" | "easy" | "medium" | "hard") => void;
   onChangeMode: (m: Mode) => void;
   onAddSearchPoint: () => void;
   onClearSearchPoints: () => void;
@@ -30,6 +33,8 @@ const RouteCardView: React.FC<Props> = ({
   name,
   isPrivate,
   category,
+  difficulty,
+  categoryOptions = [],
   geocoderRef,
   searchPoints,
   drawPoints,
@@ -39,6 +44,7 @@ const RouteCardView: React.FC<Props> = ({
   onChangeName,
   onTogglePrivate,
   onChangeCategory,
+  onChangeDifficulty,
   onChangeMode,
   onAddSearchPoint,
   onClearSearchPoints,
@@ -47,6 +53,18 @@ const RouteCardView: React.FC<Props> = ({
   onSave,
   onChangeDescription,
 }) => {
+  const formatCategory = (cat: string) => {
+    if (!cat) return "";
+    const labels: Record<string, string> = {
+      urban: "Urbana",
+      gastronomia: "Gastronomía",
+    };
+    if (labels[cat]) return labels[cat];
+    return cat
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
+  };
+
   return (
     <div className="route-card-panel">
       <div className="route-card__header">
@@ -76,7 +94,7 @@ const RouteCardView: React.FC<Props> = ({
                 type="text"
                 value={name}
                 onChange={(e) => onChangeName(e.target.value)}
-                placeholder="Ej: Ruta al trabajo"
+                placeholder="Ej: Ruta gastronómica"
               />
             </div>
 
@@ -90,9 +108,34 @@ const RouteCardView: React.FC<Props> = ({
                 <option value="" disabled>
                   Selecciona una categoría…
                 </option>
-                <option value="entretenimiento">Entretenimiento</option>
-                <option value="trabajo">Trabajo</option>
+                {categoryOptions.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {formatCategory(cat)}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="difficulty">Dificultad</label>
+              <select
+                id="difficulty"
+                value={difficulty}
+                onChange={(e) =>
+                  onChangeDifficulty(e.target.value as "" | "easy" | "medium" | "hard")
+                }
+              >
+                <option value="" disabled>
+                  Selecciona dificultad…
+                </option>
+                <option value="easy">Fácil</option>
+                <option value="medium">Media</option>
+                <option value="hard">Alta</option>
+              </select>
+              <p className="route-card__helper">
+                Puedes ajustar la dificultad manualmente; la distancia y duración se calculan
+                automáticamente al guardar.
+              </p>
             </div>
 
             <div className="input-group">

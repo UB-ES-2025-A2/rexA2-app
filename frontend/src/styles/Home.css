@@ -202,6 +202,115 @@ button {
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
 }
 
+.routes-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 20px 10px;
+}
+
+.routes-count {
+  font-weight: 800;
+  color: var(--text);
+}
+
+.routes-active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.routes-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.routes-filter-chip.muted {
+  color: #475569;
+}
+
+.routes-reset {
+  margin-left: auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--close-border);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--brand);
+  transition: all 0.2s ease;
+}
+
+.routes-reset:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+}
+
+.category-chip-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px 12px;
+}
+
+.category-chip {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--close-border);
+  background: #fff;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-chip:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
+}
+
+.category-chip.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+}
+
+.routes-empty {
+  padding: 24px;
+  background: #f8fafc;
+  border: 2px dashed var(--close-border);
+  border-radius: 16px;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.routes-empty h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.routes-empty__tips {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #475569;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 .input {
   border: 2px solid var(--close-border);
   outline: none;

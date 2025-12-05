@@ -14,6 +14,8 @@ type RouteItem = {
   category: string;
   points: Array<[number, number]>;
   visibility: boolean;
+  rating?: number | null;
+  rating_count?: number | null;
 };
 
 type Props = {
@@ -266,6 +268,16 @@ const UserViewCard: React.FC<Props> = ({
             ? route.points.map((p: any) => [p.longitude, p.latitude])
             : [],
           visibility: route.visibility ?? false,
+          rating:
+            typeof route.rating === "number"
+              ? route.rating
+              : route.average_rating ?? route.averageRating ?? null,
+          rating_count:
+            typeof route.rating_count === "number"
+              ? route.rating_count
+              : typeof route.ratingCount === "number"
+                ? route.ratingCount
+                : null,
         }));
 
         setRoutes(formatted);
@@ -348,6 +360,11 @@ const UserViewCard: React.FC<Props> = ({
               name={r.name}
               category={r.category as Category}
               points={r.points}
+              distanceKm={r.distanceKm}
+              durationMinutes={r.durationMinutes}
+              difficulty={r.difficulty}
+              ratingAverage={r.rating ?? null}
+              ratingCount={r.rating_count ?? null}
               initialSaved={false}
               onClick={() => onRouteClick?.(r)}
             />
