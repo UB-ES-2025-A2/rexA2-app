@@ -12,11 +12,13 @@ export function useRouteCard({
   drawPoints,
   onResetPoints,
   onClose,
+  initialImages = [],
 }: {
   modeDefault: Mode;
   drawPoints: Array<[number, number]>;
   onResetPoints?: () => void;
   onClose?: () => void;
+  initialImages?: string[];
 }) {
   const { token } = useAuth();
   const { showAlert } = useAlert();
@@ -29,8 +31,19 @@ export function useRouteCard({
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
   const [nameTooLong, setNameTooLong] = useState(false);
+  const [images, setImages] = useState<
+    { id: string; url: string; name: string; size?: number }[]
+  >(() =>
+    (initialImages ?? []).map((url, idx) => ({
+      id: `initial-${idx}`,
+      url,
+      name: `Imagen ${idx + 1}`,
+    }))
+  );
   const geocoderRef = useRef<HTMLDivElement | null>(null);
   const geocoderInstance = useRef<MapboxGeocoder | null>(null);
+  const MAX_IMAGES = 10;
+  const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
 
   useEffect(() => {
     if (mode !== "search") {
@@ -104,6 +117,16 @@ export function useRouteCard({
     else clearSearchPoints();
   };
 
+  useEffect(() => {
+    setImages(
+      (initialImages ?? []).map((url, idx) => ({
+        id: `initial-${idx}`,
+        url,
+        name: `Imagen ${idx + 1}`,
+      }))
+    );
+  }, [initialImages]);
+
   const checkRouteNameExists = async (routeName: string) => {
     try {
       const res = await fetch(`${API}/routes/by-name/${encodeURIComponent(routeName.trim())}`, {
@@ -148,6 +171,10 @@ export function useRouteCard({
       showAlert("No se ha seleccionado ninguna categoría", "error");
       return;
     }
+    if (images.length > MAX_IMAGES) {
+      showAlert(`Máximo ${MAX_IMAGES} imágenes por ruta.`, "error");
+      return;
+    }
 
     const formattedPoints = points.map(([lng, lat]) => ({
       latitude: lat,
@@ -160,6 +187,7 @@ export function useRouteCard({
       points: formattedPoints,
       visibility: !isPrivate,
       category: category as Category,
+      images: images.map((img) => img.url),
     };
 
     try {
@@ -194,6 +222,7 @@ export function useRouteCard({
       description,
       isPrivate,
       category,
+      images,
 
       geocoderRef,
       searchPoints,
@@ -210,6 +239,54 @@ export function useRouteCard({
       onResetDrawPoints: onResetPoints,
       onSave: handleSave,
       nameTooLong,
+      onSelectImages: async (files: FileList | null) => {
+        if (!files) return;
+        const currentCount = images.length;
+        const availableSlots = MAX_IMAGES - currentCount;
+        if (availableSlots <= 0) {
+          showAlert(`Máximo ${MAX_IMAGES} imágenes por ruta.`, "error");
+          return;
+        }
+        const candidates = Array.from(files).slice(0, availableSlots);
+        const accepted: { id: string; url: string; name: string; size?: number }[] = [];
+
+        for (const file of candidates) {
+          if (!file.type.startsWith("image/")) {
+            showAlert(`El archivo ${file.name} no es una imagen válida.`, "error");
+            continue;
+          }
+          if (file.size > MAX_IMAGE_SIZE_BYTES) {
+            showAlert(`'${file.name}' supera los 2 MB.`, "error");
+            continue;
+          }
+          try {
+            const url = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (typeof reader.result === "string") resolve(reader.result);
+                else reject(new Error("Formato de imagen no soportado"));
+              };
+              reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+              reader.readAsDataURL(file);
+            });
+            accepted.push({
+              id: `${file.name}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+              url,
+              name: file.name,
+              size: file.size,
+            });
+          } catch (err) {
+            console.error("Error leyendo imagen", err);
+            showAlert(`No se pudo leer '${file.name}'.`, "error");
+          }
+        }
+
+        if (accepted.length) {
+          setImages((prev) => [...prev, ...accepted]);
+        }
+      },
+      onRemoveImage: (id: string) =>
+        setImages((prev) => prev.filter((img) => img.id !== id)),
     },
   } as const;
 }
