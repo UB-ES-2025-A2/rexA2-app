@@ -333,8 +333,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowers(rawItems.map(normalizeFollower));
         setFollowersStatus("idle");
@@ -402,8 +402,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowing(rawItems.map(normalizeFollower));
         setFollowingStatus("idle");
@@ -637,9 +637,8 @@ export default function Profile() {
 
       <main className="profile-layout">
         <aside
-          className={`sidebar ${
-            showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
-          }`}
+          className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
+            }`}
         >
           {showFavoriteRoute && selectedFavorite ? (
             <RouteDetailsCard
@@ -664,7 +663,6 @@ export default function Profile() {
               isPrivate={!selectedFavorite.visibility}
               rating={selectedFavorite.rating ?? null}
               ratingCount={selectedFavorite.rating_count ?? null}
-              userRating={selectedFavorite.user_rating ?? null}
               onRatingChange={({ average, count }) => {
                 setFavorites((prev) =>
                   prev.map((r) =>
@@ -708,7 +706,6 @@ export default function Profile() {
               isPrivate={!selectedCreatedRoute.visibility}
               rating={selectedCreatedRoute.rating ?? null}
               ratingCount={selectedCreatedRoute.rating_count ?? null}
-              userRating={selectedCreatedRoute.user_rating ?? null}
               onRatingChange={({ average, count }) => {
                 setCreatedRoutes((prev) =>
                   prev.map((r) =>
@@ -871,12 +868,12 @@ function normalizeFavoriteRoute(
 ): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
-        .filter(
-          (point): point is FavoriteRoutePoint =>
-            typeof point?.longitude === "number" &&
-            typeof point?.latitude === "number"
-        )
-        .map((point) => [point.longitude, point.latitude])
+      .filter(
+        (point): point is FavoriteRoutePoint =>
+          typeof point?.longitude === "number" &&
+          typeof point?.latitude === "number"
+      )
+      .map((point) => [point.longitude, point.latitude])
     : [];
 
   const createdAt =

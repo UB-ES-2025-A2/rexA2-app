@@ -135,6 +135,8 @@
 
 .pill-dot.difficulty {
   background: linear-gradient(135deg, #f97316, #ef4444);
+}
+
 .route-preview-rating-badge {
   display: inline-flex;
   align-items: center;
@@ -198,7 +200,7 @@
   fill: #ff6b6b;
 }
 
-.save-container input:checked ~ .save-icon {
+.save-container input:checked~.save-icon {
   fill: #ff6b6b;
   animation: pulse 0.4s ease;
 }
@@ -213,16 +215,19 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     transform: scale(1);
   }
+
   50% {
     transform: scale(1.2);
   }

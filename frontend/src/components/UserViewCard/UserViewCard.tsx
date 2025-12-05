@@ -16,6 +16,9 @@ type RouteItem = {
   visibility: boolean;
   rating?: number | null;
   rating_count?: number | null;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string | null;
 };
 
 type Props = {
@@ -331,9 +334,8 @@ const UserViewCard: React.FC<Props> = ({
           {shouldShowFollowButton && (
             <button
               type="button"
-              className={`usercard__follow-btn ${
-                isFollowing ? "usercard__follow-btn--following" : ""
-              }`}
+              className={`usercard__follow-btn ${isFollowing ? "usercard__follow-btn--following" : ""
+                }`}
               onClick={handleFollowClick}
               disabled={followLoading}
             >

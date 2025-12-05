@@ -123,19 +123,19 @@ const formatRouteFromApi = (route: any): RouteItem => ({
     null,
   user: route.user
     ? {
-        id: route.user._id || route.user.id,
-        username: route.user.username,
-        name: route.user.name,
-        email: route.user.email,
-      }
+      id: route.user._id || route.user.id,
+      username: route.user.username,
+      name: route.user.name,
+      email: route.user.email,
+    }
     : route.username || route.ownerName || route.ownerUsername
-    ? {
+      ? {
         id: route.user_id || route.owner_id,
         username: route.username,
         name: route.ownerName,
         email: route.email,
       }
-    : undefined,
+      : undefined,
   difficulty: route.difficulty,
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
@@ -501,11 +501,10 @@ export default function Home() {
         if (!response.ok) throw new Error("Error al cargar las rutas");
         const data = await response.json();
 
-        const formatted: RouteItem[] = data.map((route: any) =>
-          formatRouteFromApi(route)
-        );
+
 
         const formatted: RouteItem[] = data.map((route: any) => {
+          formatRouteFromApi(route)
           // Lógica de US32 para procesar puntos y calcular métricas si faltan
           const pointTuples = (route.points || []).map((p: any) => [
             p.longitude,
@@ -519,8 +518,8 @@ export default function Home() {
 
           const durationMinutes = normalizeDurationMinutes(
             route.duration_minutes ??
-              route.durationMinutes ??
-              route.duration,
+            route.durationMinutes ??
+            route.duration,
             distanceKm
           );
 
@@ -534,7 +533,7 @@ export default function Home() {
             durationMinutes,
             difficulty:
               route.difficulty || route.difficulty_level || route.difficultyLevel,
-          theme: route.theme || route.topic || route.themedCategory,
+            theme: route.theme || route.topic || route.themedCategory,
             visibility: route.visibility ?? false,
             // Campos de Rating (Traídos de Develop)
             rating:
@@ -546,14 +545,14 @@ export default function Home() {
               typeof route.rating_count === "number"
                 ? route.rating_count
                 : typeof route.ratingCount === "number"
-                ? route.ratingCount
-                : null,
+                  ? route.ratingCount
+                  : null,
             user_rating:
               typeof route.user_rating === "number"
                 ? route.user_rating
                 : typeof route.userRating === "number"
-                ? route.userRating
-                : null,
+                  ? route.userRating
+                  : null,
             // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
             user_id: route.user_id,
@@ -593,19 +592,19 @@ export default function Home() {
             email: route.user?.email || route.email,
             user: route.user
               ? {
-                  id: route.user._id || route.user.id,
-                  username: route.user.username,
-                  name: route.user.name,
-                  email: route.user.email,
-                }
+                id: route.user._id || route.user.id,
+                username: route.user.username,
+                name: route.user.name,
+                email: route.user.email,
+              }
               : route.username || route.ownerName || route.ownerUsername
-              ? {
+                ? {
                   id: route.user_id || route.owner_id,
                   username: route.username,
                   name: route.ownerName,
                   email: route.email,
                 }
-              : undefined,
+                : undefined,
             username: route.username,
           };
         });
@@ -876,296 +875,296 @@ export default function Home() {
               onEdit={(rd) => {
                 const payload = rd
                   ? {
-                      id: rd.id ?? selectedRoute.id,
-                      name: rd.name ?? selectedRoute.name,
-                      description: rd.description ?? selectedRoute.description,
-                      category: rd.category ?? selectedRoute.category,
-                      difficulty: rd.difficulty ?? selectedRoute.difficulty,
-                      distanceKm: rd.distance_km ?? rd.distanceKm ?? selectedRoute.distanceKm,
-                      durationMinutes:
-                        rd.duration_minutes ??
-                        rd.durationMinutes ??
-                        selectedRoute.durationMinutes,
-                    }
+                    id: rd.id ?? selectedRoute.id,
+                    name: rd.name ?? selectedRoute.name,
+                    description: rd.description ?? selectedRoute.description,
+                    category: rd.category ?? selectedRoute.category,
+                    difficulty: rd.difficulty ?? selectedRoute.difficulty,
+                    distanceKm: rd.distance_km ?? rd.distanceKm ?? selectedRoute.distanceKm,
+                    durationMinutes:
+                      rd.duration_minutes ??
+                      rd.durationMinutes ??
+                      selectedRoute.durationMinutes,
+                  }
                   : selectedRoute;
                 setEditingRoute(payload as RouteItem);
-              onRatingChange={({ average, count }) => {
-                setSelectedRoute((prev) =>
-                  prev && prev.id === selectedRoute.id
-                    ? { ...prev, rating: average, rating_count: count }
-                    : prev
-                );
+              }}
+                onRatingChange = {({ average, count }) => {
+            setSelectedRoute((prev) =>
+              prev && prev.id === selectedRoute.id
+                ? { ...prev, rating: average, rating_count: count }
+                : prev
+            );
                 setRoutes((prev) =>
                   prev.map((r) =>
-                    r.id === selectedRoute.id
-                      ? { ...r, rating: average, rating_count: count }
-                      : r
-                  )
-                );
+          r.id === selectedRoute.id
+          ? {...r, rating: average, rating_count: count }
+          : r
+          )
+          );
               }}
-              onClose={() => {
-                setSelectedRoute(null);
-                setSelectedRoutePoints([]);
-                setShowComments(false);
-                if (userInitialCenterRef.current) {
-                  setMapCenter(userInitialCenterRef.current);
-                  setMapZoom(GEO_ZOOM);
-                } else {
-                  setMapCenter(DEFAULT_CENTER);
-                  setMapZoom(DEFAULT_ZOOM);
-                }
-              }}
-              onShowComments={() => setShowComments(true)}
-              onDelete={async (routeId) => {
-                const res = await fetch(`${API}/routes/${routeId}`, {
-                  method: "DELETE",
-                  headers: { Authorization: `Bearer ${token}` },
-                });
-                if (!res.ok) throw new Error("No se pudo eliminar");
-                setRoutes((prev) => prev.filter((r) => r.id !== routeId));
-              }}
+          onClose={() => {
+            setSelectedRoute(null);
+            setSelectedRoutePoints([]);
+            setShowComments(false);
+            if (userInitialCenterRef.current) {
+              setMapCenter(userInitialCenterRef.current);
+              setMapZoom(GEO_ZOOM);
+            } else {
+              setMapCenter(DEFAULT_CENTER);
+              setMapZoom(DEFAULT_ZOOM);
+            }
+          }}
+          onShowComments={() => setShowComments(true)}
+          onDelete={async (routeId) => {
+            const res = await fetch(`${API}/routes/${routeId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("No se pudo eliminar");
+            setRoutes((prev) => prev.filter((r) => r.id !== routeId));
+          }}
             />
           ) : selectedUser ? (
-            <UserCardView
-              userId={selectedUser.id}
-              username={selectedUser.username}
-              email={selectedUser.email}
-              avatarUrl={selectedUser.avatar_url}
-              onClose={() => setSelectedUser(null)}
-              onRouteClick={(route) => {
-                setSelectedRoute(route);
-                setSelectedRoutePoints(route.points);
-                setShowComments(false);
-              }}
-            />
+          <UserCardView
+            userId={selectedUser.id}
+            username={selectedUser.username}
+            email={selectedUser.email}
+            avatarUrl={selectedUser.avatar_url}
+            onClose={() => setSelectedUser(null)}
+            onRouteClick={(route) => {
+              setSelectedRoute(route);
+              setSelectedRoutePoints(route.points);
+              setShowComments(false);
+            }}
+          />
           ) : (
-            <div>
-              <div className="container">
-                <div className="tabs">
-                  <input
-                    type="radio"
-                    id="radio-1"
-                    name="tabs"
-                    checked={searchMode === "routes"}
-                    onChange={() => setSearchMode("routes")}
-                  />
-                  <label className="tab" htmlFor="radio-1">
-                    Rutas
-                  </label>
+          <div>
+            <div className="container">
+              <div className="tabs">
+                <input
+                  type="radio"
+                  id="radio-1"
+                  name="tabs"
+                  checked={searchMode === "routes"}
+                  onChange={() => setSearchMode("routes")}
+                />
+                <label className="tab" htmlFor="radio-1">
+                  Rutas
+                </label>
 
-                  <input
-                    type="radio"
-                    id="radio-2"
-                    name="tabs"
-                    checked={searchMode === "users"}
-                    onChange={() => setSearchMode("users")}
-                  />
-                  <label className="tab" htmlFor="radio-2">
-                    Usuarios
-                  </label>
+                <input
+                  type="radio"
+                  id="radio-2"
+                  name="tabs"
+                  checked={searchMode === "users"}
+                  onChange={() => setSearchMode("users")}
+                />
+                <label className="tab" htmlFor="radio-2">
+                  Usuarios
+                </label>
 
-                  <span className="glider"></span>
-                </div>
+                <span className="glider"></span>
               </div>
+            </div>
 
-              {searchMode === "routes" ? (
-                <>
-              {routesLoading ? (
-                renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
-              ) : routesError ? (
-                renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
-              ) : (() => {
-                const filteredRoutes = getFilteredRoutes();
-                const hasFiltersApplied =
-                  appliedFilters.category !== "all" ||
-                  appliedFilters.pointsFilter !== "all" ||
-                  appliedFilters.distance !== "all" ||
-                  appliedFilters.duration !== "all" ||
-                  appliedFilters.difficulty !== "all" ||
-                  appliedFilters.theme !== "all";
-                const hasSearch = Boolean(routeSearchQuery.trim());
-                const resultCount = filteredRoutes.length;
+            {searchMode === "routes" ? (
+              <>
+                {routesLoading ? (
+                  renderEmptyState("Cargando rutas...", "Obteniendo coincidencias")
+                ) : routesError ? (
+                  renderEmptyState(routesError, "Intenta de nuevo en unos segundos")
+                ) : (() => {
+                  const filteredRoutes = getFilteredRoutes();
+                  const hasFiltersApplied =
+                    appliedFilters.category !== "all" ||
+                    appliedFilters.pointsFilter !== "all" ||
+                    appliedFilters.distance !== "all" ||
+                    appliedFilters.duration !== "all" ||
+                    appliedFilters.difficulty !== "all" ||
+                    appliedFilters.theme !== "all";
+                  const hasSearch = Boolean(routeSearchQuery.trim());
+                  const resultCount = filteredRoutes.length;
 
-                return (
-                  <>
-                    <div className="category-chip-bar" aria-label="Filtrar por categoría">
-                      {CATEGORY_OPTIONS.map((cat) => (
-                        <button
-                          key={cat}
-                          className={`category-chip ${
-                            appliedFilters.category === cat ? "active" : ""
-                          }`}
-                          onClick={() => handleCategorySelect(cat)}
-                          aria-pressed={appliedFilters.category === cat}
-                        >
-                          {CATEGORY_LABELS[cat] ?? cat}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="routes-meta">
-                      <div className="routes-count">
-                        {resultCount} rutas encontradas
+                  return (
+                    <>
+                      <div className="category-chip-bar" aria-label="Filtrar por categoría">
+                        {CATEGORY_OPTIONS.map((cat) => (
+                          <button
+                            key={cat}
+                            className={`category-chip ${appliedFilters.category === cat ? "active" : ""
+                              }`}
+                            onClick={() => handleCategorySelect(cat)}
+                            aria-pressed={appliedFilters.category === cat}
+                          >
+                            {CATEGORY_LABELS[cat] ?? cat}
+                          </button>
+                        ))}
                       </div>
-                      {(hasFiltersApplied || hasSearch) && (
-                        <div className="routes-active-filters">
-                          {hasSearch ? (
-                            <span className="routes-filter-chip muted">
-                                  Búsqueda: "{routeSearchQuery.trim()}"
-                                </span>
-                              ) : null}
-                              {appliedFilters.category !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Categoría:{" "}
-                                  {CATEGORY_LABELS[appliedFilters.category] ??
-                                    appliedFilters.category}
-                                </span>
-                              ) : null}
-                              {appliedFilters.pointsFilter !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
-                                </span>
-                              ) : null}
-                              {appliedFilters.distance !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
-                                </span>
-                              ) : null}
-                              {appliedFilters.duration !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Duración: {DURATION_LABELS[appliedFilters.duration]}
-                                </span>
-                              ) : null}
-                              {appliedFilters.difficulty !== "all" ? (
-                                <span className="routes-filter-chip">
-                                  Dificultad:{" "}
-                                  {DIFFICULTY_LABELS[appliedFilters.difficulty]}
-                                </span>
-                              ) : null}
-                              {appliedFilters.theme !== "all" ? (
-                                <span className="routes-filter-chip">
-                            Temática: {THEME_LABELS[appliedFilters.theme]}
-                          </span>
-                        ) : null}
-                        <button
-                          className="routes-reset"
-                          onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
-                        >
-                          Restablecer filtros
-                        </button>
-                      </div>
-                    )}
-                  </div>
 
-                    {resultCount === 0 ? (
-                      <div className="routes-empty">
-                        <h4>
-                          {hasFiltersApplied || hasSearch
-                            ? "No hay rutas para estos filtros"
-                            : "No hay rutas disponibles"}
-                        </h4>
-                        <p className="muted">
-                          {hasFiltersApplied || hasSearch
-                            ? "Ajusta la búsqueda o prueba con filtros más amplios."
-                            : "Crea una ruta para verla aquí."}
-                        </p>
-                        <div className="routes-empty__tips">
-                          <span>• Reduce filtros activos.</span>
-                          <span>• Amplía el rango de distancia o duración.</span>
-                          <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                      <div className="routes-meta">
+                        <div className="routes-count">
+                          {resultCount} rutas encontradas
                         </div>
                         {(hasFiltersApplied || hasSearch) && (
-                          <button
-                            className="routes-reset"
-                            onClick={() => {
-                              handleApplyFilters(DEFAULT_FILTERS);
-                              setRouteSearchQuery("");
-                            }}
-                          >
-                            Restablecer filtros
-                          </button>
+                          <div className="routes-active-filters">
+                            {hasSearch ? (
+                              <span className="routes-filter-chip muted">
+                                Búsqueda: "{routeSearchQuery.trim()}"
+                              </span>
+                            ) : null}
+                            {appliedFilters.category !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Categoría:{" "}
+                                {CATEGORY_LABELS[appliedFilters.category] ??
+                                  appliedFilters.category}
+                              </span>
+                            ) : null}
+                            {appliedFilters.pointsFilter !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Puntos: {POINTS_LABELS[appliedFilters.pointsFilter]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.distance !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.duration !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Duración: {DURATION_LABELS[appliedFilters.duration]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.difficulty !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Dificultad:{" "}
+                                {DIFFICULTY_LABELS[appliedFilters.difficulty]}
+                              </span>
+                            ) : null}
+                            {appliedFilters.theme !== "all" ? (
+                              <span className="routes-filter-chip">
+                                Temática: {THEME_LABELS[appliedFilters.theme]}
+                              </span>
+                            ) : null}
+                            <button
+                              className="routes-reset"
+                              onClick={() => handleApplyFilters(DEFAULT_FILTERS)}
+                            >
+                              Restablecer filtros
+                            </button>
+                          </div>
                         )}
                       </div>
-                    ) : (
-                      <AnimatedList
-                        items={filteredRoutes.map((r) => (
-                          <div className="route-row" key={r.id}>
-                            <RoutePreviewCard
-                          id={r.id}
-                          name={r.name}
-                          category={r.category as Category}
-                          points={r.points}
-                          distanceKm={r.distanceKm ?? null}
-                          durationMinutes={r.durationMinutes ?? null}
-                          difficulty={r.difficulty ?? null}
-                          ratingAverage={r.rating ?? null}
-                          ratingCount={r.rating_count ?? null}
-                          initialSaved={favoriteIds.has(String(r.id))}
+
+                      {resultCount === 0 ? (
+                        <div className="routes-empty">
+                          <h4>
+                            {hasFiltersApplied || hasSearch
+                              ? "No hay rutas para estos filtros"
+                              : "No hay rutas disponibles"}
+                          </h4>
+                          <p className="muted">
+                            {hasFiltersApplied || hasSearch
+                              ? "Ajusta la búsqueda o prueba con filtros más amplios."
+                              : "Crea una ruta para verla aquí."}
+                          </p>
+                          <div className="routes-empty__tips">
+                            <span>• Reduce filtros activos.</span>
+                            <span>• Amplía el rango de distancia o duración.</span>
+                            <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
+                          </div>
+                          {(hasFiltersApplied || hasSearch) && (
+                            <button
+                              className="routes-reset"
+                              onClick={() => {
+                                handleApplyFilters(DEFAULT_FILTERS);
+                                setRouteSearchQuery("");
+                              }}
+                            >
+                              Restablecer filtros
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <AnimatedList
+                          items={filteredRoutes.map((r) => (
+                            <div className="route-row" key={r.id}>
+                              <RoutePreviewCard
+                                id={r.id}
+                                name={r.name}
+                                category={r.category as Category}
+                                points={r.points}
+                                distanceKm={r.distanceKm ?? null}
+                                durationMinutes={r.durationMinutes ?? null}
+                                difficulty={r.difficulty ?? null}
+                                ratingAverage={r.rating ?? null}
+                                ratingCount={r.rating_count ?? null}
+                                initialSaved={favoriteIds.has(String(r.id))}
+                              />
+                            </div>
+                          ))}
+                          className="routes-animated-list"
+                          itemClassName="routes-animated-item"
+                          showGradients
+                          onItemSelect={(index) =>
+                            requireAuth(() => {
+                              const route = filteredRoutes[index];
+                              if (!route) return;
+                              setSelectedRoute(route);
+                              setSelectedRoutePoints(route.points);
+                            })
+                          }
+                        />
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
+              <>
+                {usersLoading ? (
+                  renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
+                ) : usersError ? (
+                  renderEmptyState(usersError, "Inténtalo de nuevo en unos segundos")
+                ) : users.length === 0 ? (
+                  renderEmptyState(
+                    userSearchQuery.trim() ? "Sin coincidencias" : "No hay usuarios.",
+                    userSearchQuery.trim()
+                      ? "Prueba con otro nombre o email"
+                      : "Todavía no hay usuarios para mostrar"
+                  )
+                ) : (
+                  (() => {
+                    const userItems = users.map((u) => (
+                      <div className="user-row" key={u.id}>
+                        <UserPreviewCard
+                          id={u.id}
+                          username={u.username}
+                          email={u.email}
+                          name={u.name}
+                          avatar_url={u.avatar_url}
                         />
                       </div>
-                    ))}
-                        className="routes-animated-list"
-                        itemClassName="routes-animated-item"
-                        showGradients
-                        onItemSelect={(index) =>
-                          requireAuth(() => {
-                            const route = filteredRoutes[index];
-                            if (!route) return;
-                            setSelectedRoute(route);
-                            setSelectedRoutePoints(route.points);
-                          })
-                        }
-                      />
-                    )}
-                  </>
-                );
-              })()}
-            </>
-          ) : (
-                <>
-                  {usersLoading ? (
-                    renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
-                  ) : usersError ? (
-                    renderEmptyState(usersError, "Inténtalo de nuevo en unos segundos")
-                  ) : users.length === 0 ? (
-                    renderEmptyState(
-                      userSearchQuery.trim() ? "Sin coincidencias" : "No hay usuarios.",
-                      userSearchQuery.trim()
-                        ? "Prueba con otro nombre o email"
-                        : "Todavía no hay usuarios para mostrar"
-                    )
-                  ) : (
-                    (() => {
-                      const userItems = users.map((u) => (
-                        <div className="user-row" key={u.id}>
-                          <UserPreviewCard
-                            id={u.id}
-                            username={u.username}
-                            email={u.email}
-                            name={u.name}
-                            avatar_url={u.avatar_url}
-                          />
-                        </div>
-                      ));
+                    ));
 
-                      return (
-                        <AnimatedList
-                          items={userItems}
-                          className="users-animated-list"
-                          itemClassName="users-animated-item"
-                          showGradients
-                          onItemSelect={(index) => {
-                            const u = users[index];
-                            if (!u) return;
-                            handleOpenUser(u);
-                          }}
-                        />
-                      );
-                    })()
-                  )}
-                </>
-              )}
-            </div>
+                    return (
+                      <AnimatedList
+                        items={userItems}
+                        className="users-animated-list"
+                        itemClassName="users-animated-item"
+                        showGradients
+                        onItemSelect={(index) => {
+                          const u = users[index];
+                          if (!u) return;
+                          handleOpenUser(u);
+                        }}
+                      />
+                    );
+                  })()
+                )}
+              </>
+            )}
+          </div>
           )}
         </div>
 

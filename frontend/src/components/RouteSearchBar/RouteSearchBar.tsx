@@ -1,36 +1,12 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import "../../styles/RouteSearchBar.css";
 
-interface Route {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  points: Array<[number, number]>;
-  distanceKm?: number | null;
-  durationMinutes?: number | null;
-  difficulty?: string;
-  routeType?: string;
-  theme?: string;
-  visibility: boolean;
-  is_owner?: boolean;
-  ownerName?: string;
-  ownerUsername?: string;
-  username?: string;
-  email?: string;
-  owner_id?: string | number;
-  user_id?: string | number;
-  ownerId?: string | number;
-  userId?: string | number;
-  user?: { id?: string | number; username?: string; name?: string; email?: string };
-}
+export type SearchScope = "routes" | "users";
 
-type SearchScope = "routes" | "users";
-
-type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
-type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
-type DifficultyFilter = "all" | "easy" | "medium" | "hard";
-type ThemeFilter =
+export type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+export type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+export type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+export type ThemeFilter =
   | "all"
   | "nature"
   | "urban"
@@ -42,29 +18,7 @@ type ThemeFilter =
   | "entretenimiento"
   | "otros";
 
-const HIDDEN_CATEGORIES = new Set(["trabajo", "Trabajo"]);
-const CATEGORY_OPTIONS = [
-  "gastronomia",
-  "naturaleza",
-  "aventura",
-  "cultura",
-  "deporte",
-  "historia",
-  "entretenimiento",
-  "otros",
-];
-const CATEGORY_LABELS: Record<string, string> = {
-  gastronomia: "Gastronomía",
-  naturaleza: "Naturaleza",
-  aventura: "Aventura",
-  cultura: "Cultura",
-  deporte: "Deporte",
-  historia: "Historia",
-  entretenimiento: "Entretenimiento",
-  otros: "Otros",
-};
-
-type FiltersState = {
+export type FiltersState = {
   category: string;
   pointsFilter: string;
   distance: DistanceFilter;
@@ -83,7 +37,6 @@ const DEFAULT_FILTERS: FiltersState = {
 };
 
 interface RouteSearchBarProps {
-  routes: Route[];
   mode: SearchScope;
   query: string;
   onQueryChange: (query: string) => void;
@@ -93,7 +46,6 @@ interface RouteSearchBarProps {
 }
 
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
-  routes,
   mode,
   query,
   onQueryChange,
@@ -103,16 +55,6 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 }) => {
   const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
   const [showFilterModal, setShowFilterModal] = useState(false);
-
-  const categories = useMemo(() => {
-    const cats = new Set<string>();
-    CATEGORY_OPTIONS.forEach((c) => cats.add(c));
-    routes
-      .map((r) => r.category)
-      .filter((c) => c && !HIDDEN_CATEGORIES.has(String(c).toLowerCase()))
-      .forEach((c) => cats.add(c));
-    return Array.from(cats).sort();
-  }, [routes]);
 
   useEffect(() => {
     setLocalFilters(filters);
@@ -278,9 +220,8 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       ].map((option) => (
                         <button
                           key={option.value}
-                          className={`filter-chip ${
-                            localFilters.distance === option.value ? "active" : ""
-                          }`}
+                          className={`filter-chip ${localFilters.distance === option.value ? "active" : ""
+                            }`}
                           onClick={() => updateFilters({ distance: option.value })}
                         >
                           {option.label}
@@ -301,9 +242,8 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       ].map((option) => (
                         <button
                           key={option.value}
-                          className={`filter-chip ${
-                            localFilters.duration === option.value ? "active" : ""
-                          }`}
+                          className={`filter-chip ${localFilters.duration === option.value ? "active" : ""
+                            }`}
                           onClick={() => updateFilters({ duration: option.value })}
                         >
                           {option.label}
@@ -323,9 +263,8 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       ].map((option) => (
                         <button
                           key={option.value}
-                          className={`filter-chip ${
-                            localFilters.difficulty === option.value ? "active" : ""
-                          }`}
+                          className={`filter-chip ${localFilters.difficulty === option.value ? "active" : ""
+                            }`}
                           onClick={() => updateFilters({ difficulty: option.value })}
                         >
                           {option.label}
@@ -351,9 +290,8 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       ].map((option) => (
                         <button
                           key={option.value}
-                          className={`filter-chip ${
-                            localFilters.theme === option.value ? "active" : ""
-                          }`}
+                          className={`filter-chip ${localFilters.theme === option.value ? "active" : ""
+                            }`}
                           onClick={() => updateFilters({ theme: option.value })}
                         >
                           {option.label}
