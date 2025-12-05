@@ -7,6 +7,7 @@ type Props = {
   description: string;
   isPrivate: boolean;
   category: Category | "";
+  images: { id: string; url: string; name: string; size?: number }[];
   difficulty: "" | "easy" | "medium" | "hard";
   categoryOptions?: Category[];
 
@@ -14,6 +15,7 @@ type Props = {
   searchPoints: Array<[number, number]>;
   drawPoints: Array<[number, number]>;
   selectedCoord: [number, number] | null;
+  nameTooLong: boolean;
 
   onChangeName: (v: string) => void;
   onTogglePrivate: (v: boolean) => void;
@@ -26,6 +28,8 @@ type Props = {
   onResetDrawPoints?: () => void;
   onSave: () => void | Promise<void>;
   onChangeDescription: (v: string) => void;
+  onSelectImages: (files: FileList | null) => void | Promise<void>;
+  onRemoveImage: (id: string) => void;
 };
 
 const RouteCardView: React.FC<Props> = ({
@@ -33,12 +37,14 @@ const RouteCardView: React.FC<Props> = ({
   name,
   isPrivate,
   category,
+  images,
   difficulty,
   categoryOptions = [],
   geocoderRef,
   searchPoints,
   drawPoints,
   selectedCoord,
+  nameTooLong, // reservado para futuras ayudas visuales
   description,
 
   onChangeName,
@@ -52,6 +58,8 @@ const RouteCardView: React.FC<Props> = ({
   onResetDrawPoints,
   onSave,
   onChangeDescription,
+  onSelectImages,
+  onRemoveImage,
 }) => {
   const formatCategory = (cat: string) => {
     if (!cat) return "";
@@ -96,6 +104,11 @@ const RouteCardView: React.FC<Props> = ({
                 onChange={(e) => onChangeName(e.target.value)}
                 placeholder="Ej: Ruta gastronómica"
               />
+              {nameTooLong && (
+                <p className="route-card__helper" style={{ color: "#dc2626" }}>
+                  Máximo 30 caracteres.
+                </p>
+              )}
             </div>
 
             <div className="input-group">
@@ -263,6 +276,54 @@ const RouteCardView: React.FC<Props> = ({
               </div>
             </>
           )}
+        </div>
+
+        <div className="route-card__section">
+          <div className="route-card__section-head">
+            <span className="route-card__section-title">Imágenes (opcional)</span>
+            <span className="route-card__helper">
+              Añade hasta 10 imágenes JPG/PNG (máx. 2 MB). No es obligatorio para guardar la ruta.
+            </span>
+          </div>
+          <div className="route-card__images">
+            <label className="btn" htmlFor="route-images-input">
+              Seleccionar imágenes
+            </label>
+            <input
+              id="route-images-input"
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                onSelectImages(e.target.files);
+                e.target.value = "";
+              }}
+            />
+            <p className="route-card__helper">Puedes omitirlas y guardar la ruta igual.</p>
+            {images.length === 0 ? (
+              <p className="muted">No has añadido imágenes.</p>
+            ) : (
+              <div className="route-card__image-grid">
+                {images.map((img) => (
+                  <div key={img.id} className="route-card__image-item">
+                    <button
+                      type="button"
+                      className="route-card__image-remove"
+                      onClick={() => onRemoveImage(img.id)}
+                      title="Eliminar imagen"
+                    >
+                      ✕
+                    </button>
+                    <img src={img.url} alt={img.name} loading="lazy" />
+                    <div className="route-card__image-meta">
+                      <span title={img.name}>{img.name}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="route-card__section">

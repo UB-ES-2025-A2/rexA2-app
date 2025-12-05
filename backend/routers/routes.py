@@ -17,6 +17,15 @@ from bson.errors import InvalidId
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
+def _with_images(route: dict | None) -> dict | None:
+    """
+    Normaliza el campo opcional de imágenes para no propagar None a los response_model.
+    """
+    if route is None:
+        return None
+    route["images"] = route.get("images") or []
+    return route
+
 
 async def _ensure_route_access(route_id: str, current_user: dict) -> dict:
     """
@@ -28,6 +37,7 @@ async def _ensure_route_access(route_id: str, current_user: dict) -> dict:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
+    route = _with_images(route)
 
     is_public = bool(route.get("visibility"))
     is_owner = route.get("owner_id") == current_user["_id"]
@@ -58,6 +68,7 @@ async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depen
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Este nombre de ruta ya existe")
     
+    route = _with_images(route)
     # Normalización _id para el response model (alias "_id" -> "id")
     route["_id"] = str(route["_id"])
     return route
@@ -84,6 +95,7 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
             owner_usernames[oid] = None
 
     for route in routes:
+        route = _with_images(route)
         route["_id"] = str(route["_id"])
         if route.get("owner_id"):
             route["owner_username"] = owner_usernames.get(str(route["owner_id"]))
@@ -123,7 +135,7 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
-    route = await route_crud.get_route_by_id(route_id)
+    route = _with_images(await route_crud.get_route_by_id(route_id))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     
@@ -142,6 +154,40 @@ async def get_route(route_id: str, current_user: dict = Depends(get_current_user
     if user_rating is not None:
         route["user_rating"] = user_rating
     return route
+
+@router.put("/{route_id}", response_model=RoutePublic)
+async def update_route_endpoint(
+    route_id: str,
+    payload: RouteCreate,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Actualiza una ruta propia. Mantiene compatibilidad con clients que no envían imágenes (se normalizan a []).
+    """
+    try:
+        existing = await route_crud.get_route_by_id(route_id)
+    except InvalidId:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Ruta no encontrada")
+
+    if str(existing.get("owner_id")) != str(current_user["_id"]):
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    # Evita duplicar nombres dentro del mismo owner (salvo que sea la misma ruta)
+    duplicate = await route_crud.get_route_by_name(current_user["_id"], payload.name)
+    if duplicate and str(duplicate.get("_id")) != str(route_id):
+        raise HTTPException(status_code=409, detail="Este nombre de ruta ya existe")
+
+    updated = await route_crud.update_route(route_id, current_user["_id"], payload.model_dump())
+    if not updated:
+        # No coincide el owner o no existe
+        raise HTTPException(status_code=403, detail="No autorizado o ruta inexistente")
+
+    updated = _with_images(updated)
+    updated["_id"] = str(updated["_id"])
+    return updated
 
 @router.get("/{route_id}/ownership")
 async def check_route_ownership(
@@ -223,7 +269,7 @@ async def get_public_route_by_name(name: str, current_user: dict = Depends(get_c
     - 200 si existe (pública)
     - 404 si no existe o es privada
     """
-    route = await route_crud.get_public_route_by_name(name)
+    route = _with_images(await route_crud.get_public_route_by_name(name))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
     route["_id"] = str(route["_id"])

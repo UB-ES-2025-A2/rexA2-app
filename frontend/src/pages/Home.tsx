@@ -15,7 +15,7 @@ import CommentsModal from "../components/CommentsModal";
 import RouteSearchBar from "../components/RouteSearchBar/RouteSearchBar";
 
 import "../styles/Home.css";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
@@ -800,16 +800,14 @@ export default function Home() {
               role="menu"
               aria-label="Profile menu"
             >
-              <button
+              <Link
                 className="profile-menu__item"
                 role="menuitem"
-                onClick={() => {
-                  setProfileMenuOpen(false);
-                  navigate("/perfil");
-                }}
+                to="/perfil"
+                onClick={() => setProfileMenuOpen(false)}
               >
                 Mi perfil
-              </button>
+              </Link>
               <button
                 className="profile-menu__item"
                 role="menuitem"
@@ -1056,96 +1054,97 @@ export default function Home() {
                         )}
                       </div>
 
-                      {resultCount === 0 ? (
-                        <div className="routes-empty">
-                          <h4>
-                            {hasFiltersApplied || hasSearch
-                              ? "No hay rutas para estos filtros"
-                              : "No hay rutas disponibles"}
-                          </h4>
-                          <p className="muted">
-                            {hasFiltersApplied || hasSearch
-                              ? "Ajusta la búsqueda o prueba con filtros más amplios."
-                              : "Crea una ruta para verla aquí."}
-                          </p>
-                          <div className="routes-empty__tips">
-                            <span>• Reduce filtros activos.</span>
-                            <span>• Amplía el rango de distancia o duración.</span>
-                            <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
-                          </div>
-                          {(hasFiltersApplied || hasSearch) && (
-                            <button
-                              className="routes-reset"
-                              onClick={() => {
-                                handleApplyFilters(DEFAULT_FILTERS);
-                                setRouteSearchQuery("");
-                              }}
-                            >
-                              Restablecer filtros
-                            </button>
-                          )}
+                    {resultCount === 0 ? (
+                      <div className="routes-empty">
+                        <h4>
+                          {hasFiltersApplied || hasSearch
+                            ? "No hay rutas para estos filtros"
+                            : "No hay rutas disponibles"}
+                        </h4>
+                        <p className="muted">
+                          {hasFiltersApplied || hasSearch
+                            ? "Ajusta la búsqueda o prueba con filtros más amplios."
+                            : "Crea una ruta para verla aquí."}
+                        </p>
+                        <div className="routes-empty__tips">
+                          <span>• Reduce filtros activos.</span>
+                          <span>• Amplía el rango de distancia o duración.</span>
+                          <span>• Usa “Restablecer filtros” para volver al listado completo.</span>
                         </div>
-                      ) : (
-                        <AnimatedList
-                          items={filteredRoutes.map((r) => (
-                            <div className="route-row" key={r.id}>
-                              <RoutePreviewCard
-                                id={r.id}
-                                name={r.name}
-                                category={r.category as Category}
-                                points={r.points}
-                                distanceKm={r.distanceKm ?? null}
-                                durationMinutes={r.durationMinutes ?? null}
-                                difficulty={r.difficulty ?? null}
-                                ratingAverage={r.rating ?? null}
-                                ratingCount={r.rating_count ?? null}
-                                initialSaved={favoriteIds.has(String(r.id))}
-                              />
-                            </div>
-                          ))}
-                          className="routes-animated-list"
-                          itemClassName="routes-animated-item"
-                          showGradients
-                          onItemSelect={(index) =>
-                            requireAuth(() => {
-                              const route = filteredRoutes[index];
-                              if (!route) return;
-                              setSelectedRoute(route);
-                              setSelectedRoutePoints(route.points);
-                            })
-                          }
-                        />
-                      )}
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <>
-                {usersLoading ? (
-                  renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
-                ) : usersError ? (
-                  renderEmptyState(usersError, "Inténtalo de nuevo en unos segundos")
-                ) : users.length === 0 ? (
-                  renderEmptyState(
-                    userSearchQuery.trim() ? "Sin coincidencias" : "No hay usuarios.",
-                    userSearchQuery.trim()
-                      ? "Prueba con otro nombre o email"
-                      : "Todavía no hay usuarios para mostrar"
-                  )
-                ) : (
-                  (() => {
-                    const userItems = users.map((u) => (
-                      <div className="user-row" key={u.id}>
-                        <UserPreviewCard
-                          id={u.id}
-                          username={u.username}
-                          email={u.email}
-                          name={u.name}
-                          avatar_url={u.avatar_url}
+                        {(hasFiltersApplied || hasSearch) && (
+                          <button
+                            className="routes-reset"
+                            onClick={() => {
+                              handleApplyFilters(DEFAULT_FILTERS);
+                              setRouteSearchQuery("");
+                            }}
+                          >
+                            Restablecer filtros
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <AnimatedList
+                        items={filteredRoutes.map((r) => (
+                          <div className="route-row" key={r.id}>
+                            <RoutePreviewCard
+                          id={r.id}
+                          name={r.name}
+                          category={r.category as Category}
+                          points={r.points}
+                          images={r.images ?? []}
+                          distanceKm={r.distanceKm ?? null}
+                          durationMinutes={r.durationMinutes ?? null}
+                          difficulty={r.difficulty ?? null}
+                          ratingAverage={r.rating ?? null}
+                          ratingCount={r.rating_count ?? null}
+                          initialSaved={favoriteIds.has(String(r.id))}
                         />
                       </div>
-                    ));
+                    ))}
+                        className="routes-animated-list"
+                        itemClassName="routes-animated-item"
+                        showGradients
+                        onItemSelect={(index) =>
+                          requireAuth(() => {
+                            const route = filteredRoutes[index];
+                            if (!route) return;
+                            setSelectedRoute(route);
+                            setSelectedRoutePoints(route.points);
+                          })
+                        }
+                      />
+                    )}
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+                <>
+                  {usersLoading ? (
+                    renderEmptyState("Cargando usuarios...", "Buscando coincidencias")
+                  ) : usersError ? (
+                    renderEmptyState(usersError, "Inténtalo de nuevo en unos segundos")
+                  ) : users.length === 0 ? (
+                    renderEmptyState(
+                      userSearchQuery.trim() ? "Sin coincidencias" : "No hay usuarios.",
+                      userSearchQuery.trim()
+                        ? "Prueba con otro nombre o email"
+                        : "Todavía no hay usuarios para mostrar"
+                    )
+                  ) : (
+                    (() => {
+                      const userItems = users.map((u) => (
+                        <div className="user-row" key={u.id}>
+                          <UserPreviewCard
+                            id={u.id}
+                            username={u.username}
+                            email={u.email}
+                            name={u.name}
+                            avatar_url={u.avatar_url}
+                          />
+                        </div>
+                      ));
 
                     return (
                       <AnimatedList

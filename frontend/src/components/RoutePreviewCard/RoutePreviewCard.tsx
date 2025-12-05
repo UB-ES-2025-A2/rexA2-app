@@ -4,6 +4,7 @@ import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
+import RouteMiniMap from "./RouteMiniMap";
 
 const API = import.meta.env.VITE_API_URL as string || window.location.origin;
 
@@ -12,6 +13,7 @@ type Props = {
   name: string;
   category: Category;
   points: Array<[number, number]>;
+  images?: string[];
   distanceKm?: number | null;
   durationMinutes?: number | null;
   difficulty?: string | null;
@@ -29,6 +31,7 @@ const RoutePreviewCard: React.FC<Props> = ({
   name,
   category,
   points,
+  images = [],
   distanceKm,
   durationMinutes,
   difficulty,
@@ -155,6 +158,17 @@ const RoutePreviewCard: React.FC<Props> = ({
       }}
     >
       <div className="route-preview-content">
+        <div className="route-preview-thumb">
+          {images.length > 0 ? (
+            <img src={images[0]} alt={`Imagen de ${name}`} loading="lazy" />
+          ) : points.length > 0 ? (
+            <RouteMiniMap points={points} className="route-preview-thumb__map" />
+          ) : (
+            <div className="route-preview-thumb__placeholder" aria-label="Ruta sin imagen">
+              <span>🗺️</span>
+            </div>
+          )}
+        </div>
         <div className="route-preview-texts">
           <h3 className="route-preview-title">{name}</h3>
           <p className="route-preview-category">

@@ -362,6 +362,7 @@ const UserViewCard: React.FC<Props> = ({
               name={r.name}
               category={r.category as Category}
               points={r.points}
+              images={r.images ?? []}
               distanceKm={r.distanceKm}
               durationMinutes={r.durationMinutes}
               difficulty={r.difficulty}
