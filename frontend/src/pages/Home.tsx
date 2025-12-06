@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
@@ -209,19 +209,6 @@ const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
   hard: "Alta",
 };
 
-const CATEGORY_OPTIONS = [
-  "all",
-  "aventura",
-  "cultura",
-  "deporte",
-  "entretenimiento",
-  "gastronomia",
-  "historia",
-  "naturaleza",
-  "otros",
-  "urban",
-];
-
 const CATEGORY_LABELS: Record<string, string> = {
   all: "Todas",
   gastronomia: "Gastronomía",
@@ -347,6 +334,35 @@ export default function Home() {
 
   const { requireAuth } = useRequireAuth(openAuth);
 
+  const normalizeCategoryKey = useCallback((value?: string | null) => {
+    if (!value) return "";
+    const base = value.toString().trim().toLowerCase();
+    // Eliminar acentos/diacríticos para comparar de forma robusta
+    return base.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }, []);
+
+  const dynamicCategoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: Array<{ value: string; label: string }> = [
+      { value: "all", label: "Todas" },
+    ];
+
+    routes.forEach((route) => {
+      const rawSource = route.category || route.theme || "";
+      const raw = rawSource.toString().trim();
+      if (!raw) return;
+      const value = normalizeCategoryKey(raw);
+      if (seen.has(value)) return;
+      seen.add(value);
+      opts.push({
+        value,
+        label: CATEGORY_LABELS[value] || raw.charAt(0).toUpperCase() + raw.slice(1),
+      });
+    });
+
+    return opts;
+  }, [routes, normalizeCategoryKey]);
+
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
     setDrawPoints([]);
@@ -390,10 +406,17 @@ export default function Home() {
     let filtered = routes;
 
     const normalizedSearch = routeSearchQuery.trim().toLowerCase();
+    const normalizeKey = normalizeCategoryKey;
+    const selectedCategory = (() => {
+      if (appliedFilters.theme !== "all") return normalizeKey(appliedFilters.theme);
+      if (appliedFilters.category !== "all") return normalizeKey(appliedFilters.category);
+      return "";
+    })();
 
     // Aplicar filtros de búsqueda global
     if (appliedFilters.category !== "all") {
-      filtered = filtered.filter((r) => r.category === appliedFilters.category);
+      const catKey = normalizeKey(appliedFilters.category);
+      filtered = filtered.filter((r) => normalizeKey(r.category) === catKey);
     }
 
     if (appliedFilters.pointsFilter !== "all") {
@@ -442,53 +465,13 @@ export default function Home() {
       );
     }
 
-    if (appliedFilters.theme !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
-      );
-    }
-
-    if (appliedFilters.distance !== "all") {
+    if (selectedCategory) {
       filtered = filtered.filter((r) => {
-        const d = r.distanceKm;
-        if (d == null) return false;
-        if (appliedFilters.distance === "lt5") return d < 5;
-        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
-        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
-        if (appliedFilters.distance === "gt20") return d > 20;
-        return true;
+        const key =
+          normalizeKey(r.category) ||
+          normalizeKey(r.theme);
+        return key === selectedCategory;
       });
-    }
-
-    if (appliedFilters.duration !== "all") {
-      filtered = filtered.filter((r) => {
-        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
-        if (minutes == null) return false;
-
-        if (appliedFilters.duration === "lt1") return minutes < 60;
-        if (appliedFilters.duration === "1to3")
-          return minutes >= 60 && minutes < 180;
-        if (appliedFilters.duration === "3to6")
-          return minutes >= 180 && minutes <= 360;
-        if (appliedFilters.duration === "gt6") return minutes > 360;
-        return true;
-      });
-    }
-
-    if (appliedFilters.difficulty !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.difficulty &&
-          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
-      );
-    }
-
-    if (appliedFilters.theme !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
-      );
     }
 
     if (normalizedSearch) {
@@ -872,10 +855,6 @@ export default function Home() {
     setAppliedFilters({ ...filters });
   };
 
-  const handleCategorySelect = (category: string) => {
-    setAppliedFilters((prev) => ({ ...prev, category }));
-  };
-
   // Controlar qué puntos se ven en el mapa según el modo actual
   let visiblePoints = selectedRoutePoints;
   if (routeCardOpen) {
@@ -953,6 +932,7 @@ export default function Home() {
               onApplyFilters={handleApplyFilters}
               filters={appliedFilters}
               isLoading={searchMode === "users" ? usersLoading : routesLoading}
+              categoryOptions={dynamicCategoryOptions}
             />
           )}
         </div>
@@ -1187,20 +1167,6 @@ export default function Home() {
 
                     return (
                       <>
-                        <div className="category-chip-bar" aria-label="Filtrar por categoría">
-                          {CATEGORY_OPTIONS.map((cat) => (
-                            <button
-                              key={cat}
-                              className={`category-chip ${appliedFilters.category === cat ? "active" : ""
-                                }`}
-                              onClick={() => handleCategorySelect(cat)}
-                              aria-pressed={appliedFilters.category === cat}
-                            >
-                              {CATEGORY_LABELS[cat] ?? cat}
-                            </button>
-                          ))}
-                        </div>
-
                         <div className="routes-meta">
                           <div className="routes-count">
                             {resultCount} rutas encontradas
