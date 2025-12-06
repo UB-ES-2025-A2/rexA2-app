@@ -1,0 +1,102 @@
+.route-summary-card {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 360px;
+    background-color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    z-index: 10;
+    animation: slideUp 0.3s ease-out;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
+}
+
+.route-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.route-summary-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.3;
+}
+
+.route-summary-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.route-summary-close:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+.route-summary-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.9rem;
+    color: #4b5563;
+}
+
+.route-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.route-stat-icon {
+    font-size: 1rem;
+}
+
+.route-summary-actions {
+    margin-top: 4px;
+}
+
+.route-summary-btn {
+    width: 100%;
+    background-color: #4f46e5;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.route-summary-btn:hover {
+    background-color: #4338ca;
+}
