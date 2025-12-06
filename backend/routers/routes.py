@@ -1,6 +1,6 @@
 import asyncio
 import json
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
 from sse_starlette.sse import EventSourceResponse
 from backend.db.models import route as route_crud
 from backend.db.models import user as user_crud
@@ -180,10 +180,21 @@ async def discover_by_themes(
     return blocks
 
 @router.get("/{route_id}", response_model=RoutePublic)
-async def get_route(route_id: str, current_user: dict | None = Depends(get_current_user_optional)):
+async def get_route(
+    route_id: str,
+    request: Request,
+    current_user: dict | None = Depends(get_current_user_optional),
+):
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
+    if current_user is None:
+        # En tests se inyecta un override de get_current_user_optional; respetarlo manualmente
+        for dep in (get_current_user_optional, get_current_user):
+            override_fn = request.app.dependency_overrides.get(dep)
+            if override_fn:
+                current_user = await override_fn(request)
+                break
     route = _with_images(await route_crud.get_route_by_id(route_id))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")

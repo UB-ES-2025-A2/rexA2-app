@@ -70,14 +70,19 @@ class FakeRoutesCol:
     async def update_one(self, filter_, update):
         matched = None
         for d in self._docs:
-            if "_id" in filter_ and d.get("_id") != filter_["_id"]:
+            # Coincidencia exacta con todos los pares clave/valor del filtro
+            ok = True
+            for k, v in filter_.items():
+                if k == "comments.id":
+                    has_parent = any(c.get("id") == v for c in d.get("comments", []))
+                    if not has_parent:
+                        ok = False
+                        break
+                elif d.get(k) != v:
+                    ok = False
+                    break
+            if not ok:
                 continue
-
-            parent_id = filter_.get("comments.id")
-            if parent_id:
-                has_parent = any(c.get("id") == parent_id for c in d.get("comments", []))
-                if not has_parent:
-                    continue
 
             matched = d
             break
@@ -91,6 +96,12 @@ class FakeRoutesCol:
             return res
 
         res.matched_count = 1
+
+        set_ops = update.get("$set", {})
+        if set_ops:
+            for key, val in set_ops.items():
+                matched[key] = val
+            res.modified_count = 1
 
         push_ops = update.get("$push", {})
         for key, val in push_ops.items():
