@@ -347,6 +347,26 @@ export default function Discover() {
     return sorted;
   }, [countryBlocks, themeBlocks, country, theme, ratingFilter, durationFilter, sortBy]);
 
+  const heroStats = useMemo(() => {
+    const uniqueCountries = new Set(
+      filteredRoutes.map(
+        (r) => r.country_name || r.country || r.country_code || "Desconocido"
+      )
+    );
+    const uniqueThemes = new Set(filteredRoutes.map((r) => normalizeTheme(r.theme)));
+    const totalKm = filteredRoutes.reduce(
+      (acc, route) => acc + (route.distance_km ?? 0),
+      0
+    );
+
+    return {
+      routes: filteredRoutes.length,
+      regions: uniqueCountries.size,
+      themes: uniqueThemes.size,
+      distance: Math.round(totalKm),
+    };
+  }, [filteredRoutes]);
+
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
     return countryBlocks
@@ -386,6 +406,14 @@ export default function Discover() {
       }).filter((option) => option.routes.length > 0),
     [themeBlocks, country, theme]
   );
+
+  const handleSurprise = () => {
+    if (!filteredRoutes.length) return;
+    const randomRoute = filteredRoutes[Math.floor(Math.random() * filteredRoutes.length)];
+    navigate("/mapa", {
+      state: { fromDiscover: true, highlightRouteId: randomRoute.id },
+    });
+  };
 
 const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = "default") => {
     const points: Array<[number, number]> = Array.isArray(route.points)
@@ -576,131 +604,133 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
 
       <main className="discover__main">
         <section className="discover-hero">
-          <div className="discover-hero__copy">
-            <p className="eyebrow">Explorar</p>
-            <h1>Descubre rutas como si ya estuvieras allí</h1>
-            <p className="lead">
-              Explora rutas destacadas por país o temática, con el look & feel
-              de un catálogo cuidadosamente curado al estilo Airbnb.
-            </p>
-          </div>
-          <div className="discover-hero__panel">
-            <div className="panel-card">
-              <div className="panel-card__title">
-                <span className="eyebrow">Contexto</span>
-                <h3>Elige dónde empezar</h3>
-              </div>
-              <label className="label" htmlFor="country-select">
-                País o región
-              </label>
-              <select
-                id="country-select"
-                className="country-select"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                disabled={loading}
-              >
-                {countryOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <div className="panel-card__chips"></div>
-              <div className="panel-card__footer">
-                Las colecciones se adaptan al país que selecciones.
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="filters">
-          <div className="filters__group">
-            <span className="label">País o región</span>
-            <div className="filters__chips">
-              {countryOptions.map((c) => (
+          <div className="hero-overlay">
+            <div className="discover-hero__copy">
+              <p className="eyebrow hero-eyebrow">Experiencias REX</p>
+              <h1>Explora rutas icónicas que invitan a viajar</h1>
+              <p className="lead">
+                Un mosaico de destinos y temáticas para despertar ganas de salir. Guarda tus
+                favoritas y síguelas explorándolas en el mapa.
+              </p>
+              <div className="hero-actions">
+                <a className="cta-btn" href="#featured">
+                  Ver todas las rutas
+                </a>
                 <button
-                  key={c}
-                  className={`filter-chip ${country === c ? "active" : ""}`}
-                  onClick={() => setCountry(c)}
-                  disabled={loading}
+                  className="ghost-btn hero-ghost"
+                  onClick={() => navigate("/mapa")}
                 >
-                  {c}
+                  Ir al mapa
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
 
-          <div className="filters__group">
-            <span className="label">Colección temática</span>
-            <div className="filters__chips">
-              <button
-                className={`filter-chip ${theme === "todos" ? "active" : ""}`}
-                onClick={() => setTheme("todos")}
-                disabled={loading}
-              >
-                Todas
-              </button>
-              {themeOptions
-                .filter((t) => t !== "todos")
-                .map((option) => (
-                  <button
-                    key={option}
-                    className={`filter-chip ${
-                      theme === option ? "active" : ""
-                    }`}
-                    onClick={() => setTheme(option)}
+            <div className="hero-controls">
+              <div className="hero-row">
+                <div className="hero-field">
+                  <span className="label">País o región</span>
+                  <select
+                    id="country-select"
+                    className="country-select glass-input"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
                     disabled={loading}
                   >
-                    {CATEGORY_LABELS[option] || option}
+                    {countryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hero-field">
+                  <span className="label">Temática</span>
+                  <div className="pill-group wrap">
+                    {themeOptions.map((option) => (
+                      <button
+                        key={option}
+                        className={`pill-chip solid ${theme === option ? "active" : ""}`}
+                        onClick={() => setTheme(option)}
+                        disabled={loading}
+                      >
+                        {CATEGORY_LABELS[option] || option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hero-stats">
+                <div className="stat-card">
+                  <span className="stat-label">Rutas activas</span>
+                  <span className="stat-value">{heroStats.routes ?? "-"}</span>
+                  <p className="stat-hint">Destacadas y filtradas</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">Regiones</span>
+                  <span className="stat-value">{heroStats.regions ?? "-"}</span>
+                  <p className="stat-hint">Destinos únicos</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">Temáticas</span>
+                  <span className="stat-value">{heroStats.themes ?? "-"}</span>
+                  <p className="stat-hint">Mood para inspirarte</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">KM totales</span>
+                  <span className="stat-value">{heroStats.distance ?? "-"}</span>
+                  <p className="stat-hint">Estimados entre todas</p>
+                </div>
+              </div>
+
+              <div className="hero-filter-grid">
+                <div className="hero-field">
+                  <span className="label">Valoración media</span>
+                  <div className="pill-group wrap">
+                    {[0, 4, 4.5, 4.8].map((threshold) => (
+                      <button
+                        key={threshold}
+                        className={`pill-chip solid ${ratingFilter === threshold ? "active" : ""}`}
+                        onClick={() => setRatingFilter(threshold)}
+                        disabled={loading}
+                      >
+                        {threshold === 0 ? "Cualquier rating" : `⭐ ${threshold}+`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hero-field">
+                  <span className="label">Duración estimada</span>
+                  <div className="pill-group wrap">
+                    {[{ key: "any", label: "Cualquiera" }, { key: "lt1", label: "< 1h" }, { key: "1to3", label: "1–3h" }, { key: "3to6", label: "3–6h" }, { key: "gt6", label: ">6h" }].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${durationFilter === opt.key ? "active" : ""}`}
+                        onClick={() => setDurationFilter(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                      ))}
+                  </div>
+                </div>
+
+                <div className="surprise-spot">
+                  <button
+                    className="cta-btn ghost-dark"
+                    onClick={handleSurprise}
+                    disabled={!filteredRoutes.length}
+                  >
+                    Sorpréndeme con una ruta
                   </button>
-                ))}
-            </div>
-          </div>
-
-          <div className="filters__group">
-            <span className="label">Valoración media</span>
-            <div className="filters__chips">
-              {[0, 4, 4.5, 4.8].map((threshold) => (
-                <button
-                  key={threshold}
-                  className={`filter-chip ${
-                    ratingFilter === threshold ? "active" : ""
-                  }`}
-                  onClick={() => setRatingFilter(threshold)}
-                  disabled={loading}
-                >
-                  {threshold === 0 ? "Cualquier rating" : `⭐ ${threshold}+`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="filters__group">
-            <span className="label">Duración estimada</span>
-            <div className="filters__chips">
-              {[
-                { key: "any", label: "Cualquiera" },
-                { key: "lt1", label: "< 1h" },
-                { key: "1to3", label: "1–3h" },
-                { key: "3to6", label: "3–6h" },
-                { key: "gt6", label: ">6h" },
-              ].map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`filter-chip ${
-                    durationFilter === opt.key ? "active" : ""
-                  }`}
-                  onClick={() => setDurationFilter(opt.key as any)}
-                  disabled={loading}
-                >
-                  {opt.label}
-                </button>
-              ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="featured">
+        <section className="featured" id="featured">
           <div className="section-head">
             <div>
               <p className="eyebrow">Destacadas</p>
