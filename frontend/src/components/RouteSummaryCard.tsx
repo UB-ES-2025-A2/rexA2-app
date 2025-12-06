@@ -28,8 +28,39 @@ export default function RouteSummaryCard({
 
     return (
         <div className="route-summary-card">
-            <div className="route-summary-header">
-                <h3 className="route-summary-title">{route.name}</h3>
+            <div className="route-summary-content">
+                <h3 className="route-summary-title" title={route.name}>
+                    {route.name}
+                </h3>
+
+                <div className="route-summary-stats">
+                    {route.distanceKm != null && (
+                        <div className="route-stat" title="Distancia">
+                            <span className="route-stat-icon">📏</span>
+                            <span>{route.distanceKm} km</span>
+                        </div>
+                    )}
+
+                    {route.durationMinutes != null && (
+                        <div className="route-stat" title="Duración estimada">
+                            <span className="route-stat-icon">⏱️</span>
+                            <span>{formatDuration(route.durationMinutes)}</span>
+                        </div>
+                    )}
+
+                    {route.rating != null && (
+                        <div className="route-stat" title="Valoración media">
+                            <span className="route-stat-icon">⭐</span>
+                            <span>{route.rating.toFixed(1)}</span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            <div className="route-summary-actions">
+                <button className="route-summary-btn" onClick={onViewDetails}>
+                    Ver detalle
+                </button>
                 <button
                     className="route-summary-close"
                     onClick={(e) => {
@@ -39,40 +70,6 @@ export default function RouteSummaryCard({
                     aria-label="Cerrar resumen"
                 >
                     &times;
-                </button>
-            </div>
-
-            <div className="route-summary-stats">
-                {route.distanceKm != null && (
-                    <div className="route-stat" title="Distancia">
-                        <span className="route-stat-icon">📏</span>
-                        <span>{route.distanceKm} km</span>
-                    </div>
-                )}
-
-                {route.durationMinutes != null && (
-                    <div className="route-stat" title="Duración estimada">
-                        <span className="route-stat-icon">⏱️</span>
-                        <span>{formatDuration(route.durationMinutes)}</span>
-                    </div>
-                )}
-
-                {route.rating != null && (
-                    <div className="route-stat" title="Valoración media">
-                        <span className="route-stat-icon">⭐</span>
-                        <span>{route.rating.toFixed(1)}</span>
-                        {route.rating_count ? (
-                            <span style={{ fontSize: "0.8em", opacity: 0.7 }}>
-                                ({route.rating_count})
-                            </span>
-                        ) : null}
-                    </div>
-                )}
-            </div>
-
-            <div className="route-summary-actions">
-                <button className="route-summary-btn" onClick={onViewDetails}>
-                    Ver detalle
                 </button>
             </div>
         </div>
