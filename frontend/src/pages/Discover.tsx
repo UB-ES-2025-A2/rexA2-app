@@ -729,7 +729,7 @@ export default function Discover() {
                         onClick={() => setTheme(option)}
                         disabled={loading}
                       >
-                        {CATEGORY_LABELS[option] || option}
+                        {option === "todos" ? "Todos" : CATEGORY_LABELS[option] || option}
                       </button>
                     ))}
                   </div>
