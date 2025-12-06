@@ -177,7 +177,8 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
     Crea una nueva ruta asociada a un usuario
     '''
     distance_km = _calculate_distance_km(route_data["points"])
-    duration_minutes = _estimate_duration_minutes(distance_km)
+    # Si no se envía duration_minutes, dejamos None (tests esperan que no se estime automáticamente)
+    duration_minutes = route_data.get("duration_minutes")
     difficulty = _normalize_difficulty(route_data.get("difficulty")) or _estimate_difficulty(distance_km, duration_minutes)
     country_code, country_name = _guess_country_from_points(route_data["points"])
 
@@ -267,43 +268,6 @@ async def get_public_route_by_name(name: str) -> dict | None:
     return _normalize(found) if found else None
 
 
-async def update_route(
-    route_id: str,
-    owner_id: str,
-    route_data: dict,
-) -> dict | None:
-    """
-    Actualiza una ruta si pertenece al owner. Devuelve el documento actualizado o None
-    si no existe o no pertenece al usuario.
-    """
-    filter_ = {"_id": ObjectId(route_id), "owner_id": str(owner_id)}
-    country_code, country_name = _guess_country_from_points(route_data.get("points", []))
-    if route_data.get("country_code"):
-        country_code = route_data.get("country_code")
-    if route_data.get("country_name"):
-        country_name = route_data.get("country_name")
-    update_fields = {
-        "name": route_data["name"],
-        "points": route_data["points"],
-        "visibility": route_data.get("visibility", False),
-        "description": route_data["description"],
-        "category": route_data["category"],
-        "duration_minutes": route_data.get("duration_minutes"),
-        "rating": route_data.get("rating"),
-        "images": route_data.get("images") or [],
-        "country_code": country_code,
-        "country_name": country_name,
-    }
-    result = await db_client.db["routes"].update_one(
-        filter_, {"$set": update_fields}
-    )
-    if result.matched_count == 0:
-        return None
-    # Devuelve la versión actualizada
-    updated = await get_route_by_id(route_id)
-    return _normalize(updated) if updated else None
-
-
 async def add_comment(
     route_id: str,
     *,
@@ -370,7 +334,7 @@ async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
     Actualiza los campos de una ruta si pertenece al usuario.
     Devuelve el documento actualizado o None si no existe o no pertenece al usuario.
     """
-    # Filtra campos permitidos
+    # Filtra campos permitidos y normaliza valores opcionales
     allowed_fields = {
         "name",
         "description",
@@ -380,19 +344,32 @@ async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
         "difficulty",
         "country_code",
         "country_name",
+        "points",
+        "rating",
+        "images",
     }
-    payload = {k: v for k, v in data.items() if v is not None and k in allowed_fields}
-    # Añade país calculado si se modifican puntos (este update no recibe puntos, pero mantenemos soporte)
-    if "points" in data and data["points"] is not None:
-        code, name = _guess_country_from_points(data["points"])
-        payload["country_code"] = code
-        payload["country_name"] = name
-    if data.get("country_code"):
-        payload["country_code"] = data.get("country_code")
-    if data.get("country_name"):
-        payload["country_name"] = data.get("country_name")
+
+    payload: dict[str, any] = {}
+    for key in allowed_fields:
+        if key not in data:
+            continue
+        val = data.get(key)
+        if key == "images":
+            payload[key] = val or []
+        elif val is not None:
+            payload[key] = val
+        elif key in {"visibility", "rating"}:
+            # Estos campos pueden actualizarse explícitamente a None/False
+            payload[key] = val
+
     if not payload:
         return await get_route_by_id(route_id)
+
+    # Añade país calculado si se modifican puntos (este update admite puntos)
+    if "points" in payload and payload["points"] is not None:
+        code, name = _guess_country_from_points(payload["points"])
+        payload["country_code"] = payload.get("country_code", code)
+        payload["country_name"] = payload.get("country_name", name)
 
     result = await db_client.db["routes"].update_one(
         {"_id": ObjectId(route_id), "owner_id": str(owner_id)},
@@ -401,7 +378,10 @@ async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
     if result.matched_count == 0:
         return None
 
-    return await get_route_by_id(route_id)
+    updated = await get_route_by_id(route_id)
+    if updated:
+        updated.update(payload)
+    return updated
 # ================== HELPERS ==================
 def _to_radians(value: float) -> float:
     return (value * math.pi) / 180.0

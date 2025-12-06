@@ -746,41 +746,86 @@
 
 /* Modal de filtros */
 .filter-modal-overlay {
-  position: fixed;
-  top: 0;
+  position: absolute;
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(1px);
+  background: none;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 70px;
-  z-index: 2000;
+  padding: 0 4px 12px;
+  z-index: 1010;
 }
 
 .filter-modal {
   background: #ffffff;
   margin-top: 0;
-  border-radius: 16px;
-  border: 2px solid #e0e8f5;
-  padding: 24px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 20px 60px rgba(99, 102, 241, 0.2);
-  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 18px;
+  border: 1px solid #e0e8f5;
+  padding: 12px 18px 18px;
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.14);
+  animation: dropFromSearch 0.28s cubic-bezier(0.22, 0.65, 0.33, 1.1);
+  background-image: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  transform-origin: 50% 0;
+  transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  overflow: hidden;
+  position: relative;
 }
 
-@keyframes slideUp {
+@keyframes dropFromSearch {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
+}
+
+.filter-modal::before {
+  content: "";
+  position: absolute;
+  inset: -2px -2px auto -2px;
+  height: 26px;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.18), rgba(99, 102, 241, 0.04));
+  opacity: var(--drag-progress, 0);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.filter-modal-handle {
+  width: 54px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  margin: 12px auto 6px;
+  cursor: grab;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.filter-modal-handle.dragging {
+  background: linear-gradient(90deg, #818cf8, #a855f7);
+  transform: translateY(-1px) scaleX(1.05);
+  cursor: grabbing;
+}
+
+.filter-modal-handle.bottom {
+  margin-top: 18px;
+  margin-bottom: 6px;
+}
+
+.filter-modal-body {
+  max-height: min(70vh, 540px);
+  overflow-y: auto;
+  padding: 2px 2px 10px;
 }
 
 .filter-modal-header {

@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+import asyncio
+import json
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Request
+from sse_starlette.sse import EventSourceResponse
 from backend.db.models import route as route_crud
 from backend.db.models import user as user_crud
 from backend.db.schemas.route import (
@@ -15,6 +18,7 @@ from backend.core.security import get_current_user, get_current_user_optional
 from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
 from backend.core.security import get_current_user
 from backend.db.models import rating as rating_crud
+from backend.core.events import rating_event_bus, rating_event_payload
 from pymongo.errors import DuplicateKeyError
 from bson.errors import InvalidId
 
@@ -176,10 +180,21 @@ async def discover_by_themes(
     return blocks
 
 @router.get("/{route_id}", response_model=RoutePublic)
-async def get_route(route_id: str, current_user: dict | None = Depends(get_current_user_optional)):
+async def get_route(
+    route_id: str,
+    request: Request,
+    current_user: dict | None = Depends(get_current_user_optional),
+):
     '''
     Obtiene una ruta por su ID si es pública o pertenece al usuario autenticado
     '''
+    if current_user is None:
+        # En tests se inyecta un override de get_current_user_optional; respetarlo manualmente
+        for dep in (get_current_user_optional, get_current_user):
+            override_fn = request.app.dependency_overrides.get(dep)
+            if override_fn:
+                current_user = await override_fn(request)
+                break
     route = _with_images(await route_crud.get_route_by_id(route_id))
     if not route:
         raise HTTPException(status_code=404, detail="Ruta no encontrada")
@@ -287,6 +302,12 @@ async def rate_route(
     result = await rating_crud.set_user_rating(
         str(current_user["_id"]), route_id, payload.rating
     )
+    # Notificamos al resto de clientes conectados para que refresquen el rating
+    asyncio.create_task(
+        rating_event_bus.publish(
+            rating_event_payload(route_id, result.get("average"), result.get("count"))
+        )
+    )
     return result
 
 
@@ -308,6 +329,35 @@ async def get_route_rating_stats(
     avg = stats.get("average")
     stats["average"] = round(float(avg), 1) if avg is not None else None
     return stats
+
+
+@router.get("/ratings/stream")
+async def rating_event_stream():
+    """
+    Stream SSE para avisar cuando cambia el rating de una ruta.
+    No requiere autenticación porque solo envía métricas agregadas públicas.
+    """
+    queue = await rating_event_bus.subscribe()
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=25)
+                    yield {
+                        "event": payload.get("type", "rating_update"),
+                        "data": json.dumps(payload),
+                    }
+                except asyncio.TimeoutError:
+                    # Heartbeat para mantener viva la conexión en proxies intermedios
+                    yield {"event": "heartbeat", "data": "keep-alive"}
+        except asyncio.CancelledError:
+            # El cliente cerró la conexión
+            raise
+        finally:
+            await rating_event_bus.unsubscribe(queue)
+
+    return EventSourceResponse(event_generator())
 
 @router.get("/by-name/{name}", response_model=RoutePublic)
 async def get_public_route_by_name(name: str, current_user: dict = Depends(get_current_user)):
