@@ -26,6 +26,7 @@ import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
+import RouteSummaryCard from "../components/RouteSummaryCard";
 
 type RouteItem = {
   id: string;
@@ -126,10 +127,10 @@ const formatRouteFromApi = (route: any): RouteItem => ({
     null,
   user: route.user
     ? {
-        id: route.user._id || route.user.id,
-        username: route.user.username,
-        name: route.user.name,
-        email: route.user.email,
+      id: route.user._id || route.user.id,
+      username: route.user.username,
+      name: route.user.name,
+      email: route.user.email,
     }
     : route.username || route.ownerName || route.ownerUsername
       ? {
@@ -295,6 +296,7 @@ export default function Home() {
   const [routesError, setRoutesError] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [summaryRoute, setSummaryRoute] = useState<RouteItem | null>(null);
   const [editingRoute, setEditingRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
 
@@ -369,6 +371,7 @@ export default function Home() {
     setDrawPoints([]);
     setSelectedRoutePoints([]);
     setShowComments(false);
+    setSummaryRoute(null);
   }
 
   const handleBoundsChange = useCallback(
@@ -847,6 +850,7 @@ export default function Home() {
       setRouteCardOpen(false);
       setSelectedRoutePoints([]);
       setShowComments(false);
+      setSummaryRoute(null);
 
       setSelectedUser({
         id: u.id,
@@ -868,7 +872,9 @@ export default function Home() {
     setSelectedRoute(null);
     setRouteCardOpen(false);
     setSelectedRoutePoints([]);
+    setSelectedRoutePoints([]);
     setShowComments(false);
+    setSummaryRoute(null);
 
     setSelectedUser({
       id: u.id,
@@ -888,6 +894,8 @@ export default function Home() {
   if (routeCardOpen) {
     const { mode: createMode, searchPoints } = routeCtrl.viewProps;
     visiblePoints = createMode === "search" ? searchPoints : drawPoints;
+  } else if (summaryRoute) {
+    visiblePoints = summaryRoute.points;
   }
 
   const renderEmptyState = (title: string, subtitle?: string) => (
@@ -912,11 +920,25 @@ export default function Home() {
   const handleMarkerClick = useCallback((id: string) => {
     const route = routes.find((r) => r.id === id);
     if (route) {
-      setSelectedRoute(route);
-      setSelectedRoutePoints(route.points);
+      setSummaryRoute(route);
+      // No seleccionamos la ruta completa todavía, solo el resumen
+      // setSelectedRoute(route);
+      // setSelectedRoutePoints(route.points);
       setShowComments(false);
     }
   }, [routes]);
+
+  const handleViewDetails = () => {
+    if (summaryRoute) {
+      setSelectedRoute(summaryRoute);
+      setSelectedRoutePoints(summaryRoute.points);
+      setSummaryRoute(null);
+    }
+  };
+
+  const handleCloseSummary = () => {
+    setSummaryRoute(null);
+  };
 
   return (
     <div className="home">
@@ -1114,6 +1136,7 @@ export default function Home() {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);
                 setShowComments(false);
+                setSummaryRoute(null);
                 if (userInitialCenterRef.current) {
                   setMapCenter(userInitialCenterRef.current);
                   setMapZoom(GEO_ZOOM);
@@ -1143,6 +1166,7 @@ export default function Home() {
                 setSelectedRoute(route);
                 setSelectedRoutePoints(route.points);
                 setShowComments(false);
+                setSummaryRoute(null);
               }}
             />
           ) : (
@@ -1293,30 +1317,30 @@ export default function Home() {
                           <AnimatedList
                             items={filteredRoutes.map((r) => (
                               <div className="route-row" key={r.id}>
-                            <RoutePreviewCard
-                              id={r.id}
-                              name={r.name}
-                              category={r.category as Category}
-                              points={r.points}
-                              images={
-                                (Array.isArray((r as any).images) &&
-                                  (r as any).images.length > 0 &&
-                                  (r as any).images) ||
-                                (Array.isArray((r as any).image_urls) &&
-                                  (r as any).image_urls.length > 0 &&
-                                  (r as any).image_urls) ||
-                                (Array.isArray((r as any).imageUrls) &&
-                                  (r as any).imageUrls.length > 0 &&
-                                  (r as any).imageUrls) ||
-                                []
-                              }
-                              image_urls={Array.isArray((r as any).image_urls) ? (r as any).image_urls : undefined}
-                              imageUrls={Array.isArray((r as any).imageUrls) ? (r as any).imageUrls : undefined}
-                              distanceKm={r.distanceKm ?? null}
-                              durationMinutes={r.durationMinutes ?? null}
-                              difficulty={r.difficulty ?? null}
-                              ratingAverage={r.rating ?? null}
-                              ratingCount={r.rating_count ?? null}
+                                <RoutePreviewCard
+                                  id={r.id}
+                                  name={r.name}
+                                  category={r.category as Category}
+                                  points={r.points}
+                                  images={
+                                    (Array.isArray((r as any).images) &&
+                                      (r as any).images.length > 0 &&
+                                      (r as any).images) ||
+                                    (Array.isArray((r as any).image_urls) &&
+                                      (r as any).image_urls.length > 0 &&
+                                      (r as any).image_urls) ||
+                                    (Array.isArray((r as any).imageUrls) &&
+                                      (r as any).imageUrls.length > 0 &&
+                                      (r as any).imageUrls) ||
+                                    []
+                                  }
+                                  image_urls={Array.isArray((r as any).image_urls) ? (r as any).image_urls : undefined}
+                                  imageUrls={Array.isArray((r as any).imageUrls) ? (r as any).imageUrls : undefined}
+                                  distanceKm={r.distanceKm ?? null}
+                                  durationMinutes={r.durationMinutes ?? null}
+                                  difficulty={r.difficulty ?? null}
+                                  ratingAverage={r.rating ?? null}
+                                  ratingCount={r.rating_count ?? null}
                                   initialSaved={favoriteIds.has(String(r.id))}
                                 />
                               </div>
@@ -1405,10 +1429,41 @@ export default function Home() {
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
                 highlightPoints={visiblePoints}
-                fitOnHighlight={!routeCardOpen}
+                fitOnHighlight={!routeCardOpen && !summaryRoute}
                 onBoundsChange={handleBoundsChange}
                 markers={!routeCardOpen && !selectedRoute ? mapMarkers : []}
                 onMarkerClick={handleMarkerClick}
+                popupLocation={
+                  summaryRoute && summaryRoute.points.length > 0
+                    ? summaryRoute.points[0]
+                    : null
+                }
+                popupNode={
+                  summaryRoute && !selectedRoute && !routeCardOpen ? (
+                    <RouteSummaryCard
+                      route={{
+                        id: summaryRoute.id,
+                        name: summaryRoute.name,
+                        distanceKm: summaryRoute.distanceKm,
+                        durationMinutes: summaryRoute.durationMinutes,
+                        rating: summaryRoute.rating,
+                        rating_count: summaryRoute.rating_count,
+                        image:
+                          (Array.isArray((summaryRoute as any).images) &&
+                            (summaryRoute as any).images[0]) ||
+                          (Array.isArray((summaryRoute as any).image_urls) &&
+                            (summaryRoute as any).image_urls[0]) ||
+                          (Array.isArray((summaryRoute as any).imageUrls) &&
+                            (summaryRoute as any).imageUrls[0]) ||
+                          summaryRoute.image ||
+                          summaryRoute.cover_image ||
+                          summaryRoute.thumbnail,
+                      }}
+                      onViewDetails={handleViewDetails}
+                      onClose={handleCloseSummary}
+                    />
+                  ) : null
+                }
               />
 
               <button
@@ -1421,6 +1476,7 @@ export default function Home() {
                       setDrawPoints([]);
                       setSelectedRoutePoints([]);
                       setShowComments(false);
+                      setSummaryRoute(null);
                       return !prev;
                     });
                   })
