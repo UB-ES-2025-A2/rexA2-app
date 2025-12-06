@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Discover.css";
+import Modal from "../components/Modal";
+import AuthCard from "../components/AuthCard";
 
 type DiscoverRoute = {
   id: string;
@@ -230,6 +232,8 @@ export default function Discover() {
   const [country, setCountry] = useState<string>("Todos");
   const [theme, setTheme] = useState<string>("todos");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [countryBlocks, setCountryBlocks] = useState<CountryBlock[]>([]);
   const [themeBlocks, setThemeBlocks] = useState<ThemeBlock[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -249,6 +253,11 @@ export default function Discover() {
   );
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setAuthOpen(true);
+    setProfileMenuOpen(false);
+  };
 
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [durationFilter, setDurationFilter] = useState<
@@ -653,8 +662,7 @@ export default function Discover() {
                     className="profile-menu__item"
                     role="menuitem"
                     onClick={() => {
-                      navigate("/mapa", { state: { authMode: "login" } });
-                      setProfileMenuOpen(false);
+                      openAuth("login");
                     }}
                   >
                     Iniciar sesión
@@ -663,8 +671,7 @@ export default function Discover() {
                     className="profile-menu__item"
                     role="menuitem"
                     onClick={() => {
-                      navigate("/mapa", { state: { authMode: "signup" } });
-                      setProfileMenuOpen(false);
+                      openAuth("signup");
                     }}
                   >
                     Crear cuenta
@@ -976,6 +983,13 @@ export default function Discover() {
           )}
         </section>
       </main>
+      <Modal open={authOpen} onClose={() => setAuthOpen(false)}>
+        <AuthCard
+          mode={authMode}
+          onSwitchMode={setAuthMode}
+          onSubmit={() => setAuthOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

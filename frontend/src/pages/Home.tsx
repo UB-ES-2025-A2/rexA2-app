@@ -833,6 +833,7 @@ export default function Home() {
   useEffect(() => {
     const state = location.state as {
       openUserFromFollowers?: SelectedUser;
+      authMode?: "login" | "signup";
     } | null;
 
     if (state?.openUserFromFollowers) {
@@ -851,7 +852,13 @@ export default function Home() {
         avatar_url: u.avatar_url,
       });
     }
-  }, [location.state]);
+
+    if (state?.authMode) {
+      openAuth(state.authMode);
+      const { authMode, ...rest } = state;
+      navigate(location.pathname, { replace: true, state: rest });
+    }
+  }, [location.state, navigate]);
 
   const handleOpenUser = (u: any) => {
     setSelectedRoute(null);
