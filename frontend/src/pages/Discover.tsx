@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Discover.css";
+import Modal from "../components/Modal";
+import AuthCard from "../components/AuthCard";
 
 type DiscoverRoute = {
   id: string;
@@ -117,7 +119,11 @@ const RouteMiniMap = ({
   const path = mapped.map((p) => p.join(",")).join(" ");
 
   return (
-    <div className={["discover-card__cover map", className].filter(Boolean).join(" ")}>
+    <div
+      className={["discover-card__cover map", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
         <defs>
           <linearGradient id="mapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -125,13 +131,32 @@ const RouteMiniMap = ({
             <stop offset="100%" stopColor="#d9f99d" />
           </linearGradient>
         </defs>
-        <rect x="0" y="0" width="100" height="100" rx="12" fill="url(#mapGrad)" />
+        <rect
+          x="0"
+          y="0"
+          width="100"
+          height="100"
+          rx="12"
+          fill="url(#mapGrad)"
+        />
         <g opacity="0.25" stroke="#94a3b8" strokeWidth="0.5">
           {Array.from({ length: 5 }).map((_, i) => (
-            <line key={`v${i}`} x1={(i + 1) * 20} y1="0" x2={(i + 1) * 20} y2="100" />
+            <line
+              key={`v${i}`}
+              x1={(i + 1) * 20}
+              y1="0"
+              x2={(i + 1) * 20}
+              y2="100"
+            />
           ))}
           {Array.from({ length: 5 }).map((_, i) => (
-            <line key={`h${i}`} x1="0" y1={(i + 1) * 20} x2="100" y2={(i + 1) * 20} />
+            <line
+              key={`h${i}`}
+              x1="0"
+              y1={(i + 1) * 20}
+              x2="100"
+              y2={(i + 1) * 20}
+            />
           ))}
         </g>
         <polyline
@@ -156,7 +181,13 @@ const RouteMiniMap = ({
         ))}
         <defs>
           <filter id="shadow" x="-10" y="-10" width="120" height="120">
-            <feDropShadow dx="0" dy="0" stdDeviation="1.5" floodColor="#312e81" floodOpacity="0.4" />
+            <feDropShadow
+              dx="0"
+              dy="0"
+              stdDeviation="1.5"
+              floodColor="#312e81"
+              floodOpacity="0.4"
+            />
           </filter>
         </defs>
       </svg>
@@ -164,7 +195,10 @@ const RouteMiniMap = ({
   );
 };
 
-const formatCategoryLabel = (category?: string | null, fallback?: string | null) => {
+const formatCategoryLabel = (
+  category?: string | null,
+  fallback?: string | null
+) => {
   const source = category || fallback || "";
   if (!source) return "Sin categoría";
   const normalized = source.toLowerCase();
@@ -198,6 +232,8 @@ export default function Discover() {
   const [country, setCountry] = useState<string>("Todos");
   const [theme, setTheme] = useState<string>("todos");
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [countryBlocks, setCountryBlocks] = useState<CountryBlock[]>([]);
   const [themeBlocks, setThemeBlocks] = useState<ThemeBlock[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -217,6 +253,11 @@ export default function Discover() {
   );
   const { token, user, logout } = useAuth();
   const navigate = useNavigate();
+  const openAuth = (mode: "login" | "signup") => {
+    setAuthMode(mode);
+    setAuthOpen(true);
+    setProfileMenuOpen(false);
+  };
 
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [durationFilter, setDurationFilter] = useState<
@@ -312,7 +353,10 @@ export default function Discover() {
 
     const filtered = base.filter((route) => {
       const routeCountry =
-        route.country_name || route.country || route.country_code || "Desconocido";
+        route.country_name ||
+        route.country ||
+        route.country_code ||
+        "Desconocido";
       const routeTheme = normalizeTheme(route.theme);
       if (country !== "Todos" && routeCountry !== country) return false;
       if (theme !== "todos" && routeTheme !== theme) return false;
@@ -321,7 +365,8 @@ export default function Discover() {
       if (durationFilter !== "any" && dur != null) {
         if (durationFilter === "lt1" && dur >= 60) return false;
         if (durationFilter === "1to3" && (dur < 60 || dur > 180)) return false;
-        if (durationFilter === "3to6" && (dur <= 180 || dur > 360)) return false;
+        if (durationFilter === "3to6" && (dur <= 180 || dur > 360))
+          return false;
         if (durationFilter === "gt6" && dur <= 360) return false;
       }
       return true;
@@ -345,7 +390,37 @@ export default function Discover() {
     });
 
     return sorted;
-  }, [countryBlocks, themeBlocks, country, theme, ratingFilter, durationFilter, sortBy]);
+  }, [
+    countryBlocks,
+    themeBlocks,
+    country,
+    theme,
+    ratingFilter,
+    durationFilter,
+    sortBy,
+  ]);
+
+  const heroStats = useMemo(() => {
+    const uniqueCountries = new Set(
+      filteredRoutes.map(
+        (r) => r.country_name || r.country || r.country_code || "Desconocido"
+      )
+    );
+    const uniqueThemes = new Set(
+      filteredRoutes.map((r) => normalizeTheme(r.theme))
+    );
+    const totalKm = filteredRoutes.reduce(
+      (acc, route) => acc + (route.distance_km ?? 0),
+      0
+    );
+
+    return {
+      routes: filteredRoutes.length,
+      regions: uniqueCountries.size,
+      themes: uniqueThemes.size,
+      distance: Math.round(totalKm),
+    };
+  }, [filteredRoutes]);
 
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
@@ -387,12 +462,24 @@ export default function Discover() {
     [themeBlocks, country, theme]
   );
 
-const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = "default") => {
+  const handleSurprise = () => {
+    if (!filteredRoutes.length) return;
+    const randomRoute =
+      filteredRoutes[Math.floor(Math.random() * filteredRoutes.length)];
+    navigate("/mapa", {
+      state: { fromDiscover: true, highlightRouteId: randomRoute.id },
+    });
+  };
+
+  const renderRouteCard = (
+    route: DiscoverRoute,
+    variant: "default" | "compact" = "default"
+  ) => {
     const points: Array<[number, number]> = Array.isArray(route.points)
-      ? (route.points as Array<any>).map((p: any) => [
+      ? ((route.points as Array<any>).map((p: any) => [
           p.longitude ?? p.lng ?? p[0],
           p.latitude ?? p.lat ?? p[1],
-        ]) as Array<[number, number]>
+        ]) as Array<[number, number]>)
       : [];
     const coverImage =
       (Array.isArray(route.images) && route.images[0]) ||
@@ -408,11 +495,21 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
         <div className="route-preview-content">
           <div className="route-preview-thumb">
             {coverImage ? (
-              <img src={coverImage} alt={`Imagen de ${route.name}`} loading="lazy" />
+              <img
+                src={coverImage}
+                alt={`Imagen de ${route.name}`}
+                loading="lazy"
+              />
             ) : points.length > 0 ? (
-              <RouteMiniMap points={points} className="route-preview-thumb__map" />
+              <RouteMiniMap
+                points={points}
+                className="route-preview-thumb__map"
+              />
             ) : (
-              <div className="route-preview-thumb__placeholder" aria-label="Ruta sin imagen">
+              <div
+                className="route-preview-thumb__placeholder"
+                aria-label="Ruta sin imagen"
+              >
                 <span>🗺️</span>
               </div>
             )}
@@ -424,26 +521,38 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
               Categoría: {formatCategoryLabel(route.category, route.theme)}
             </p>
             <p className="route-preview-points">
-              {(route.country_name || route.country || route.country_code || "Origen desconocido") +
+              {(route.country_name ||
+                route.country ||
+                route.country_code ||
+                "Origen desconocido") +
                 " · " +
                 `${points.length} punto${points.length === 1 ? "" : "s"}`}
             </p>
 
             <div className="route-preview-meta">
               {typeof route.distance_km === "number" ? (
-                <span className="route-preview-pill" title="Distancia aproximada">
+                <span
+                  className="route-preview-pill"
+                  title="Distancia aproximada"
+                >
                   <span className="pill-dot distance" />
                   {formatDistance(route.distance_km)}
                 </span>
               ) : null}
               {route.duration_minutes != null ? (
-                <span className="route-preview-pill" title="Duración aproximada">
+                <span
+                  className="route-preview-pill"
+                  title="Duración aproximada"
+                >
                   <span className="pill-dot duration" />
                   {formatDuration(route.duration_minutes)}
                 </span>
               ) : null}
               {difficultyLabel ? (
-                <span className="route-preview-pill" title="Dificultad estimada">
+                <span
+                  className="route-preview-pill"
+                  title="Dificultad estimada"
+                >
                   <span className="pill-dot difficulty" />
                   {difficultyLabel}
                 </span>
@@ -455,7 +564,9 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
             {ratingDisplay ? (
               <div className="route-preview-rating-badge">
                 <span className="route-preview-rating__star">★</span>
-                <span className="route-preview-rating__value">{ratingDisplay}</span>
+                <span className="route-preview-rating__value">
+                  {ratingDisplay}
+                </span>
               </div>
             ) : null}
             <button
@@ -551,8 +662,7 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
                     className="profile-menu__item"
                     role="menuitem"
                     onClick={() => {
-                      navigate("/mapa", { state: { authMode: "login" } });
-                      setProfileMenuOpen(false);
+                      openAuth("login");
                     }}
                   >
                     Iniciar sesión
@@ -561,8 +671,7 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
                     className="profile-menu__item"
                     role="menuitem"
                     onClick={() => {
-                      navigate("/mapa", { state: { authMode: "signup" } });
-                      setProfileMenuOpen(false);
+                      openAuth("signup");
                     }}
                   >
                     Crear cuenta
@@ -576,137 +685,156 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
 
       <main className="discover__main">
         <section className="discover-hero">
-          <div className="discover-hero__copy">
-            <p className="eyebrow">Explorar</p>
-            <h1>Descubre rutas como si ya estuvieras allí</h1>
-            <p className="lead">
-              Explora rutas destacadas por país o temática, con el look & feel
-              de un catálogo cuidadosamente curado al estilo Airbnb.
-            </p>
-          </div>
-          <div className="discover-hero__panel">
-            <div className="panel-card">
-              <div className="panel-card__title">
-                <span className="eyebrow">Contexto</span>
-                <h3>Elige dónde empezar</h3>
-              </div>
-              <label className="label" htmlFor="country-select">
-                País o región
-              </label>
-              <select
-                id="country-select"
-                className="country-select"
-                value={country}
-                onChange={(e) => setCountry(e.target.value)}
-                disabled={loading}
-              >
-                {countryOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <div className="panel-card__chips"></div>
-              <div className="panel-card__footer">
-                Las colecciones se adaptan al país que selecciones.
-              </div>
-            </div>
-          </div>
-        </section>
-        <section className="filters">
-          <div className="filters__group">
-            <span className="label">País o región</span>
-            <div className="filters__chips">
-              {countryOptions.map((c) => (
+          <div className="hero-overlay">
+            <div className="discover-hero__copy">
+              <p className="eyebrow hero-eyebrow">Experiencias REX</p>
+              <h1>Explora rutas icónicas que invitan a viajar</h1>
+              <p className="lead">
+                Un mosaico de destinos y temáticas para despertar ganas de
+                salir. Guarda tus favoritas y síguelas explorándolas en el mapa.
+              </p>
+              <div className="hero-actions">
+                <a className="cta-btn" href="#featured">
+                  Ver todas las rutas
+                </a>
                 <button
-                  key={c}
-                  className={`filter-chip ${country === c ? "active" : ""}`}
-                  onClick={() => setCountry(c)}
-                  disabled={loading}
+                  className="ghost-btn hero-ghost"
+                  onClick={() => navigate("/mapa")}
                 >
-                  {c}
+                  Ir al mapa
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
 
-          <div className="filters__group">
-            <span className="label">Colección temática</span>
-            <div className="filters__chips">
-              <button
-                className={`filter-chip ${theme === "todos" ? "active" : ""}`}
-                onClick={() => setTheme("todos")}
-                disabled={loading}
-              >
-                Todas
-              </button>
-              {themeOptions
-                .filter((t) => t !== "todos")
-                .map((option) => (
-                  <button
-                    key={option}
-                    className={`filter-chip ${
-                      theme === option ? "active" : ""
-                    }`}
-                    onClick={() => setTheme(option)}
+            <div className="hero-controls">
+              <div className="hero-row">
+                <div className="hero-field">
+                  <span className="label">País o región</span>
+                  <select
+                    id="country-select"
+                    className="country-select glass-input"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
                     disabled={loading}
                   >
-                    {CATEGORY_LABELS[option] || option}
+                    {countryOptions.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="hero-field">
+                  <span className="label">Temática</span>
+                  <div className="pill-group wrap">
+                    {themeOptions.map((option) => (
+                      <button
+                        key={option}
+                        className={`pill-chip solid ${
+                          theme === option ? "active" : ""
+                        }`}
+                        onClick={() => setTheme(option)}
+                        disabled={loading}
+                      >
+                        {option === "todos" ? "Todos" : CATEGORY_LABELS[option] || option}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hero-stats">
+                <div className="stat-card">
+                  <span className="stat-label">Rutas activas</span>
+                  <span className="stat-value">{heroStats.routes ?? "-"}</span>
+                  <p className="stat-hint">Destacadas y filtradas</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">Regiones</span>
+                  <span className="stat-value">{heroStats.regions ?? "-"}</span>
+                  <p className="stat-hint">Destinos únicos</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">Temáticas</span>
+                  <span className="stat-value">{heroStats.themes ?? "-"}</span>
+                  <p className="stat-hint">Mood para inspirarte</p>
+                </div>
+                <div className="stat-card">
+                  <span className="stat-label">KM totales</span>
+                  <span className="stat-value">
+                    {heroStats.distance ?? "-"}
+                  </span>
+                  <p className="stat-hint">Estimados entre todas</p>
+                </div>
+              </div>
+
+              <div className="hero-filter-grid">
+                <div className="hero-field">
+                  <span className="label">Valoración media</span>
+                  <div className="pill-group wrap">
+                    {[0, 4, 4.5, 4.8].map((threshold) => (
+                      <button
+                        key={threshold}
+                        className={`pill-chip solid ${
+                          ratingFilter === threshold ? "active" : ""
+                        }`}
+                        onClick={() => setRatingFilter(threshold)}
+                        disabled={loading}
+                      >
+                        {threshold === 0
+                          ? "Cualquier rating"
+                          : `⭐ ${threshold}+`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hero-field">
+                  <span className="label">Duración estimada</span>
+                  <div className="pill-group wrap">
+                    {[
+                      { key: "any", label: "Cualquiera" },
+                      { key: "lt1", label: "< 1h" },
+                      { key: "1to3", label: "1–3h" },
+                      { key: "3to6", label: "3–6h" },
+                      { key: "gt6", label: ">6h" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${
+                          durationFilter === opt.key ? "active" : ""
+                        }`}
+                        onClick={() => setDurationFilter(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="surprise-spot">
+                  <button
+                    className="cta-btn ghost-dark"
+                    onClick={handleSurprise}
+                    disabled={!filteredRoutes.length}
+                  >
+                    Sorpréndeme con una ruta
                   </button>
-                ))}
-            </div>
-          </div>
-
-          <div className="filters__group">
-            <span className="label">Valoración media</span>
-            <div className="filters__chips">
-              {[0, 4, 4.5, 4.8].map((threshold) => (
-                <button
-                  key={threshold}
-                  className={`filter-chip ${
-                    ratingFilter === threshold ? "active" : ""
-                  }`}
-                  onClick={() => setRatingFilter(threshold)}
-                  disabled={loading}
-                >
-                  {threshold === 0 ? "Cualquier rating" : `⭐ ${threshold}+`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="filters__group">
-            <span className="label">Duración estimada</span>
-            <div className="filters__chips">
-              {[
-                { key: "any", label: "Cualquiera" },
-                { key: "lt1", label: "< 1h" },
-                { key: "1to3", label: "1–3h" },
-                { key: "3to6", label: "3–6h" },
-                { key: "gt6", label: ">6h" },
-              ].map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`filter-chip ${
-                    durationFilter === opt.key ? "active" : ""
-                  }`}
-                  onClick={() => setDurationFilter(opt.key as any)}
-                  disabled={loading}
-                >
-                  {opt.label}
-                </button>
-              ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="featured">
+        <section className="featured" id="featured">
           <div className="section-head">
             <div>
               <p className="eyebrow">Destacadas</p>
               <h2>Rutas listas para abrir en el mapa</h2>
               <p className="muted">
-                Usa los filtros para acotar y abre directamente la ficha con mapa.
+                Usa los filtros para acotar y abre directamente la ficha con
+                mapa.
               </p>
             </div>
             <span className="pill muted">
@@ -725,7 +853,8 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
           ) : filteredRoutes.length === 0 ? (
             <div className="empty">
               <p className="muted">
-                No hay rutas para esta combinación. Cambia los filtros o explora otro país.
+                No hay rutas para esta combinación. Cambia los filtros o explora
+                otro país.
               </p>
             </div>
           ) : (
@@ -832,7 +961,9 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
                   ) : (
                     <div className="collection-card__routes">
                       {collection.routes.map((route) => (
-                        <div key={route.id}>{renderRouteCard(route, "compact")}</div>
+                        <div key={route.id}>
+                          {renderRouteCard(route, "compact")}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -852,6 +983,13 @@ const renderRouteCard = (route: DiscoverRoute, variant: "default" | "compact" = 
           )}
         </section>
       </main>
+      <Modal open={authOpen} onClose={() => setAuthOpen(false)}>
+        <AuthCard
+          mode={authMode}
+          onSwitchMode={setAuthMode}
+          onSubmit={() => setAuthOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }
