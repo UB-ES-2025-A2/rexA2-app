@@ -17,6 +17,8 @@ type Props = {
   highlightPoints?: Array<[number, number]>;
   fitOnHighlight?: boolean;
   onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+  popupNode?: React.ReactNode;
+  popupLocation?: [number, number] | null;
 };
 
 async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
@@ -57,11 +59,14 @@ export default function MapView({
   onBoundsChange,
   markers = [],
   onMarkerClick,
+  popupNode,
+  popupLocation,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevViewportRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
@@ -294,7 +299,35 @@ export default function MapView({
     return () => {
       map.off("moveend", handleMoveEnd);
     };
+    return () => {
+      map.off("moveend", handleMoveEnd);
+    };
   }, [mapLoaded, onBoundsChange]);
+
+  // Update popup position on map move
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !popupLocation) {
+      setPopupPos(null);
+      return;
+    }
+
+    const updatePos = () => {
+      const pos = map.project(popupLocation);
+      setPopupPos({ x: pos.x, y: pos.y });
+    };
+
+    map.on("move", updatePos);
+    map.on("moveend", updatePos);
+    map.on("zoom", updatePos);
+    updatePos();
+
+    return () => {
+      map.off("move", updatePos);
+      map.off("moveend", updatePos);
+      map.off("zoom", updatePos);
+    };
+  }, [mapLoaded, popupLocation]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -494,15 +527,47 @@ export default function MapView({
   }, [forceMapResize]);
 
   return (
-    <div
-      ref={containerRef}
-      className={className ? `map-view ${className}` : "map-view"}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        transform: "none",
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        className={className ? `map-view ${className}` : "map-view"}
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          transform: "none",
+        }}
+      />
+      {popupNode && popupPos && (
+        <div
+          style={{
+            position: "absolute",
+            left: popupPos.x,
+            top: popupPos.y,
+            transform: "translate(-50%, -100%)",
+            pointerEvents: "auto",
+            zIndex: 1000,
+            paddingBottom: "12px", // Space for the "arrow" feel
+          }}
+        >
+          {popupNode}
+          {/* Optional Arrow */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "4px",
+              left: "50%",
+              transform: "translateX(-50%) rotate(45deg)",
+              width: "16px",
+              height: "16px",
+              background: "rgba(255, 255, 255, 0.65)",
+              backdropFilter: "blur(12px)",
+              borderRight: "1px solid rgba(255, 255, 255, 0.4)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.4)",
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 }

@@ -1,107 +1,119 @@
 .route-summary-card {
+    /* Position will be handled by the parent/map now, but we keep defaults just in case */
+    width: 280px;
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Inter', sans-serif;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.route-summary-image-container {
+    width: 100%;
+    height: 140px;
+    position: relative;
+    background-color: #e5e7eb;
+}
+
+.route-summary-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.route-summary-close {
     position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto;
-    min-width: 200px;
-    max-width: 320px;
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 8px 12px;
-    z-index: 1000;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    font-family: 'Inter', sans-serif;
-    border: 1px solid #e5e7eb;
+    justify-content: center;
+    cursor: pointer;
+    color: #374151;
+    font-size: 16px;
+    line-height: 1;
+    backdrop-filter: blur(4px);
+    transition: background 0.2s;
+}
+
+.route-summary-close:hover {
+    background: white;
 }
 
 .route-summary-content {
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 8px;
+}
+
+.route-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
 }
 
 .route-summary-title {
     margin: 0;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     color: #111827;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
+    line-height: 1.2;
 }
 
 .route-summary-stats {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    color: #6b7280;
+    gap: 10px;
+    font-size: 0.8rem;
+    color: #4b5563;
+    font-weight: 500;
 }
 
 .route-stat {
     display: flex;
     align-items: center;
-    gap: 2px;
-}
-
-.route-stat-icon {
-    font-size: 0.8rem;
-}
-
-.route-summary-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-left: auto;
-    padding-left: 8px;
-    border-left: 1px solid #f3f4f6;
+    gap: 4px;
 }
 
 .route-summary-btn {
+    width: 100%;
+    margin-top: 4px;
     background-color: #4f46e5;
     color: white;
     border: none;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s;
-    white-space: nowrap;
 }
 
 .route-summary-btn:hover {
     background-color: #4338ca;
-}
-
-.route-summary-close {
-    background: none;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    padding: 2px;
-    font-size: 1.1rem;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.route-summary-close:hover {
-    color: #4b5563;
-}
-
-@media (max-width: 480px) {
-    .route-summary-card {
-        bottom: 80px;
-        /* Above bottom nav if exists, or just higher */
-        width: 90%;
-        max-width: none;
-        justify-content: space-between;
-    }
 }

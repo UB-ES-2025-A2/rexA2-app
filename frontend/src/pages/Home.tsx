@@ -1433,22 +1433,38 @@ export default function Home() {
                 onBoundsChange={handleBoundsChange}
                 markers={!routeCardOpen && !selectedRoute ? mapMarkers : []}
                 onMarkerClick={handleMarkerClick}
+                popupLocation={
+                  summaryRoute && summaryRoute.points.length > 0
+                    ? summaryRoute.points[0]
+                    : null
+                }
+                popupNode={
+                  summaryRoute && !selectedRoute && !routeCardOpen ? (
+                    <RouteSummaryCard
+                      route={{
+                        id: summaryRoute.id,
+                        name: summaryRoute.name,
+                        distanceKm: summaryRoute.distanceKm,
+                        durationMinutes: summaryRoute.durationMinutes,
+                        rating: summaryRoute.rating,
+                        rating_count: summaryRoute.rating_count,
+                        image:
+                          (Array.isArray((summaryRoute as any).images) &&
+                            (summaryRoute as any).images[0]) ||
+                          (Array.isArray((summaryRoute as any).image_urls) &&
+                            (summaryRoute as any).image_urls[0]) ||
+                          (Array.isArray((summaryRoute as any).imageUrls) &&
+                            (summaryRoute as any).imageUrls[0]) ||
+                          summaryRoute.image ||
+                          summaryRoute.cover_image ||
+                          summaryRoute.thumbnail,
+                      }}
+                      onViewDetails={handleViewDetails}
+                      onClose={handleCloseSummary}
+                    />
+                  ) : null
+                }
               />
-
-              {summaryRoute && !selectedRoute && !routeCardOpen && (
-                <RouteSummaryCard
-                  route={{
-                    id: summaryRoute.id,
-                    name: summaryRoute.name,
-                    distanceKm: summaryRoute.distanceKm,
-                    durationMinutes: summaryRoute.durationMinutes,
-                    rating: summaryRoute.rating,
-                    rating_count: summaryRoute.rating_count,
-                  }}
-                  onViewDetails={handleViewDetails}
-                  onClose={handleCloseSummary}
-                />
-              )}
 
               <button
                 className="fab"
