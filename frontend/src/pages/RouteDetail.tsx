@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate, useParams, useLocation } from "react-router-dom";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import "../styles/RouteDetail.css";
+import { subscribeToRatingUpdates } from "../services/ratingEvents";
 
 type ApiPoint = { latitude?: number; longitude?: number; lat?: number; lng?: number } | [number, number];
 type ApiRoute = {
@@ -75,6 +76,24 @@ export default function RouteDetail() {
 
     return () => controller.abort();
   }, [routeId, fallbackRoute]);
+
+  useEffect(() => {
+    if (!routeId) return;
+    const unsubscribe = subscribeToRatingUpdates(({ route_id, average, count }) => {
+      if (String(route_id) !== String(routeId)) return;
+      setRoute((prev) =>
+        prev
+          ? {
+              ...prev,
+              rating: average ?? prev.rating ?? null,
+              rating_count: count ?? prev.rating_count ?? null,
+            }
+          : prev
+      );
+    });
+
+    return unsubscribe;
+  }, [routeId]);
 
   const points = useMemo(() => normalizePoints(route?.points), [route]);
 

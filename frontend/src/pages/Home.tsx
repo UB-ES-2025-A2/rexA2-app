@@ -19,6 +19,7 @@ import RouteSearchBar, {
   type DifficultyFilter,
   type ThemeFilter,
 } from "../components/RouteSearchBar/RouteSearchBar";
+import { subscribeToRatingUpdates } from "../services/ratingEvents";
 
 import "../styles/Home.css";
 import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
@@ -736,6 +737,26 @@ export default function Home() {
 
     fetchAll();
   }, [token, showAlert]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToRatingUpdates(({ route_id, average, count }) => {
+      setRoutes((prev) =>
+        prev.map((r) =>
+          String(r.id) === String(route_id)
+            ? { ...r, rating: average ?? null, rating_count: count }
+            : r
+        )
+      );
+
+      setSelectedRoute((prev) =>
+        prev && String(prev.id) === String(route_id)
+          ? { ...prev, rating: average ?? null, rating_count: count }
+          : prev
+      );
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (searchMode !== "users") {
