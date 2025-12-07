@@ -204,13 +204,14 @@ const DEFAULT_FILTERS: FiltersState = {
   theme: "all",
 };
 
+/*
 const DISTANCE_LABELS: Record<DistanceFilter, string> = {
   all: "Todas las distancias",
   lt5: "<5 km",
   "5to10": "5–10 km",
   "10to20": "10–20 km",
   gt20: ">20 km",
-};
+};*/
 
 const DURATION_LABELS: Record<DurationFilter, string> = {
   all: "Todas las duraciones",
