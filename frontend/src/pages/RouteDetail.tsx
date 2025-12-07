@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate, useParams, useLocation } from "react-router
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import "../styles/RouteDetail.css";
 import { subscribeToRatingUpdates } from "../services/ratingEvents";
+import { useAlert } from "../context/AlertContext";
 
 type ApiPoint = { latitude?: number; longitude?: number; lat?: number; lng?: number } | [number, number];
 type ApiRoute = {
@@ -59,6 +60,7 @@ export default function RouteDetail() {
   const navigate = useNavigate();
   const location = useLocation();
   const fallbackRoute = (location.state as any)?.fallbackRoute as ApiRoute | undefined;
+  const { showAlert } = useAlert();
 
   const [route, setRoute] = useState<ApiRoute | null>(fallbackRoute || null);
   const [loading, setLoading] = useState<boolean>(!fallbackRoute);
@@ -79,7 +81,9 @@ export default function RouteDetail() {
         if (!controller.signal.aborted) setRoute(data);
       } catch (err) {
         if (controller.signal.aborted) return;
-        setError(err instanceof Error ? err.message : "No se pudo cargar la ruta.");
+        const message = err instanceof Error ? err.message : "No se pudo cargar la ruta.";
+        setError(message);
+        showAlert(message, "error");
       } finally {
         if (!controller.signal.aborted) setLoading(false);
       }
@@ -90,7 +94,7 @@ export default function RouteDetail() {
     }
 
     return () => controller.abort();
-  }, [routeId, fallbackRoute]);
+  }, [routeId, fallbackRoute, showAlert]);
 
   useEffect(() => {
     if (!routeId) return;

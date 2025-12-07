@@ -515,9 +515,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       const res = await fetchWithAuth(`/routes/${routeId}/pdf`, { method: "GET" });
 
       if (!res.ok) {
-        const detail =
-          (await res.json().catch(() => null))?.detail ||
-          "Error al generar el PDF. Inténtalo de nuevo más tarde.";
+        let detail = "No se pudo generar el PDF. Inténtalo de nuevo más tarde.";
+        const body = await res.json().catch(() => null);
+        if (body?.detail) detail = String(body.detail);
+        if (res.status >= 500) {
+          detail = "Error del servidor al generar el PDF. Inténtalo de nuevo más tarde.";
+        }
         throw new Error(detail);
       }
 
@@ -537,14 +540,19 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       link.remove();
       URL.revokeObjectURL(url);
 
-      showAlert("Descarga del PDF iniciada.", "success");
+      showAlert("Descarga del PDF con éxito.", "success");
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : "Error al generar el PDF. Inténtalo de nuevo más tarde.";
-      setDownloadError(message);
-      showAlert("Error al generar el PDF. Inténtalo de nuevo más tarde.", "error");
+          : "No se pudo generar el PDF. Revisa tu conexión o inténtalo más tarde.";
+      const networkHint =
+        err instanceof TypeError
+          ? "Revisa tu conexión o vuelve a intentarlo."
+          : "";
+      const finalMessage = networkHint ? `${message} ${networkHint}`.trim() : message;
+      setDownloadError(finalMessage);
+      showAlert(finalMessage, "error");
     } finally {
       setDownloadingPdf(false);
     }
