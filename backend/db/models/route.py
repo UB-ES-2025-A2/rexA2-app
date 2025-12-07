@@ -1,4 +1,4 @@
-# from db.client import db
+
 import json
 import math
 from pathlib import Path
@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from uuid import uuid4
 from typing import Any
 
-# ============ HELPERS ======================
 COUNTRY_BBOXES = [
     {"code": "ES", "name": "España", "lat_min": 27.0, "lat_max": 44.5, "lon_min": -19.0, "lon_max": 5.0},
     {"code": "FR", "name": "Francia", "lat_min": 41.0, "lat_max": 51.5, "lon_min": -5.5, "lon_max": 9.9},
@@ -19,7 +18,6 @@ COUNTRY_BBOXES = [
     {"code": "CA", "name": "Canadá", "lat_min": 41.6, "lat_max": 83.1, "lon_min": -141.0, "lon_max": -52.6},
 ]
 
-# Carga opcional de polígonos de países desde un GeoJSON simplificado.
 COUNTRY_POLYGONS: list[dict[str, Any]] = []
 GEOJSON_PATH = Path(__file__).resolve().parents[2] / "assets" / "countries.geojson"
 if GEOJSON_PATH.exists():
