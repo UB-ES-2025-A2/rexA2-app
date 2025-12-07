@@ -593,10 +593,6 @@ export default function Profile() {
     }
   };
 
-  const showFavoriteRoute = active === "favorites" && Boolean(selectedFavorite);
-  const showCreatedRoute =
-    active === "created" && Boolean(selectedCreatedRoute);
-
   const handleSelectFavorite = (route: FavoriteRoute) => {
     setSelectedFavorite(route);
   };
@@ -747,138 +743,6 @@ export default function Profile() {
 
       <main className="profile-layout">
         <section className="content">
-          {(showFavoriteRoute && selectedFavorite) ||
-          (showCreatedRoute && selectedCreatedRoute) ? (
-            <div className="route-details-inline card">
-              {showFavoriteRoute && selectedFavorite ? (
-                <RouteDetailsCard
-                  routeId={selectedFavorite.id}
-                  name={selectedFavorite.name}
-                  description={
-                    selectedFavorite.description || "Sin descripción"
-                  }
-                  category={
-                    (selectedFavorite.category as Category) || "entretenimiento"
-                  }
-                  points={selectedFavorite.points}
-                  distanceKm={
-                    (selectedFavorite as any).distanceKm ??
-                    (selectedFavorite as any).distance_km ??
-                    null
-                  }
-                  durationMinutes={
-                    (selectedFavorite as any).durationMinutes ??
-                    (selectedFavorite as any).duration_minutes ??
-                    null
-                  }
-                  difficulty={(selectedFavorite as any).difficulty ?? null}
-                  isPrivate={!selectedFavorite.visibility}
-                  rating={selectedFavorite.rating ?? null}
-                  ratingCount={selectedFavorite.rating_count ?? null}
-                  initialCompleted={normalizeCompletedFlag(
-                    selectedFavorite.isCompleted ?? false
-                  )}
-                  onCompletedChange={(next) => {
-                    setFavorites((prev) =>
-                      prev.map((r) =>
-                        r.id === selectedFavorite.id
-                          ? { ...r, isCompleted: next }
-                          : r
-                      )
-                    );
-                    setSelectedFavorite((prev) =>
-                      prev && prev.id === selectedFavorite.id
-                        ? { ...prev, isCompleted: next }
-                        : prev
-                    );
-                  }}
-                  onRatingChange={({ average, count }) => {
-                    setFavorites((prev) =>
-                      prev.map((r) =>
-                        r.id === selectedFavorite.id
-                          ? { ...r, rating: average, rating_count: count }
-                          : r
-                      )
-                    );
-                    setSelectedFavorite((prev) =>
-                      prev && prev.id === selectedFavorite.id
-                        ? { ...prev, rating: average, rating_count: count }
-                        : prev
-                    );
-                  }}
-                  onClose={closeFavoriteView}
-                  initialSaved
-                  onSavedChange={handleFavoriteSavedChange}
-                />
-              ) : showCreatedRoute && selectedCreatedRoute ? (
-                <RouteDetailsCard
-                  routeId={selectedCreatedRoute.id}
-                  name={selectedCreatedRoute.name}
-                  description={
-                    selectedCreatedRoute.description || "Sin descripción"
-                  }
-                  category={
-                    (selectedCreatedRoute.category as Category) ||
-                    "entretenimiento"
-                  }
-                  points={selectedCreatedRoute.points}
-                  distanceKm={
-                    (selectedCreatedRoute as any).distanceKm ??
-                    (selectedCreatedRoute as any).distance_km ??
-                    null
-                  }
-                  durationMinutes={
-                    (selectedCreatedRoute as any).durationMinutes ??
-                    (selectedCreatedRoute as any).duration_minutes ??
-                    null
-                  }
-                  difficulty={(selectedCreatedRoute as any).difficulty ?? null}
-                  isPrivate={!selectedCreatedRoute.visibility}
-                  rating={selectedCreatedRoute.rating ?? null}
-                  ratingCount={selectedCreatedRoute.rating_count ?? null}
-                  initialCompleted={normalizeCompletedFlag(
-                    selectedCreatedRoute.isCompleted ?? false
-                  )}
-                  onCompletedChange={(next) => {
-                    setCreatedRoutes((prev) =>
-                      prev.map((r) =>
-                        r.id === selectedCreatedRoute.id
-                          ? { ...r, isCompleted: next }
-                          : r
-                      )
-                    );
-                    setSelectedCreatedRoute((prev) =>
-                      prev && prev.id === selectedCreatedRoute.id
-                        ? { ...prev, isCompleted: next }
-                        : prev
-                    );
-                  }}
-                  onRatingChange={({ average, count }) => {
-                    setCreatedRoutes((prev) =>
-                      prev.map((r) =>
-                        r.id === selectedCreatedRoute.id
-                          ? { ...r, rating: average, rating_count: count }
-                          : r
-                      )
-                    );
-                    setSelectedCreatedRoute((prev) =>
-                      prev && prev.id === selectedCreatedRoute.id
-                        ? { ...prev, rating: average, rating_count: count }
-                        : prev
-                    );
-                  }}
-                  onClose={closeCreatedView}
-                  initialSaved={favorites.some(
-                    (route) => route.id === selectedCreatedRoute.id
-                  )}
-                  onSavedChange={handleCreatedSavedChange}
-                  onDelete={handleDeleteCreatedRoute}
-                  isOwnRoute={true}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
           <PersonalData
             profile={profile}
             loadingProfile={profileStatus === "loading"}
@@ -912,6 +776,37 @@ export default function Profile() {
               onViewRoute={handleSelectFavorite}
               selectedRoute={selectedFavorite}
               onCloseRoute={closeFavoriteView}
+              onSavedChange={handleFavoriteSavedChange}
+              onRatingChange={({ average, count }) => {
+                if (!selectedFavorite) return;
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
+              onCompletedChange={(next) => {
+                if (!selectedFavorite) return;
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id
+                      ? { ...r, isCompleted: next }
+                      : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
             />
           )}
           {active === "created" && (
@@ -922,6 +817,41 @@ export default function Profile() {
               onViewRoute={handleSelectCreatedRoute}
               selectedRoute={selectedCreatedRoute}
               onCloseRoute={closeCreatedView}
+              onSavedChange={handleCreatedSavedChange}
+              onRatingChange={({ average, count }) => {
+                if (!selectedCreatedRoute) return;
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, rating: average, rating_count: count }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, rating: average, rating_count: count }
+                    : prev
+                );
+              }}
+              onCompletedChange={(next) => {
+                if (!selectedCreatedRoute) return;
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, isCompleted: next }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
+              onDeleteRoute={handleDeleteCreatedRoute}
+              initialSavedForRoute={(routeId) =>
+                favorites.some((route) => route.id === routeId)
+              }
             />
           )}
           {active === "followers" && (
@@ -974,18 +904,38 @@ function normalizeFavoriteRoute(
 ): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
-        .filter(
-          (point): point is FavoriteRoutePoint =>
-            typeof point?.longitude === "number" &&
-            typeof point?.latitude === "number"
-        )
-        .map((point) => [point.longitude, point.latitude])
+        .map((point: any) => {
+          if (Array.isArray(point) && point.length >= 2) {
+            const [lng, lat] = point;
+            return typeof lng === "number" && typeof lat === "number"
+              ? [lng, lat]
+              : null;
+          }
+          const lng =
+            point?.longitude ??
+            point?.lng ??
+            point?.lon ??
+            (Array.isArray(point?.coordinates) ? point.coordinates[0] : null);
+          const lat =
+            point?.latitude ??
+            point?.lat ??
+            point?.latitud ??
+            (Array.isArray(point?.coordinates) ? point.coordinates[1] : null);
+          if (typeof lng === "number" && typeof lat === "number") {
+            return [lng, lat];
+          }
+          return null;
+        })
+        .filter((p): p is [number, number] => Array.isArray(p))
     : [];
 
+  const createdAtRaw = (route as any)?.createdAt ?? route.created_at ?? null;
   const createdAt =
-    typeof route.created_at === "string"
-      ? route.created_at
-      : new Date(route.created_at).toISOString();
+    typeof createdAtRaw === "string"
+      ? createdAtRaw
+      : createdAtRaw
+      ? new Date(createdAtRaw).toISOString()
+      : "";
 
   return {
     id: route.id ?? route._id ?? "",
@@ -1401,6 +1351,9 @@ type FavoritesPanelProps = {
   selectedRoute: FavoriteRoute | null;
   onViewRoute: (route: FavoriteRoute) => void;
   onCloseRoute: () => void;
+  onSavedChange: (saved: boolean) => void;
+  onRatingChange: (stats: { average: number | null; count: number }) => void;
+  onCompletedChange: (completed: boolean) => void;
 };
 
 function FavoritesPanel({
@@ -1410,29 +1363,66 @@ function FavoritesPanel({
   selectedRoute,
   onViewRoute,
   onCloseRoute,
+  onSavedChange,
+  onRatingChange,
+  onCompletedChange,
 }: FavoritesPanelProps) {
   if (selectedRoute) {
     const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
     return (
-      <div className="card fill favorites-panel">
-        <div className="section-title favorites-panel__header">
-          <div>
-            <h2>{selectedRoute.name}</h2>
-            <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
-              {formatDateLabel(selectedRoute.createdAt)}
-            </p>
+      <div className="card fill route-details-inline">
+        <div className="route-details-map-shell">
+          <header className="route-details-map__header">
+            <div>
+              <p className="eyebrow">Mapa de la ruta</p>
+              <h3>{selectedRoute.name}</h3>
+              <p className="muted">
+                Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+                {formatDateLabel(selectedRoute.createdAt)}
+              </p>
+            </div>
+            <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+              Cerrar
+            </button>
+          </header>
+          <div className="route-details-map__body">
+            <MapView
+              className="route-details-map"
+              highlightPoints={selectedRoute.points}
+              fitOnHighlight
+            />
           </div>
-          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
-            Cerrar
-          </button>
         </div>
-        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView
-            className="favorites-map"
-            highlightPoints={selectedRoute.points}
-          />
-        </div>
+
+        <RouteDetailsCard
+          routeId={selectedRoute.id}
+          name={selectedRoute.name}
+          description={selectedRoute.description || "Sin descripción"}
+          category={(selectedRoute.category as Category) || "entretenimiento"}
+          points={selectedRoute.points}
+          distanceKm={
+            (selectedRoute as any).distanceKm ??
+            (selectedRoute as any).distance_km ??
+            null
+          }
+          durationMinutes={
+            (selectedRoute as any).durationMinutes ??
+            (selectedRoute as any).duration_minutes ??
+            null
+          }
+          difficulty={(selectedRoute as any).difficulty ?? null}
+          isPrivate={!selectedRoute.visibility}
+          rating={selectedRoute.rating ?? null}
+          ratingCount={selectedRoute.rating_count ?? null}
+          initialCompleted={normalizeCompletedFlag(
+            selectedRoute.isCompleted ?? false
+          )}
+          onCompletedChange={onCompletedChange}
+          onRatingChange={onRatingChange}
+          onClose={onCloseRoute}
+          initialSaved
+          onSavedChange={onSavedChange}
+        />
       </div>
     );
   }
@@ -1450,6 +1440,8 @@ function FavoritesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
+        initialSaved
+        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1496,6 +1488,11 @@ type CreatedRoutesPanelProps = {
   selectedRoute: FavoriteRoute | null;
   onViewRoute: (route: FavoriteRoute) => void;
   onCloseRoute: () => void;
+  onSavedChange: (saved: boolean) => void;
+  onRatingChange: (stats: { average: number | null; count: number }) => void;
+  onCompletedChange: (completed: boolean) => void;
+  onDeleteRoute: (routeId: string) => Promise<void>;
+  initialSavedForRoute: (routeId: string) => boolean;
 };
 
 function CreatedRoutesPanel({
@@ -1505,29 +1502,74 @@ function CreatedRoutesPanel({
   selectedRoute,
   onViewRoute,
   onCloseRoute,
+  onSavedChange,
+  onRatingChange,
+  onCompletedChange,
+  onDeleteRoute,
+  initialSavedForRoute,
 }: CreatedRoutesPanelProps) {
   if (selectedRoute) {
     const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
     return (
-      <div className="card fill favorites-panel">
-        <div className="section-title favorites-panel__header">
-          <div>
-            <h2>{selectedRoute.name}</h2>
-            <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
-              {formatDateLabel(selectedRoute.createdAt)}
-            </p>
+      <div className="card fill route-details-inline">
+        <div className="route-details-map-shell">
+          <header className="route-details-map__header">
+            <div>
+              <p className="eyebrow">Mapa de la ruta</p>
+              <h3>{selectedRoute.name}</h3>
+              <p className="muted">
+                Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+                {formatDateLabel(selectedRoute.createdAt)}
+              </p>
+            </div>
+            <div className="route-details-map__actions">
+              <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+                Cerrar
+              </button>
+            </div>
+          </header>
+          <div className="route-details-map__body">
+            <MapView
+              className="route-details-map"
+              highlightPoints={selectedRoute.points}
+              fitOnHighlight
+            />
           </div>
-          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
-            Cerrar
-          </button>
         </div>
-        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView
-            className="favorites-map"
-            highlightPoints={selectedRoute.points}
-          />
-        </div>
+
+        <RouteDetailsCard
+          routeId={selectedRoute.id}
+          name={selectedRoute.name}
+          description={selectedRoute.description || "Sin descripción"}
+          category={(selectedRoute.category as Category) || "entretenimiento"}
+          points={selectedRoute.points}
+          distanceKm={
+            (selectedRoute as any).distanceKm ??
+            (selectedRoute as any).distance_km ??
+            null
+          }
+          durationMinutes={
+            (selectedRoute as any).durationMinutes ??
+            (selectedRoute as any).duration_minutes ??
+            null
+          }
+          difficulty={(selectedRoute as any).difficulty ?? null}
+          isPrivate={!selectedRoute.visibility}
+          rating={selectedRoute.rating ?? null}
+          ratingCount={selectedRoute.rating_count ?? null}
+          initialCompleted={normalizeCompletedFlag(
+            selectedRoute.isCompleted ?? false
+          )}
+          onCompletedChange={onCompletedChange}
+          onRatingChange={onRatingChange}
+          onClose={onCloseRoute}
+          initialSaved={initialSavedForRoute(selectedRoute.id)}
+          onSavedChange={onSavedChange}
+          onDelete={async (routeId) => {
+            await onDeleteRoute(routeId);
+          }}
+          isOwnRoute
+        />
       </div>
     );
   }
@@ -1545,6 +1587,8 @@ function CreatedRoutesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
+        initialSaved={initialSavedForRoute(route.id)}
+        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1645,7 +1689,7 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     const follower = followers[index];
     if (!follower) return;
 
-    navigate("/", {
+    navigate("/mapa", {
       state: {
         openUserFromFollowers: {
           id: follower.id,
@@ -1737,7 +1781,7 @@ function FollowingPanel({ following, status, error }: FollowingPanelProps) {
     const user = following[index];
     if (!user) return;
 
-    navigate("/", {
+    navigate("/mapa", {
       state: {
         openUserFromFollowers: {
           id: user.id,

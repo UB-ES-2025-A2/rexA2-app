@@ -797,19 +797,8 @@ body.profile-body-host {
   align-items: center;
 }
 
-.favorites-map-shell {
-  flex: 1;
-  min-height: 320px;
-  max-height: 65vh;
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
-}
-
-.favorites-map {
-  flex: 1;
-  width: 100% !important;
-  height: 100% !important;
+.favorites-panel .route-details-card {
+  height: 100%;
 }
 
 .avatar-block {
@@ -1444,6 +1433,11 @@ body.profile-body-host {
 
 .route-details-inline {
   min-height: 0;
+  padding: clamp(14px, 2vw, 20px);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: clamp(14px, 1.8vw, 20px);
 }
 
 /* Elementos del perfil que no deben colapsar */
@@ -1457,4 +1451,69 @@ body.profile-body-host {
 
 .profile-panel .stats-summary {
   flex-shrink: 0;
+}
+
+.route-details-map-shell {
+  order: 2;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 320px;
+  min-height: clamp(320px, 45vh, 520px);
+}
+
+.route-details-map__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border);
+}
+
+.route-details-map__header h3 {
+  margin: 4px 0 2px;
+}
+
+.route-details-map__body {
+  width: 100%;
+  flex: 1;
+  height: 100%;
+  min-height: clamp(260px, 40vh, 420px);
+  border-top: 1px solid var(--border);
+}
+
+.route-details-map {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 0 var(--radius) var(--radius);
+  overflow: hidden;
+}
+
+.route-details-inline .route-details-card {
+  order: 1;
+  flex: 1.2;
+  min-width: 360px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+@media (max-width: 1024px) {
+  .route-details-inline {
+    flex-direction: column;
+  }
+
+  .route-details-map-shell,
+  .route-details-inline .route-details-card {
+    order: initial;
+    min-width: 0;
+  }
 }
