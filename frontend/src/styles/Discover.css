@@ -287,9 +287,11 @@
 
 .surprise-spot {
   display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
+  justify-content: space-between;
+  align-items: center;
   padding: 6px 0;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .quick-row {
