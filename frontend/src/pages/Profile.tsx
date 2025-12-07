@@ -1,5 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { useAuth } from "../context/AuthContext";
 import MapView from "../components/MapView";
@@ -10,7 +10,7 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 
-type TabKey = "profile" | "favorites" | "created" | "followers" | "following";
+type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
 type ProfileStats = {
   routes_created: number;
@@ -98,16 +98,16 @@ const normalizeCompletedFlag = (value: any, fallback = false) => {
 };
 
 export default function Profile() {
-  const [active, setActive] = useState<TabKey>("profile");
+  const [active, setActive] = useState<TabKey>("favorites");
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const { user, token, logout } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileStatus, setProfileStatus] = useState<
     "idle" | "loading" | "error"
   >("loading");
   const [profileError, setProfileError] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() =>
     createDraftFromProfile()
@@ -120,7 +120,7 @@ export default function Profile() {
   const [followersError, setFollowersError] = useState("");
 
   const [isEditing, setIsEditing] = useState(false);
-  const [avatarError, setAvatarError] = useState("");
+  const [, setAvatarError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [favorites, setFavorites] = useState<FavoriteRoute[]>([]);
   const [favoritesStatus, setFavoritesStatus] = useState<
@@ -157,7 +157,9 @@ export default function Profile() {
         });
         if (!res.ok) return;
         const data = await res.json();
-        const ids = Array.isArray(data?.route_ids) ? data.route_ids.map(String) : [];
+        const ids = Array.isArray(data?.route_ids)
+          ? data.route_ids.map(String)
+          : [];
         if (!cancelled) setCompletedIds(new Set(ids));
       } catch (err) {
         console.warn("No se pudieron cargar rutas completadas", err);
@@ -262,7 +264,8 @@ export default function Profile() {
           const normalized = normalizeFavoriteRoute(route, ownerFallback);
           return {
             ...normalized,
-            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+            isCompleted:
+              completedIds.has(normalized.id) || normalized.isCompleted,
           };
         });
         setCreatedRoutes(mapped);
@@ -309,7 +312,8 @@ export default function Profile() {
           const normalized = normalizeFavoriteRoute(route);
           return {
             ...normalized,
-            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+            isCompleted:
+              completedIds.has(normalized.id) || normalized.isCompleted,
           };
         });
         setFavorites(mapped);
@@ -342,12 +346,18 @@ export default function Profile() {
     );
     setSelectedFavorite((prev) =>
       prev
-        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        ? {
+            ...prev,
+            isCompleted: completedIds.has(prev.id) || prev.isCompleted,
+          }
         : prev
     );
     setSelectedCreatedRoute((prev) =>
       prev
-        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        ? {
+            ...prev,
+            isCompleted: completedIds.has(prev.id) || prev.isCompleted,
+          }
         : prev
     );
   }, [completedIds]);
@@ -416,8 +426,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-            ? data.items
-            : [];
+          ? data.items
+          : [];
 
         setFollowers(rawItems.map(normalizeFollower));
         setFollowersStatus("idle");
@@ -485,8 +495,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-            ? data.items
-            : [];
+          ? data.items
+          : [];
 
         setFollowing(rawItems.map(normalizeFollower));
         setFollowingStatus("idle");
@@ -545,11 +555,6 @@ export default function Profile() {
     setAvatarError("");
     setIsEditing(true);
   };
-  const cancelEdit = () => {
-    setAvatarError("");
-    setIsEditing(false);
-    setDraftExtras(createDraftFromProfile(profile));
-  };
   const saveEdit = async () => {
     if (!profile || !accessToken) return;
     if (!API_BASE) {
@@ -587,10 +592,6 @@ export default function Profile() {
       setIsSaving(false);
     }
   };
-
-  const showFavoriteRoute = active === "favorites" && Boolean(selectedFavorite);
-  const showCreatedRoute =
-    active === "created" && Boolean(selectedCreatedRoute);
 
   const handleSelectFavorite = (route: FavoriteRoute) => {
     setSelectedFavorite(route);
@@ -657,111 +658,127 @@ export default function Profile() {
 
   return (
     <div className="profile-root">
-      <header className="header">
-        <div className="header__inner">
-          <div className="header-left">
-            <button
-              aria-label="Ir al inicio"
-              onClick={() => navigate("/")}
-              className="btn-home"
-            ></button>
-            <div className="header-title">
-              <span className="eyebrow"></span>
-              <h1>Perfil</h1>
-            </div>
-          </div>
+      <header className="primary-header profile-header">
+        <div className="header__start">
+          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
+            REX
+          </Link>
+          <nav className="main-nav" aria-label="Navegación principal">
+            <NavLink
+              to="/descubrir"
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Descubrir
+            </NavLink>
+            <NavLink
+              to="/mapa"
+              end
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Mapa
+            </NavLink>
+          </nav>
+        </div>
+
+        <div className="header__search"></div>
+
+        <div className="header__cta">
           <div className="profile-menu-container">
             <button
               className="profile-menu-btn"
-              onClick={() => {
-                if (token) setProfileMenuOpen((v) => !v);
-                else navigate("/");
-              }}
-              aria-label="Profile"
+              onClick={() => setProfileMenuOpen((v) => !v)}
+              aria-label="Perfil"
               aria-haspopup={token ? "menu" : undefined}
               aria-expanded={token ? profileMenuOpen : undefined}
             >
               <span>👤</span>
             </button>
-
-            {token ? (
-              <div
-                className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
-                role="menu"
-                aria-label="Profile menu"
-              >
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
+              {user || token ? (
+                <>
+                  <Link
+                    className="profile-menu__item"
+                    role="menuitem"
+                    to="/perfil"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Mi perfil
+                  </Link>
+                  <button
+                    className="profile-menu__item"
+                    role="menuitem"
+                    onClick={() => {
+                      logout();
+                      setProfileMenuOpen(false);
+                      navigate("/");
+                    }}
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              ) : (
                 <button
                   className="profile-menu__item"
                   role="menuitem"
                   onClick={() => {
+                    navigate("/descubrir");
                     setProfileMenuOpen(false);
-                    navigate("/perfil");
                   }}
                 >
-                  Mi perfil
+                  Ir a descubrir
                 </button>
-
-                <button
-                  className="profile-menu__item"
-                  role="menuitem"
-                  onClick={() => {
-                    logout();
-                    setProfileMenuOpen(false);
-                    navigate("/");
-                  }}
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            ) : null}
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       <main className="profile-layout">
-        <aside
-          className={`sidebar ${showFavoriteRoute || showCreatedRoute ? "sidebar-route-open" : ""
-            }`}
-        >
-          {showFavoriteRoute && selectedFavorite ? (
-            <RouteDetailsCard
-              routeId={selectedFavorite.id}
-              name={selectedFavorite.name}
-              description={selectedFavorite.description || "Sin descripción"}
-              category={
-                (selectedFavorite.category as Category) || "entretenimiento"
-              }
-              points={selectedFavorite.points}
-              distanceKm={
-                (selectedFavorite as any).distanceKm ??
-                (selectedFavorite as any).distance_km ??
-                null
-              }
-              durationMinutes={
-                (selectedFavorite as any).durationMinutes ??
-                (selectedFavorite as any).duration_minutes ??
-                null
-              }
-              difficulty={(selectedFavorite as any).difficulty ?? null}
-              isPrivate={!selectedFavorite.visibility}
-              rating={selectedFavorite.rating ?? null}
-              ratingCount={selectedFavorite.rating_count ?? null}
-              initialCompleted={normalizeCompletedFlag(
-                selectedFavorite.isCompleted ?? false
-              )}
-              onCompletedChange={(next) => {
-                setFavorites((prev) =>
-                  prev.map((r) =>
-                    r.id === selectedFavorite.id ? { ...r, isCompleted: next } : r
-                  )
-                );
-                setSelectedFavorite((prev) =>
-                  prev && prev.id === selectedFavorite.id
-                    ? { ...prev, isCompleted: next }
-                    : prev
-                );
-              }}
+        <section className="content">
+          <PersonalData
+            profile={profile}
+            loadingProfile={profileStatus === "loading"}
+            error={profileError}
+            stats={profile?.stats ?? EMPTY_STATS}
+            isEditing={isEditing}
+            draftExtras={draftExtras}
+            onChangeDraft={handleDraftChange}
+            onStartEdit={startEdit}
+            onSaveEdit={saveEdit}
+            saving={isSaving}
+            onAvatarFile={handleAvatarFile}
+            followers={followers}
+            onGoToFollowers={() => setActive("followers")}
+            following={following}
+            onGoToFollowing={() => setActive("following")}
+            onGoToFavorites={() => setActive("favorites")}
+            onGoToCreated={() => setActive("created")}
+            activeTab={active}
+            onChangeTab={setActive}
+            onLogout={() => {
+              logout();
+              navigate("/");
+            }}
+          />
+          {active === "favorites" && (
+            <FavoritesPanel
+              favorites={favorites}
+              status={favoritesStatus}
+              error={favoritesError}
+              onViewRoute={handleSelectFavorite}
+              selectedRoute={selectedFavorite}
+              onCloseRoute={closeFavoriteView}
+              onSavedChange={handleFavoriteSavedChange}
               onRatingChange={({ average, count }) => {
+                if (!selectedFavorite) return;
                 setFavorites((prev) =>
                   prev.map((r) =>
                     r.id === selectedFavorite.id
@@ -775,51 +792,34 @@ export default function Profile() {
                     : prev
                 );
               }}
-              onClose={closeFavoriteView}
-              initialSaved
-              onSavedChange={handleFavoriteSavedChange}
-            />
-          ) : showCreatedRoute && selectedCreatedRoute ? (
-            <RouteDetailsCard
-              routeId={selectedCreatedRoute.id}
-              name={selectedCreatedRoute.name}
-              description={
-                selectedCreatedRoute.description || "Sin descripción"
-              }
-              category={
-                (selectedCreatedRoute.category as Category) || "entretenimiento"
-              }
-              points={selectedCreatedRoute.points}
-              distanceKm={
-                (selectedCreatedRoute as any).distanceKm ??
-                (selectedCreatedRoute as any).distance_km ??
-                null
-              }
-              durationMinutes={
-                (selectedCreatedRoute as any).durationMinutes ??
-                (selectedCreatedRoute as any).duration_minutes ??
-                null
-              }
-              difficulty={(selectedCreatedRoute as any).difficulty ?? null}
-              isPrivate={!selectedCreatedRoute.visibility}
-              rating={selectedCreatedRoute.rating ?? null}
-              ratingCount={selectedCreatedRoute.rating_count ?? null}
-              initialCompleted={normalizeCompletedFlag(
-                selectedCreatedRoute.isCompleted ?? false
-              )}
               onCompletedChange={(next) => {
-                setCreatedRoutes((prev) =>
+                if (!selectedFavorite) return;
+                setFavorites((prev) =>
                   prev.map((r) =>
-                    r.id === selectedCreatedRoute.id ? { ...r, isCompleted: next } : r
+                    r.id === selectedFavorite.id
+                      ? { ...r, isCompleted: next }
+                      : r
                   )
                 );
-                setSelectedCreatedRoute((prev) =>
-                  prev && prev.id === selectedCreatedRoute.id
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
                     ? { ...prev, isCompleted: next }
                     : prev
                 );
               }}
+            />
+          )}
+          {active === "created" && (
+            <CreatedRoutesPanel
+              routes={createdRoutes}
+              status={createdStatus}
+              error={createdError}
+              onViewRoute={handleSelectCreatedRoute}
+              selectedRoute={selectedCreatedRoute}
+              onCloseRoute={closeCreatedView}
+              onSavedChange={handleCreatedSavedChange}
               onRatingChange={({ average, count }) => {
+                if (!selectedCreatedRoute) return;
                 setCreatedRoutes((prev) =>
                   prev.map((r) =>
                     r.id === selectedCreatedRoute.id
@@ -833,102 +833,25 @@ export default function Profile() {
                     : prev
                 );
               }}
-              onClose={closeCreatedView}
-              initialSaved={favorites.some(
-                (route) => route.id === selectedCreatedRoute.id
-              )}
-              onSavedChange={handleCreatedSavedChange}
-              onDelete={handleDeleteCreatedRoute}
-              isOwnRoute={true}
-            />
-          ) : (
-            <ul className="menu">
-              <li>
-                <button
-                  className={`btn ${active === "profile" ? "active" : ""}`}
-                  onClick={() => setActive("profile")}
-                >
-                  <span className="label">Perfil</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`btn ${active === "favorites" ? "active" : ""}`}
-                  onClick={() => setActive("favorites")}
-                >
-                  <span className="label">Favoritas</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`btn ${active === "created" ? "active" : ""}`}
-                  onClick={() => setActive("created")}
-                >
-                  <span className="label">Mis rutas</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`btn ${active === "followers" ? "active" : ""}`}
-                  onClick={() => setActive("followers")}
-                >
-                  <span className="label">Seguidores</span>
-                </button>
-              </li>
-              <li>
-                <button
-                  className={`btn ${active === "following" ? "active" : ""}`}
-                  onClick={() => setActive("following")}
-                >
-                  <span className="label">Siguiendo</span>
-                </button>
-              </li>
-            </ul>
-          )}
-        </aside>
-
-        <section className="content">
-          {active === "profile" && (
-            <PersonalData
-              profile={profile}
-              loadingProfile={profileStatus === "loading"}
-              error={profileError}
-              stats={profile?.stats ?? EMPTY_STATS}
-              isEditing={isEditing}
-              draftExtras={draftExtras}
-              onChangeDraft={handleDraftChange}
-              onStartEdit={startEdit}
-              onCancelEdit={cancelEdit}
-              onSaveEdit={saveEdit}
-              saving={isSaving}
-              onAvatarFile={handleAvatarFile}
-              avatarError={avatarError}
-              followers={followers}
-              onGoToFollowers={() => setActive("followers")}
-              following={following}
-              onGoToFollowing={() => setActive("following")}
-              onGoToFavorites={() => setActive("favorites")}
-              onGoToCreated={() => setActive("created")}
-            />
-          )}
-          {active === "favorites" && (
-            <FavoritesPanel
-              favorites={favorites}
-              status={favoritesStatus}
-              error={favoritesError}
-              onViewRoute={handleSelectFavorite}
-              selectedRoute={selectedFavorite}
-              onCloseRoute={closeFavoriteView}
-            />
-          )}
-          {active === "created" && (
-            <CreatedRoutesPanel
-              routes={createdRoutes}
-              status={createdStatus}
-              error={createdError}
-              onViewRoute={handleSelectCreatedRoute}
-              selectedRoute={selectedCreatedRoute}
-              onCloseRoute={closeCreatedView}
+              onCompletedChange={(next) => {
+                if (!selectedCreatedRoute) return;
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id
+                      ? { ...r, isCompleted: next }
+                      : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
+              onDeleteRoute={handleDeleteCreatedRoute}
+              initialSavedForRoute={(routeId) =>
+                favorites.some((route) => route.id === routeId)
+              }
             />
           )}
           {active === "followers" && (
@@ -981,18 +904,38 @@ function normalizeFavoriteRoute(
 ): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
-      .filter(
-        (point): point is FavoriteRoutePoint =>
-          typeof point?.longitude === "number" &&
-          typeof point?.latitude === "number"
-      )
-      .map((point) => [point.longitude, point.latitude])
+        .map((point: any) => {
+          if (Array.isArray(point) && point.length >= 2) {
+            const [lng, lat] = point;
+            return typeof lng === "number" && typeof lat === "number"
+              ? [lng, lat]
+              : null;
+          }
+          const lng =
+            point?.longitude ??
+            point?.lng ??
+            point?.lon ??
+            (Array.isArray(point?.coordinates) ? point.coordinates[0] : null);
+          const lat =
+            point?.latitude ??
+            point?.lat ??
+            point?.latitud ??
+            (Array.isArray(point?.coordinates) ? point.coordinates[1] : null);
+          if (typeof lng === "number" && typeof lat === "number") {
+            return [lng, lat];
+          }
+          return null;
+        })
+        .filter((p): p is [number, number] => Array.isArray(p))
     : [];
 
+  const createdAtRaw = (route as any)?.createdAt ?? route.created_at ?? null;
   const createdAt =
-    typeof route.created_at === "string"
-      ? route.created_at
-      : new Date(route.created_at).toISOString();
+    typeof createdAtRaw === "string"
+      ? createdAtRaw
+      : createdAtRaw
+      ? new Date(createdAtRaw).toISOString()
+      : "";
 
   return {
     id: route.id ?? route._id ?? "",
@@ -1012,23 +955,23 @@ function normalizeFavoriteRoute(
       typeof route.rating_count === "number"
         ? route.rating_count
         : typeof (route as any).ratingCount === "number"
-          ? (route as any).ratingCount
-          : null,
+        ? (route as any).ratingCount
+        : null,
     user_rating:
       typeof route.user_rating === "number" ? route.user_rating : null,
     images: Array.isArray(route.images)
       ? route.images
       : Array.isArray((route as any).image_urls)
-        ? (route as any).image_urls
-        : Array.isArray((route as any).imageUrls)
-          ? (route as any).imageUrls
-          : [],
+      ? (route as any).image_urls
+      : Array.isArray((route as any).imageUrls)
+      ? (route as any).imageUrls
+      : [],
     isCompleted: normalizeCompletedFlag(
       route.is_completed ??
-      route.completed ??
-      route.isCompleted ??
-      route.completed_by_user ??
-      (route as any)?.completedByUser
+        route.completed ??
+        route.isCompleted ??
+        route.completed_by_user ??
+        (route as any)?.completedByUser
     ),
     completedAt: route.completed_at ?? route.completedAt ?? null,
   };
@@ -1086,17 +1029,18 @@ type PersonalDataProps = {
   draftExtras: ProfileDraft;
   onChangeDraft: (patch: Partial<ProfileDraft>) => void;
   onStartEdit: () => void;
-  onCancelEdit: () => void;
   onSaveEdit: () => void | Promise<void>;
   saving: boolean;
   onAvatarFile: (file: File | null) => void;
-  avatarError: string;
   followers: Follower[];
   onGoToFollowers: () => void;
   following: Follower[];
   onGoToFollowing: () => void;
   onGoToFavorites: () => void;
   onGoToCreated: () => void;
+  activeTab: TabKey;
+  onChangeTab: (tab: TabKey) => void;
+  onLogout: () => void;
 };
 
 function PersonalData({
@@ -1106,113 +1050,168 @@ function PersonalData({
   stats,
   isEditing,
   draftExtras,
+  onChangeDraft,
   onStartEdit,
-  onCancelEdit,
   onSaveEdit,
   saving,
   onAvatarFile,
-  avatarError,
   followers,
   onGoToFollowers,
   following,
   onGoToFollowing,
   onGoToFavorites,
   onGoToCreated,
+  activeTab,
+  onChangeTab,
+  onLogout,
 }: PersonalDataProps) {
   const viewExtras = isEditing ? draftExtras : createDraftFromProfile(profile);
   const username = profile?.username ?? "";
   const email = profile?.email ?? "";
+  const displayName = username || email || "Explorador";
+  const subtitle = email || "Completa tu email para compartir rutas";
+  const phoneLabel =
+    viewExtras.phone || "Añade tu teléfono para que puedan contactarte";
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const handleEditAction = async () => {
+    if (!profile || loadingProfile) return;
+    if (!isEditing) {
+      onStartEdit();
+      return;
+    }
+    await onSaveEdit();
+  };
+
+  const handleAvatarClick = () => {
+    if (!isEditing) return;
+    avatarInputRef.current?.click();
+  };
+  const showPhonePill = Boolean(viewExtras.phone);
 
   return (
     <div className="card fill profile-panel">
-      <div className="panel-header">
-        <div>
-          <h2>Perfil</h2>
+      <div className="profile-hero-card">
+        <div className="profile-hero-banner">
+          <button
+            className="pill-btn primary hero-edit-fab"
+            type="button"
+            onClick={handleEditAction}
+            disabled={!profile || loadingProfile || saving}
+          >
+            {isEditing
+              ? saving
+                ? "Guardando..."
+                : "Guardar perfil"
+              : "Editar perfil"}
+          </button>
         </div>
-        <div className="panel-actions">
-          {isEditing ? (
-            <>
-              <button
-                className="btn-ghost sm"
-                type="button"
-                onClick={onCancelEdit}
-              >
-                Cancelar
-              </button>
-              <button
-                className="btn-primary sm"
-                type="button"
-                onClick={onSaveEdit}
-                disabled={saving}
-              >
-                {saving ? "Guardando..." : "Guardar"}
-              </button>
-            </>
-          ) : (
-            <button
-              className="btn-primary sm"
-              type="button"
-              onClick={onStartEdit}
-              disabled={!profile || loadingProfile}
-            >
-              Editar
-            </button>
-          )}
-        </div>
-      </div>
-      {error && <div className="alert error">{error}</div>}
-
-      <div className="profile-top">
-        <div className="avatar-block">
-          <div className="avatar-frame">
+        <div className="profile-hero-body">
+          <input
+            ref={avatarInputRef}
+            id="avatar-upload"
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              onAvatarFile(file);
+              event.target.value = "";
+            }}
+          />
+          <div
+            className={`profile-hero-avatar ${isEditing ? "editable" : ""}`}
+            role={isEditing ? "button" : undefined}
+            tabIndex={isEditing ? 0 : -1}
+            onClick={handleAvatarClick}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                handleAvatarClick();
+              }
+            }}
+          >
             {viewExtras.avatarUrl ? (
               <img src={viewExtras.avatarUrl} alt="Avatar del usuario" />
             ) : (
-              <span>{username?.[0]?.toUpperCase() || "?"}</span>
+              <span>{displayName?.[0]?.toUpperCase() || "?"}</span>
             )}
           </div>
-
-          {isEditing ? (
-            <div className="avatar-inputs">
-              <label className="btn-ghost sm" htmlFor="avatar-upload">
-                Seleccionar foto
-              </label>
-              <input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
-                  onAvatarFile(file);
-                  event.target.value = "";
-                }}
-              />
-              {viewExtras.avatarUrl && (
-                <button
-                  className="btn-ghost sm"
-                  type="button"
-                  onClick={() => onAvatarFile(null)}
-                >
-                  Quitar foto
-                </button>
-              )}
-              {avatarError && (
-                <p className="muted" style={{ color: "#d22", marginTop: 8 }}>
-                  {avatarError}
-                </p>
-              )}
-            </div>
-          ) : (
-            <p className="muted">
-              {viewExtras.avatarUrl
-                ? "Foto personalizada."
-                : "Personaliza tu foto cuando quieras."}
-            </p>
+          {isEditing && viewExtras.avatarUrl && (
+            <button
+              className="pill-btn ghost sm avatar-remove-btn"
+              type="button"
+              onClick={() => onAvatarFile(null)}
+            >
+              Quitar foto
+            </button>
           )}
-        </div>
+          <div className="profile-hero-info">
+            <p className="profile-hero-name">{displayName}</p>
+            <p className="profile-hero-subtitle">{subtitle}</p>
+            <div className="profile-hero-tags">
+              {showPhonePill ? (
+                <span className="pill soft">{phoneLabel}</span>
+              ) : null}
+            </div>
+          </div>
 
-        <div className="profile-top-main">
+          <div className="profile-hero-actions profile-hero-actions--row">
+            <button className="ig-pill" type="button" onClick={onGoToFollowers}>
+              <span className="ig-pill__count">{followers.length}</span>
+              <span className="ig-pill__label">Seguidores</span>
+            </button>
+            <button className="ig-pill" type="button" onClick={onGoToFollowing}>
+              <span className="ig-pill__count">{following.length}</span>
+              <span className="ig-pill__label">Siguiendo</span>
+            </button>
+          </div>
+
+          <div className="profile-hero-stats profile-hero-stats--rows">
+            <div className="hero-stat-pair">
+              <button
+                className="hero-stat"
+                type="button"
+                onClick={onGoToCreated}
+              >
+                <span className="hero-stat__value">{stats.routes_created}</span>
+                <span className="hero-stat__label">Rutas creadas</span>
+              </button>
+              <button
+                className="hero-stat"
+                type="button"
+                onClick={onGoToFavorites}
+              >
+                <span className="hero-stat__value">
+                  {stats.routes_favorites}
+                </span>
+                <span className="hero-stat__label">Rutas favoritas</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        {!isEditing && (
+          <div className="profile-logout-bar">
+            <button
+              className="pill-btn logout"
+              type="button"
+              onClick={onLogout}
+            >
+              Cerrar sesión
+            </button>
+          </div>
+        )}
+      </div>
+
+      {error && <div className="alert error">{error}</div>}
+
+      <div className="profile-details-grid">
+        <div className="glass-card">
+          <div className="panel-header compact">
+            <div>
+              <h3>Datos de la cuenta</h3>
+              <p>Gestiona cómo te ven los demás en la app</p>
+            </div>
+          </div>
+
           <div className="info-grid info-grid--main">
             <InfoRow
               label="Nombre de usuario"
@@ -1224,36 +1223,104 @@ function PersonalData({
               value={email || "Sin email"}
               loading={loadingProfile}
             />
-          </div>
+            <div className="info-row editable">
+              <label className="info-label" htmlFor="phone-input">
+                Teléfono de contacto
+              </label>
+              {isEditing ? (
+                <input
+                  id="phone-input"
+                  className="input"
+                  value={viewExtras.phone}
+                  onChange={(event) =>
+                    onChangeDraft({ phone: event.target.value })
+                  }
+                  placeholder="Ej: +34 600 000 000"
+                />
+              ) : (
+                <span className="info-value">
+                  {viewExtras.phone || "No has añadido un teléfono"}
+                </span>
+              )}
+            </div>
 
-          <div className="profile-widgets">{/* extras ocultos */}</div>
+            <div className="info-row editable">
+              <span className="info-label">Unidades preferidas</span>
+              {isEditing ? (
+                <div className="unit-options">
+                  <label
+                    className={`unit-chip ${
+                      viewExtras.units === "km" ? "selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="units"
+                      value="km"
+                      checked={viewExtras.units === "km"}
+                      onChange={() => onChangeDraft({ units: "km" })}
+                    />
+                    <span>Km</span>
+                  </label>
+                  <label
+                    className={`unit-chip ${
+                      viewExtras.units === "mi" ? "selected" : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="units"
+                      value="mi"
+                      checked={viewExtras.units === "mi"}
+                      onChange={() => onChangeDraft({ units: "mi" })}
+                    />
+                    <span>Millas</span>
+                  </label>
+                </div>
+              ) : (
+                <span className="info-value">
+                  {viewExtras.units === "mi"
+                    ? "Mostrando distancias en millas"
+                    : "Mostrando distancias en kilómetros"}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="stats-summary">
-        <button type="button" className="stats-card" onClick={onGoToFollowers}>
-          <span className="stat-value">{followers.length}</span>
-          <span className="stat-label">
-            {followers.length === 1 ? "Seguidor" : "Seguidores"}
-          </span>
+      <div className="profile-inline-nav secondary-nav">
+        <button
+          className={`inline-nav-btn ${
+            activeTab === "created" ? "active" : ""
+          }`}
+          onClick={() => onChangeTab("created")}
+        >
+          Mis rutas
         </button>
-        <button type="button" className="stats-card" onClick={onGoToFollowing}>
-          <span className="stat-value">{following.length}</span>
-          <span className="stat-label">Siguiendo</span>
+        <button
+          className={`inline-nav-btn ${
+            activeTab === "favorites" ? "active" : ""
+          }`}
+          onClick={() => onChangeTab("favorites")}
+        >
+          Favoritas
         </button>
-      </div>
-
-      <div className="stats-summary">
-        <button type="button" className="stats-card" onClick={onGoToCreated}>
-          <span className="stats-card-title">Rutas creadas</span>
-          <span className="stats-card-count">{stats.routes_created}</span>
-          <span className="stats-card-cta">Ver mis rutas</span>
+        <button
+          className={`inline-nav-btn ${
+            activeTab === "followers" ? "active" : ""
+          }`}
+          onClick={() => onChangeTab("followers")}
+        >
+          Seguidores
         </button>
-
-        <button type="button" className="stats-card" onClick={onGoToFavorites}>
-          <span className="stats-card-title">Rutas favoritas</span>
-          <span className="stats-card-count">{stats.routes_favorites}</span>
-          <span className="stats-card-cta">Ver rutas favoritas</span>
+        <button
+          className={`inline-nav-btn ${
+            activeTab === "following" ? "active" : ""
+          }`}
+          onClick={() => onChangeTab("following")}
+        >
+          Siguiendo
         </button>
       </div>
     </div>
@@ -1284,6 +1351,9 @@ type FavoritesPanelProps = {
   selectedRoute: FavoriteRoute | null;
   onViewRoute: (route: FavoriteRoute) => void;
   onCloseRoute: () => void;
+  onSavedChange: (saved: boolean) => void;
+  onRatingChange: (stats: { average: number | null; count: number }) => void;
+  onCompletedChange: (completed: boolean) => void;
 };
 
 function FavoritesPanel({
@@ -1293,29 +1363,66 @@ function FavoritesPanel({
   selectedRoute,
   onViewRoute,
   onCloseRoute,
+  onSavedChange,
+  onRatingChange,
+  onCompletedChange,
 }: FavoritesPanelProps) {
   if (selectedRoute) {
     const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
     return (
-      <div className="card fill favorites-panel">
-        <div className="section-title favorites-panel__header">
-          <div>
-            <h2>{selectedRoute.name}</h2>
-            <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
-              {formatDateLabel(selectedRoute.createdAt)}
-            </p>
+      <div className="card fill route-details-inline">
+        <div className="route-details-map-shell">
+          <header className="route-details-map__header">
+            <div>
+              <p className="eyebrow">Mapa de la ruta</p>
+              <h3>{selectedRoute.name}</h3>
+              <p className="muted">
+                Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+                {formatDateLabel(selectedRoute.createdAt)}
+              </p>
+            </div>
+            <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+              Cerrar
+            </button>
+          </header>
+          <div className="route-details-map__body">
+            <MapView
+              className="route-details-map"
+              highlightPoints={selectedRoute.points}
+              fitOnHighlight
+            />
           </div>
-          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
-            Cerrar
-          </button>
         </div>
-        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView
-            className="favorites-map"
-            highlightPoints={selectedRoute.points}
-          />
-        </div>
+
+        <RouteDetailsCard
+          routeId={selectedRoute.id}
+          name={selectedRoute.name}
+          description={selectedRoute.description || "Sin descripción"}
+          category={(selectedRoute.category as Category) || "entretenimiento"}
+          points={selectedRoute.points}
+          distanceKm={
+            (selectedRoute as any).distanceKm ??
+            (selectedRoute as any).distance_km ??
+            null
+          }
+          durationMinutes={
+            (selectedRoute as any).durationMinutes ??
+            (selectedRoute as any).duration_minutes ??
+            null
+          }
+          difficulty={(selectedRoute as any).difficulty ?? null}
+          isPrivate={!selectedRoute.visibility}
+          rating={selectedRoute.rating ?? null}
+          ratingCount={selectedRoute.rating_count ?? null}
+          initialCompleted={normalizeCompletedFlag(
+            selectedRoute.isCompleted ?? false
+          )}
+          onCompletedChange={onCompletedChange}
+          onRatingChange={onRatingChange}
+          onClose={onCloseRoute}
+          initialSaved
+          onSavedChange={onSavedChange}
+        />
       </div>
     );
   }
@@ -1333,6 +1440,8 @@ function FavoritesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
+        initialSaved
+        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1379,6 +1488,11 @@ type CreatedRoutesPanelProps = {
   selectedRoute: FavoriteRoute | null;
   onViewRoute: (route: FavoriteRoute) => void;
   onCloseRoute: () => void;
+  onSavedChange: (saved: boolean) => void;
+  onRatingChange: (stats: { average: number | null; count: number }) => void;
+  onCompletedChange: (completed: boolean) => void;
+  onDeleteRoute: (routeId: string) => Promise<void>;
+  initialSavedForRoute: (routeId: string) => boolean;
 };
 
 function CreatedRoutesPanel({
@@ -1388,29 +1502,74 @@ function CreatedRoutesPanel({
   selectedRoute,
   onViewRoute,
   onCloseRoute,
+  onSavedChange,
+  onRatingChange,
+  onCompletedChange,
+  onDeleteRoute,
+  initialSavedForRoute,
 }: CreatedRoutesPanelProps) {
   if (selectedRoute) {
     const ownerLabel = selectedRoute.ownerName || selectedRoute.ownerId;
     return (
-      <div className="card fill favorites-panel">
-        <div className="section-title favorites-panel__header">
-          <div>
-            <h2>{selectedRoute.name}</h2>
-            <p>
-              Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
-              {formatDateLabel(selectedRoute.createdAt)}
-            </p>
+      <div className="card fill route-details-inline">
+        <div className="route-details-map-shell">
+          <header className="route-details-map__header">
+            <div>
+              <p className="eyebrow">Mapa de la ruta</p>
+              <h3>{selectedRoute.name}</h3>
+              <p className="muted">
+                Propietario <strong>{ownerLabel}</strong> · Creada el{" "}
+                {formatDateLabel(selectedRoute.createdAt)}
+              </p>
+            </div>
+            <div className="route-details-map__actions">
+              <button className="btn-ghost" type="button" onClick={onCloseRoute}>
+                Cerrar
+              </button>
+            </div>
+          </header>
+          <div className="route-details-map__body">
+            <MapView
+              className="route-details-map"
+              highlightPoints={selectedRoute.points}
+              fitOnHighlight
+            />
           </div>
-          <button className="btn-ghost" type="button" onClick={onCloseRoute}>
-            Cerrar
-          </button>
         </div>
-        <div className="favorites-map-shell" style={{ minHeight: 360 }}>
-          <MapView
-            className="favorites-map"
-            highlightPoints={selectedRoute.points}
-          />
-        </div>
+
+        <RouteDetailsCard
+          routeId={selectedRoute.id}
+          name={selectedRoute.name}
+          description={selectedRoute.description || "Sin descripción"}
+          category={(selectedRoute.category as Category) || "entretenimiento"}
+          points={selectedRoute.points}
+          distanceKm={
+            (selectedRoute as any).distanceKm ??
+            (selectedRoute as any).distance_km ??
+            null
+          }
+          durationMinutes={
+            (selectedRoute as any).durationMinutes ??
+            (selectedRoute as any).duration_minutes ??
+            null
+          }
+          difficulty={(selectedRoute as any).difficulty ?? null}
+          isPrivate={!selectedRoute.visibility}
+          rating={selectedRoute.rating ?? null}
+          ratingCount={selectedRoute.rating_count ?? null}
+          initialCompleted={normalizeCompletedFlag(
+            selectedRoute.isCompleted ?? false
+          )}
+          onCompletedChange={onCompletedChange}
+          onRatingChange={onRatingChange}
+          onClose={onCloseRoute}
+          initialSaved={initialSavedForRoute(selectedRoute.id)}
+          onSavedChange={onSavedChange}
+          onDelete={async (routeId) => {
+            await onDeleteRoute(routeId);
+          }}
+          isOwnRoute
+        />
       </div>
     );
   }
@@ -1428,6 +1587,8 @@ function CreatedRoutesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
+        initialSaved={initialSavedForRoute(route.id)}
+        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1528,7 +1689,7 @@ function FollowersPanel({ followers, status, error }: FollowersPanelProps) {
     const follower = followers[index];
     if (!follower) return;
 
-    navigate("/", {
+    navigate("/mapa", {
       state: {
         openUserFromFollowers: {
           id: follower.id,
@@ -1620,7 +1781,7 @@ function FollowingPanel({ following, status, error }: FollowingPanelProps) {
     const user = following[index];
     if (!user) return;
 
-    navigate("/", {
+    navigate("/mapa", {
       state: {
         openUserFromFollowers: {
           id: user.id,
