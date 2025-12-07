@@ -241,6 +241,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         await onCompletedChange?.(status);
       } catch (err) {
         console.warn("No se pudo obtener estado de completado", err);
+        showAlert("No se pudo cargar el estado de la ruta.", "error");
       }
     };
     fetchCompletion();
@@ -441,6 +442,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       const saved = await setRouteCompletionStatus(routeId, next);
       setCompleted(saved);
       await onCompletedChange?.(saved);
+      showAlert(
+        saved ? "Ruta marcada como realizada." : "Ruta marcada como pendiente.",
+        "success"
+      );
     } catch (err) {
       console.error("Error cambiando estado de la ruta:", err);
       setCompleted(prev);
@@ -657,15 +662,15 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           type="button"
           className="route-status-toggle"
           onClick={handleCompletionToggle}
-              disabled={!isAuthenticated || completionSaving}
-            >
-              {completionSaving
-                ? "Guardando..."
-                : completed
-                  ? "Ruta realizada"
-                  : "Marcar como realizada"}
-            </button>
-          </div>
+          disabled={!isAuthenticated || completionSaving}
+        >
+          {completionSaving
+            ? "Guardando..."
+            : completed
+              ? "Ruta realizada"
+              : "Marcar como realizada"}
+        </button>
+      </div>
 
           <div
             className="route-details-card__footer"
