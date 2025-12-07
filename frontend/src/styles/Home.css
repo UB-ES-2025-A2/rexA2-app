@@ -323,6 +323,53 @@ button {
   transform: translateY(-1px);
 }
 
+.routes-bounds-filter .checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.routes-bounds-filter input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--glass-shadow);
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.routes-bounds-filter input[type="checkbox"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.routes-bounds-filter input[type="checkbox"]:checked {
+  border-color: transparent;
+  background: var(--gradient-primary);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.28);
+}
+
+.routes-bounds-filter input[type="checkbox"]:checked::after {
+  background: #fff;
+}
+
 .category-chip-bar {
   display: flex;
   flex-wrap: wrap;
