@@ -18,6 +18,9 @@ from backend.core.security import get_current_user, get_current_user_optional
 from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
 from backend.core.security import get_current_user
 from backend.db.models import rating as rating_crud
+from backend.db.models import completion as completion_crud
+from backend.db.schemas.completion import CompletionPayload, CompletionStatus
+from backend.db.schemas.completion_list import CompletionList
 from backend.core.events import rating_event_bus, rating_event_payload
 from pymongo.errors import DuplicateKeyError
 from bson.errors import InvalidId
@@ -84,7 +87,10 @@ async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depen
     return route
 
 @router.get("", response_model=list[RoutePublic])
-async def list_routes(public_only: bool=True):  # Parametro para elegir públicas o todas
+async def list_routes(
+    public_only: bool=True,
+    current_user: dict | None = Depends(get_current_user_optional),
+):  # Parametro para elegir públicas o todas
     '''
     Lista todas las rutas públicas
     '''
@@ -103,12 +109,20 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
             owner_usernames[oid] = user_doc.get("username") or user_doc.get("email")
         else:
             owner_usernames[oid] = None
+    completed_set: set[str] = set()
+    if current_user:
+        try:
+            completed_ids = await completion_crud.list_completed(str(current_user["_id"]))
+            completed_set = {str(rid) for rid in completed_ids}
+        except Exception:
+            completed_set = set()
 
     for route in routes:
         route = _with_images(route)
         route["_id"] = str(route["_id"])
         if route.get("owner_id"):
             route["owner_username"] = owner_usernames.get(str(route["owner_id"]))
+        route["is_completed"] = str(route.get("_id")) in completed_set
     return routes
 
 @router.get("/me", response_model=list[RoutePublic])
@@ -209,12 +223,19 @@ async def get_route(
     
     route["_id"] = str(route["_id"])
     route["is_owner"] = is_owner  # ← NUEVO
-    try:
-        user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
-    except Exception:
-        user_rating = None
-    if user_rating is not None:
-        route["user_rating"] = user_rating
+    if current_user:
+        try:
+            user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
+        except Exception:
+            user_rating = None
+        if user_rating is not None:
+            route["user_rating"] = user_rating
+        try:
+            route["is_completed"] = await completion_crud.is_completed(str(current_user["_id"]), route_id)
+        except Exception:
+            route["is_completed"] = False
+    else:
+        route["is_completed"] = False
     return route
 
 @router.put("/{route_id}", response_model=RoutePublic)
@@ -329,6 +350,64 @@ async def get_route_rating_stats(
     avg = stats.get("average")
     stats["average"] = round(float(avg), 1) if avg is not None else None
     return stats
+
+
+@router.get(
+    "/completed/me",
+    response_model=CompletionList,
+    status_code=status.HTTP_200_OK,
+)
+async def list_my_completed_routes(current_user: dict = Depends(get_current_user)):
+    """
+    Devuelve la lista de IDs de rutas que el usuario autenticado marcó como completadas.
+    """
+    ids = await completion_crud.list_completed(str(current_user["_id"]))
+    return {"route_ids": ids}
+
+
+@router.get(
+    "/{route_id}/completion",
+    response_model=CompletionStatus,
+    status_code=status.HTTP_200_OK,
+)
+async def get_route_completion_status(
+    route_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Devuelve si la ruta está marcada como realizada por el usuario autenticado.
+    Requiere que la ruta sea pública o que pertenezca al usuario.
+    """
+    await _ensure_route_access(route_id, current_user)
+    completed = await completion_crud.is_completed(str(current_user["_id"]), route_id)
+    return {"completed": completed}
+
+
+@router.post(
+    "/{route_id}/completion",
+    response_model=CompletionStatus,
+    status_code=status.HTTP_200_OK,
+)
+async def set_route_completion_status(
+    route_id: str,
+    payload: CompletionPayload,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Marca o desmarca una ruta como realizada para el usuario autenticado.
+    """
+    await _ensure_route_access(route_id, current_user)
+
+    try:
+        if payload.completed:
+            await completion_crud.mark_completed(str(current_user["_id"]), route_id)
+        else:
+            await completion_crud.unmark_completed(str(current_user["_id"]), route_id)
+    except Exception:
+        # Evitamos filtrar detalles de persistencia al cliente
+        raise HTTPException(status_code=500, detail="No se pudo actualizar el estado de la ruta")
+
+    return {"completed": payload.completed}
 
 
 @router.get("/ratings/stream")
