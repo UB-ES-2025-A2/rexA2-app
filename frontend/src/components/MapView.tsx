@@ -299,9 +299,6 @@ export default function MapView({
     return () => {
       map.off("moveend", handleMoveEnd);
     };
-    return () => {
-      map.off("moveend", handleMoveEnd);
-    };
   }, [mapLoaded, onBoundsChange]);
 
   // Update popup position on map move
