@@ -52,6 +52,12 @@ type FavoriteRouteApi = {
   rating_count?: number | null;
   user_rating?: number | null;
   images?: string[];
+  is_completed?: boolean;
+  completed?: boolean;
+  isCompleted?: boolean;
+  completed_by_user?: boolean;
+  completedAt?: string;
+  completed_at?: string;
 };
 type FavoriteRoute = {
   id: string;
@@ -67,6 +73,8 @@ type FavoriteRoute = {
   rating_count?: number | null;
   user_rating?: number | null;
   images: string[];
+  isCompleted?: boolean;
+  completedAt?: string | null;
 };
 
 const API_BASE = (
@@ -78,6 +86,15 @@ const EMPTY_STATS: ProfileStats = {
   routes_created: 0,
   routes_completed: 0,
   routes_favorites: 0,
+};
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
 };
 
 export default function Profile() {
@@ -666,6 +683,21 @@ export default function Profile() {
               isPrivate={!selectedFavorite.visibility}
               rating={selectedFavorite.rating ?? null}
               ratingCount={selectedFavorite.rating_count ?? null}
+              initialCompleted={normalizeCompletedFlag(
+                selectedFavorite.isCompleted ?? false
+              )}
+              onCompletedChange={(next) => {
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
               onRatingChange={({ average, count }) => {
                 setFavorites((prev) =>
                   prev.map((r) =>
@@ -709,6 +741,21 @@ export default function Profile() {
               isPrivate={!selectedCreatedRoute.visibility}
               rating={selectedCreatedRoute.rating ?? null}
               ratingCount={selectedCreatedRoute.rating_count ?? null}
+              initialCompleted={normalizeCompletedFlag(
+                selectedCreatedRoute.isCompleted ?? false
+              )}
+              onCompletedChange={(next) => {
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
               onRatingChange={({ average, count }) => {
                 setCreatedRoutes((prev) =>
                   prev.map((r) =>
@@ -913,6 +960,14 @@ function normalizeFavoriteRoute(
         : Array.isArray((route as any).imageUrls)
           ? (route as any).imageUrls
           : [],
+    isCompleted: normalizeCompletedFlag(
+      route.is_completed ??
+      route.completed ??
+      route.isCompleted ??
+      route.completed_by_user ??
+      (route as any)?.completedByUser
+    ),
+    completedAt: route.completed_at ?? route.completedAt ?? null,
   };
 }
 
@@ -1214,6 +1269,7 @@ function FavoritesPanel({
         images={route.images}
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
+        isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1308,6 +1364,7 @@ function CreatedRoutesPanel({
         images={route.images}
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
+        isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
         onClick={() => onViewRoute(route)}
       />
     </div>
