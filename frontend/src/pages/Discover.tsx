@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import "../styles/Discover.css";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
@@ -64,10 +66,7 @@ const THEME_GRADIENTS: Record<string, string> = {
   otros: "linear-gradient(135deg, #6366f1, #a855f7)",
 };
 
-const formatDistance = (distanceKm?: number | null) => {
-  if (distanceKm == null) return "Distancia N/D";
-  return `${distanceKm.toFixed(1)} km`;
-};
+// formatDistance is obtained from useUnitPreference context
 
 const formatDuration = (minutes?: number | null) => {
   if (minutes == null) return "Duración N/D";
@@ -253,6 +252,7 @@ export default function Discover() {
     []
   );
   const { token, user, logout } = useAuth();
+  const { formatDistance, unit } = useUnitPreference();
   const navigate = useNavigate();
   const openAuth = (mode: "login" | "signup") => {
     setAuthMode(mode);
@@ -436,14 +436,15 @@ export default function Discover() {
       (acc, route) => acc + (route.distance_km ?? 0),
       0
     );
+    const displayDistance = unit === "mi" ? Math.round(kmToMiles(totalKm)) : Math.round(totalKm);
 
     return {
       routes: filteredRoutes.length,
       regions: uniqueCountries.size,
       themes: uniqueThemes.size,
-      distance: Math.round(totalKm),
+      distance: displayDistance,
     };
-  }, [filteredRoutes]);
+  }, [filteredRoutes, unit]);
 
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
@@ -782,7 +783,7 @@ export default function Discover() {
                   <p className="stat-hint">Mood para inspirarte</p>
                 </div>
                 <div className="stat-card">
-                  <span className="stat-label">KM totales</span>
+                  <span className="stat-label">{unit === "mi" ? "Millas totales" : "KM totales"}</span>
                   <span className="stat-value">
                     {heroStats.distance ?? "-"}
                   </span>
@@ -859,10 +860,10 @@ export default function Discover() {
                   <div className="pill-group wrap">
                     {[
                       { key: "any", label: "Cualquiera" },
-                      { key: "lt5", label: "<5 km" },
-                      { key: "5to15", label: "5–15 km" },
-                      { key: "15to30", label: "15–30 km" },
-                      { key: "gt30", label: ">30 km" },
+                      { key: "lt5", label: unit === "mi" ? `<${Math.round(kmToMiles(5))} mi` : "<5 km" },
+                      { key: "5to15", label: unit === "mi" ? `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(15))} mi` : "5–15 km" },
+                      { key: "15to30", label: unit === "mi" ? `${Math.round(kmToMiles(15))}–${Math.round(kmToMiles(30))} mi` : "15–30 km" },
+                      { key: "gt30", label: unit === "mi" ? `>${Math.round(kmToMiles(30))} mi` : ">30 km" },
                     ].map((opt) => (
                       <button
                         key={opt.key}

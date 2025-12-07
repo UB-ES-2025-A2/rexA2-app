@@ -7,6 +7,8 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
@@ -301,6 +303,7 @@ function normalizeDurationMinutes(
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { unit } = useUnitPreference();
   const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -387,6 +390,26 @@ export default function Home() {
 
     return opts;
   }, [routes, normalizeCategoryKey]);
+
+  // Dynamic distance labels based on unit preference
+  const distanceLabels = useMemo<Record<DistanceFilter, string>>(() => {
+    if (unit === "mi") {
+      return {
+        all: "Todas las distancias",
+        lt5: `<${Math.round(kmToMiles(5))} mi`,
+        "5to10": `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi`,
+        "10to20": `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi`,
+        gt20: `>${Math.round(kmToMiles(20))} mi`,
+      };
+    }
+    return {
+      all: "Todas las distancias",
+      lt5: "<5 km",
+      "5to10": "5–10 km",
+      "10to20": "10–20 km",
+      gt20: ">20 km",
+    };
+  }, [unit]);
 
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
@@ -1324,7 +1347,7 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.distance !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                  Distancia: {distanceLabels[appliedFilters.distance]}
                                 </span>
                               ) : null}
                               {appliedFilters.duration !== "all" ? (

@@ -11,6 +11,7 @@ import ShareModal from "../ShareModal";
 import StarRating from "../StarRating";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
 import { fetchWithAuth } from "../../services/api";
 import { getRouteCompletionStatus, setRouteCompletionStatus } from "../../services/completion";
 
@@ -132,6 +133,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
+  const { formatDistance } = useUnitPreference();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -693,12 +695,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           </div>
 
           <div className="route-details-card__meta">
-            {typeof displayDistance === "number" ? (
-              <span className="route-details-pill">
-                <span className="pill-dot distance" />
-                {displayDistance} km
-              </span>
-            ) : null}
+            <span className="route-details-pill">
+              <span className="pill-dot distance" />
+              {formatDistance(displayDistance)}
+            </span>
             {formatDuration(displayDuration) ? (
               <span className="route-details-pill">
                 <span className="pill-dot duration" />

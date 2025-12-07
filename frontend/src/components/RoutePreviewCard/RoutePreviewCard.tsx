@@ -4,6 +4,7 @@ import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
 import { fetchWithAuth } from "../../services/api";
 import RouteMiniMap from "./RouteMiniMap";
 
@@ -55,6 +56,7 @@ const RoutePreviewCard: React.FC<Props> = ({
   const [remoteCover, setRemoteCover] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const { token } = useAuth();
+  const { formatDistance } = useUnitPreference();
   const completed = Boolean(isCompleted);
 
   useEffect(() => {
@@ -132,10 +134,10 @@ const RoutePreviewCard: React.FC<Props> = ({
 
   const difficultyLabel = difficulty
     ? {
-        easy: "Fácil",
-        medium: "Media",
-        hard: "Alta",
-      }[difficulty.toLowerCase()] ?? difficulty
+      easy: "Fácil",
+      medium: "Media",
+      hard: "Alta",
+    }[difficulty.toLowerCase()] ?? difficulty
     : null;
 
   const baseCover =
@@ -236,10 +238,10 @@ const RoutePreviewCard: React.FC<Props> = ({
           </p>
 
           <div className="route-preview-meta">
-            {typeof distanceKm === "number" ? (
+            {distanceKm != null ? (
               <span className="route-preview-pill" title="Distancia aproximada">
                 <span className="pill-dot distance" />
-                {distanceKm} km
+                {formatDistance(distanceKm)}
               </span>
             ) : null}
             {formatDuration(durationMinutes) ? (
