@@ -27,6 +27,7 @@ import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
 import RouteSummaryCard from "../components/RouteSummaryCard";
+import { getMyCompletedRouteIds } from "../services/completion";
 
 type RouteItem = {
   id: string;
@@ -332,6 +333,7 @@ export default function Home() {
 
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
   const [routeSearchQuery, setRouteSearchQuery] = useState("");
@@ -628,6 +630,7 @@ export default function Home() {
       setRoutesError(null);
       try {
         let favSet = new Set<string>();
+        let completedSet = new Set<string>();
         if (token) {
           try {
             const favRes = await fetch(`${API}/favorites/me`, {
@@ -640,8 +643,15 @@ export default function Home() {
           } catch (e) {
             console.warn("Error cargando favoritos:", e);
           }
+          try {
+            const completedIds = await getMyCompletedRouteIds();
+            completedSet = new Set((completedIds ?? []).map(String));
+          } catch (e) {
+            console.warn("Error cargando completadas:", e);
+          }
         }
         setFavoriteIds(favSet);
+        setCompletedIds(completedSet);
 
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
@@ -699,13 +709,16 @@ export default function Home() {
                 : typeof route.userRating === "number"
                   ? route.userRating
                   : null,
-            isCompleted: normalizeCompletedFlag(
-              route.is_completed ??
-              route.completed ??
-              route.isCompleted ??
-              route.completed_by_user ??
-              route.completedByUser
-            ),
+            isCompleted:
+              completedSet.has(String(route.id)) ||
+              completedIds.has(String(route.id)) ||
+              normalizeCompletedFlag(
+                route.is_completed ??
+                route.completed ??
+                route.isCompleted ??
+                route.completed_by_user ??
+                route.completedByUser
+              ),
             completedAt: route.completed_at ?? route.completedAt ?? null,
             // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
@@ -1157,6 +1170,12 @@ export default function Home() {
                     ? { ...prev, isCompleted: next }
                     : prev
                 );
+                setCompletedIds((prev) => {
+                  const copy = new Set(prev);
+                  if (next) copy.add(String(selectedRoute.id));
+                  else copy.delete(String(selectedRoute.id));
+                  return copy;
+                });
               }}
               onEdit={(rd) => {
                 const payload = rd

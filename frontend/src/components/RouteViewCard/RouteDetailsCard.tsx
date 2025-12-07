@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
@@ -12,6 +12,7 @@ import StarRating from "../StarRating";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
+import { getRouteCompletionStatus, setRouteCompletionStatus } from "../../services/completion";
 
 interface RouteDetailsCardProps {
   name: string;
@@ -144,6 +145,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       count: typeof ratingCount === "number" ? ratingCount : 0,
     })
   );
+  const statsFetchedRef = useRef<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const useExternalComments = Boolean(onShowComments);
   const [completionSaving, setCompletionSaving] = useState(false);
@@ -229,8 +231,28 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   }, [initialCompleted]);
 
   useEffect(() => {
+    let cancelled = false;
+    const fetchCompletion = async () => {
+      if (!routeId || !token) return;
+      try {
+        const status = await getRouteCompletionStatus(routeId);
+        if (cancelled) return;
+        setCompleted(status);
+        await onCompletedChange?.(status);
+      } catch (err) {
+        console.warn("No se pudo obtener estado de completado", err);
+      }
+    };
+    fetchCompletion();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeId, token]);
+
+  useEffect(() => {
     const fetchStats = async () => {
       if (!routeId || !token) return;
+      if (statsFetchedRef.current === routeId) return;
       try {
         const res = await fetchWithAuth(`/routes/${routeId}/rating`);
         if (!res.ok) return;
@@ -247,10 +269,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         onRatingChange?.({ average, count });
       } catch (err) {
         console.warn("No se pudo obtener stats de valoración", err);
+      } finally {
+        statsFetchedRef.current = routeId;
       }
     };
     fetchStats();
-  }, [routeId, token, onRatingChange]);
+  }, [routeId, token]);
 
   useEffect(() => {
     const checkOwnership = async () => {
@@ -414,11 +438,15 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     setCompleted(next);
     setCompletionSaving(true);
     try {
-      await onCompletedChange?.(next);
+      const saved = await setRouteCompletionStatus(routeId, next);
+      setCompleted(saved);
+      await onCompletedChange?.(saved);
     } catch (err) {
       console.error("Error cambiando estado de la ruta:", err);
       setCompleted(prev);
-      showAlert("No se pudo actualizar el estado de la ruta.", "error");
+      const detail =
+        err instanceof Error ? err.message : "No se pudo actualizar el estado de la ruta.";
+      showAlert(detail, "error");
     } finally {
       setCompletionSaving(false);
     }
@@ -624,11 +652,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             ) : null}
           </div>
 
-          <div className="route-details-card__status" aria-live="polite">
-            <button
-              type="button"
-              className="route-status-toggle"
-              onClick={handleCompletionToggle}
+      <div className="route-details-card__status" aria-live="polite">
+        <button
+          type="button"
+          className="route-status-toggle"
+          onClick={handleCompletionToggle}
               disabled={!isAuthenticated || completionSaving}
             >
               {completionSaving
