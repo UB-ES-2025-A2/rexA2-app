@@ -264,6 +264,12 @@ export default function Discover() {
   const [durationFilter, setDurationFilter] = useState<
     "any" | "lt1" | "1to3" | "3to6" | "gt6"
   >("any");
+  const [difficultyFilter, setDifficultyFilter] = useState<
+    "any" | "easy" | "medium" | "hard"
+  >("any");
+  const [distanceRange, setDistanceRange] = useState<
+    "any" | "lt5" | "5to15" | "15to30" | "gt30"
+  >("any");
   const [sortBy] = useState<"relevance" | "rating" | "duration">("relevance");
 
   useEffect(() => {
@@ -371,6 +377,19 @@ export default function Discover() {
           return false;
         if (durationFilter === "gt6" && dur <= 360) return false;
       }
+      if (difficultyFilter !== "any") {
+        const diff = (route.difficulty || "").toLowerCase();
+        if (diff !== difficultyFilter) return false;
+      }
+      if (distanceRange !== "any") {
+        const dist = route.distance_km ?? null;
+        if (dist != null) {
+          if (distanceRange === "lt5" && dist >= 5) return false;
+          if (distanceRange === "5to15" && (dist < 5 || dist > 15)) return false;
+          if (distanceRange === "15to30" && (dist <= 15 || dist > 30)) return false;
+          if (distanceRange === "gt30" && dist <= 30) return false;
+        }
+      }
       return true;
     });
 
@@ -399,6 +418,8 @@ export default function Discover() {
     theme,
     ratingFilter,
     durationFilter,
+    difficultyFilter,
+    distanceRange,
     sortBy,
   ]);
 
@@ -812,7 +833,62 @@ export default function Discover() {
                   </div>
                 </div>
 
+                <div className="hero-field">
+                  <span className="label">Dificultad</span>
+                  <div className="pill-group wrap">
+                    {[
+                      { key: "any", label: "Todas" },
+                      { key: "easy", label: "Fácil" },
+                      { key: "medium", label: "Media" },
+                      { key: "hard", label: "Alta" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${difficultyFilter === opt.key ? "active" : ""}`}
+                        onClick={() => setDifficultyFilter(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hero-field">
+                  <span className="label">Distancia</span>
+                  <div className="pill-group wrap">
+                    {[
+                      { key: "any", label: "Cualquiera" },
+                      { key: "lt5", label: "<5 km" },
+                      { key: "5to15", label: "5–15 km" },
+                      { key: "15to30", label: "15–30 km" },
+                      { key: "gt30", label: ">30 km" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${distanceRange === opt.key ? "active" : ""}`}
+                        onClick={() => setDistanceRange(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="surprise-spot">
+                  <button
+                    className="cta-btn ghost-dark"
+                    onClick={() => {
+                      setRatingFilter(0);
+                      setDurationFilter("any");
+                      setDifficultyFilter("any");
+                      setDistanceRange("any");
+                    }}
+                    disabled={loading}
+                  >
+                    Restablecer filtros
+                  </button>
                   <button
                     className="cta-btn ghost-dark"
                     onClick={handleSurprise}
