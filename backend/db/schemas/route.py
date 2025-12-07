@@ -159,6 +159,7 @@ class RoutePublic(RouteBase):
     rating_count: int | None = None
     user_rating: float | None = None
     images: List[str] = Field(default_factory=list)
+    is_completed: bool = False
 
 
 class RouteUpdate(BaseModel):
