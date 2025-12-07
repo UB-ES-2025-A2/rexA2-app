@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import "../styles/Discover.css";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type DiscoverRoute = {
   id: string;
@@ -311,10 +312,11 @@ export default function Discover() {
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        const message =
+        const message = translateErrorMessage(
           err instanceof Error
             ? err.message
-            : "No se pudo cargar descubrimiento.";
+            : "No se pudo cargar descubrimiento."
+        );
         setError(message);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -477,9 +479,9 @@ export default function Discover() {
   ) => {
     const points: Array<[number, number]> = Array.isArray(route.points)
       ? ((route.points as Array<any>).map((p: any) => [
-          p.longitude ?? p.lng ?? p[0],
-          p.latitude ?? p.lat ?? p[1],
-        ]) as Array<[number, number]>)
+        p.longitude ?? p.lng ?? p[0],
+        p.latitude ?? p.lat ?? p[1],
+      ]) as Array<[number, number]>)
       : [];
     const coverImage =
       (Array.isArray(route.images) && route.images[0]) ||
@@ -730,9 +732,8 @@ export default function Discover() {
                     {themeOptions.map((option) => (
                       <button
                         key={option}
-                        className={`pill-chip solid ${
-                          theme === option ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${theme === option ? "active" : ""
+                          }`}
                         onClick={() => setTheme(option)}
                         disabled={loading}
                       >
@@ -775,9 +776,8 @@ export default function Discover() {
                     {[0, 4, 4.5, 4.8].map((threshold) => (
                       <button
                         key={threshold}
-                        className={`pill-chip solid ${
-                          ratingFilter === threshold ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${ratingFilter === threshold ? "active" : ""
+                          }`}
                         onClick={() => setRatingFilter(threshold)}
                         disabled={loading}
                       >
@@ -801,9 +801,8 @@ export default function Discover() {
                     ].map((opt) => (
                       <button
                         key={opt.key}
-                        className={`pill-chip solid ${
-                          durationFilter === opt.key ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${durationFilter === opt.key ? "active" : ""
+                          }`}
                         onClick={() => setDurationFilter(opt.key as any)}
                         disabled={loading}
                       >

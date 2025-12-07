@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { useAuth } from "../context/AuthContext";
+import { translateErrorMessage } from "../utils/errorTranslator";
 import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import type { Category } from "../components/types";
@@ -227,7 +228,7 @@ export default function Profile() {
         if (controller.signal.aborted) return;
         setProfileStatus("error");
         setProfileError(
-          err instanceof Error ? err.message : "Error cargando el perfil."
+          translateErrorMessage(err instanceof Error ? err.message : "Error cargando el perfil.")
         );
       }
     }
@@ -274,7 +275,7 @@ export default function Profile() {
         if (controller.signal.aborted) return;
         setCreatedStatus("error");
         setCreatedError(
-          err instanceof Error ? err.message : "Error al cargar tus rutas."
+          translateErrorMessage(err instanceof Error ? err.message : "Error al cargar tus rutas.")
         );
       }
     }
@@ -322,7 +323,7 @@ export default function Profile() {
         if (controller.signal.aborted) return;
         setFavoritesStatus("error");
         setFavoritesError(
-          err instanceof Error ? err.message : "Error al cargar las favoritas."
+          translateErrorMessage(err instanceof Error ? err.message : "Error al cargar las favoritas.")
         );
       }
     }
@@ -435,7 +436,7 @@ export default function Profile() {
         if (controller.signal.aborted) return;
         setFollowersStatus("error");
         setFollowersError(
-          err instanceof Error ? err.message : "Error al cargar los seguidores."
+          translateErrorMessage(err instanceof Error ? err.message : "Error al cargar los seguidores.")
         );
       }
     }
@@ -504,9 +505,9 @@ export default function Profile() {
         if (controller.signal.aborted) return;
         setFollowingStatus("error");
         setFollowingError(
-          err instanceof Error
+          translateErrorMessage(err instanceof Error
             ? err.message
-            : "Error al cargar la lista de usuarios a los que sigues."
+            : "Error al cargar la lista de usuarios a los que sigues.")
         );
       }
     }
@@ -586,7 +587,7 @@ export default function Profile() {
       setIsEditing(false);
     } catch (err) {
       setProfileError(
-        err instanceof Error ? err.message : "Error al guardar el perfil."
+        translateErrorMessage(err instanceof Error ? err.message : "Error al guardar el perfil.")
       );
     } finally {
       setIsSaving(false);
