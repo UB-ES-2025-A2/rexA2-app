@@ -267,11 +267,11 @@ body.profile-body-host {
   background: var(--surface);
   border: 2px solid var(--border);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.1);
-  padding-top: 36px;
+  padding-top: 0px;
 }
 
 .profile-hero-banner {
-  height: 115px;
+  height: 150px;
   background: var(--gradient-primary);
   position: relative;
 }
@@ -1435,8 +1435,7 @@ body.profile-body-host {
   min-height: 0;
   padding: clamp(14px, 2vw, 20px);
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  flex-direction: column;
   gap: clamp(14px, 1.8vw, 20px);
 }
 
@@ -1454,7 +1453,6 @@ body.profile-body-host {
 }
 
 .route-details-map-shell {
-  order: 2;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
@@ -1463,9 +1461,6 @@ body.profile-body-host {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-  min-width: 320px;
-  min-height: clamp(320px, 45vh, 520px);
 }
 
 .route-details-map__header {
@@ -1484,8 +1479,8 @@ body.profile-body-host {
 
 .route-details-map__body {
   width: 100%;
-  flex: 1;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   min-height: clamp(260px, 40vh, 420px);
   border-top: 1px solid var(--border);
 }
@@ -1495,25 +1490,4 @@ body.profile-body-host {
   height: 100% !important;
   border-radius: 0 0 var(--radius) var(--radius);
   overflow: hidden;
-}
-
-.route-details-inline .route-details-card {
-  order: 1;
-  flex: 1.2;
-  min-width: 360px;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-@media (max-width: 1024px) {
-  .route-details-inline {
-    flex-direction: column;
-  }
-
-  .route-details-map-shell,
-  .route-details-inline .route-details-card {
-    order: initial;
-    min-width: 0;
-  }
 }
