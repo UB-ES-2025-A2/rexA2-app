@@ -87,7 +87,10 @@ async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depen
     return route
 
 @router.get("", response_model=list[RoutePublic])
-async def list_routes(public_only: bool=True):  # Parametro para elegir públicas o todas
+async def list_routes(
+    public_only: bool=True,
+    current_user: dict | None = Depends(get_current_user_optional),
+):  # Parametro para elegir públicas o todas
     '''
     Lista todas las rutas públicas
     '''
@@ -106,12 +109,20 @@ async def list_routes(public_only: bool=True):  # Parametro para elegir pública
             owner_usernames[oid] = user_doc.get("username") or user_doc.get("email")
         else:
             owner_usernames[oid] = None
+    completed_set: set[str] = set()
+    if current_user:
+        try:
+            completed_ids = await completion_crud.list_completed(str(current_user["_id"]))
+            completed_set = {str(rid) for rid in completed_ids}
+        except Exception:
+            completed_set = set()
 
     for route in routes:
         route = _with_images(route)
         route["_id"] = str(route["_id"])
         if route.get("owner_id"):
             route["owner_username"] = owner_usernames.get(str(route["owner_id"]))
+        route["is_completed"] = str(route.get("_id")) in completed_set
     return routes
 
 @router.get("/me", response_model=list[RoutePublic])
@@ -212,12 +223,19 @@ async def get_route(
     
     route["_id"] = str(route["_id"])
     route["is_owner"] = is_owner  # ← NUEVO
-    try:
-        user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
-    except Exception:
-        user_rating = None
-    if user_rating is not None:
-        route["user_rating"] = user_rating
+    if current_user:
+        try:
+            user_rating = await rating_crud.get_user_rating(str(current_user["_id"]), route_id)
+        except Exception:
+            user_rating = None
+        if user_rating is not None:
+            route["user_rating"] = user_rating
+        try:
+            route["is_completed"] = await completion_crud.is_completed(str(current_user["_id"]), route_id)
+        except Exception:
+            route["is_completed"] = False
+    else:
+        route["is_completed"] = False
     return route
 
 @router.put("/{route_id}", response_model=RoutePublic)
