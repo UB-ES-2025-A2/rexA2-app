@@ -52,6 +52,12 @@ type FavoriteRouteApi = {
   rating_count?: number | null;
   user_rating?: number | null;
   images?: string[];
+  is_completed?: boolean;
+  completed?: boolean;
+  isCompleted?: boolean;
+  completed_by_user?: boolean;
+  completedAt?: string;
+  completed_at?: string;
 };
 type FavoriteRoute = {
   id: string;
@@ -67,6 +73,8 @@ type FavoriteRoute = {
   rating_count?: number | null;
   user_rating?: number | null;
   images: string[];
+  isCompleted?: boolean;
+  completedAt?: string | null;
 };
 
 const API_BASE = (
@@ -78,6 +86,15 @@ const EMPTY_STATS: ProfileStats = {
   routes_created: 0,
   routes_completed: 0,
   routes_favorites: 0,
+};
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
 };
 
 export default function Profile() {
@@ -112,6 +129,7 @@ export default function Profile() {
   const [favoritesError, setFavoritesError] = useState("");
   const [selectedFavorite, setSelectedFavorite] =
     useState<FavoriteRoute | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [createdRoutes, setCreatedRoutes] = useState<FavoriteRoute[]>([]);
   const [createdStatus, setCreatedStatus] = useState<
     "idle" | "loading" | "error"
@@ -125,6 +143,31 @@ export default function Profile() {
     (typeof window !== "undefined"
       ? localStorage.getItem("access_token") || ""
       : "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCompleted = async () => {
+      if (!accessToken) {
+        setCompletedIds(new Set());
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/routes/completed/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const ids = Array.isArray(data?.route_ids) ? data.route_ids.map(String) : [];
+        if (!cancelled) setCompletedIds(new Set(ids));
+      } catch (err) {
+        console.warn("No se pudieron cargar rutas completadas", err);
+      }
+    };
+    loadCompleted();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -215,9 +258,14 @@ export default function Profile() {
           throw new Error(detail || "No se pudieron cargar tus rutas creadas.");
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setCreatedRoutes(
-          data.map((route) => normalizeFavoriteRoute(route, ownerFallback))
-        );
+        const mapped = data.map((route) => {
+          const normalized = normalizeFavoriteRoute(route, ownerFallback);
+          return {
+            ...normalized,
+            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+          };
+        });
+        setCreatedRoutes(mapped);
         setCreatedStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -230,7 +278,7 @@ export default function Profile() {
 
     fetchCreatedRoutes();
     return () => controller.abort();
-  }, [accessToken, profile?.username, profile?.email]);
+  }, [accessToken, profile?.username, profile?.email, completedIds]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -257,7 +305,14 @@ export default function Profile() {
           );
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setFavorites(data.map((route) => normalizeFavoriteRoute(route)));
+        const mapped = data.map((route) => {
+          const normalized = normalizeFavoriteRoute(route);
+          return {
+            ...normalized,
+            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+          };
+        });
+        setFavorites(mapped);
         setFavoritesStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -270,7 +325,32 @@ export default function Profile() {
 
     fetchFavorites();
     return () => controller.abort();
-  }, [accessToken]);
+  }, [accessToken, completedIds]);
+
+  useEffect(() => {
+    setFavorites((prev) =>
+      prev.map((r) => ({
+        ...r,
+        isCompleted: completedIds.has(r.id) || r.isCompleted,
+      }))
+    );
+    setCreatedRoutes((prev) =>
+      prev.map((r) => ({
+        ...r,
+        isCompleted: completedIds.has(r.id) || r.isCompleted,
+      }))
+    );
+    setSelectedFavorite((prev) =>
+      prev
+        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        : prev
+    );
+    setSelectedCreatedRoute((prev) =>
+      prev
+        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        : prev
+    );
+  }, [completedIds]);
 
   useEffect(() => {
     if (active !== "favorites" && selectedFavorite) {
@@ -666,6 +746,21 @@ export default function Profile() {
               isPrivate={!selectedFavorite.visibility}
               rating={selectedFavorite.rating ?? null}
               ratingCount={selectedFavorite.rating_count ?? null}
+              initialCompleted={normalizeCompletedFlag(
+                selectedFavorite.isCompleted ?? false
+              )}
+              onCompletedChange={(next) => {
+                setFavorites((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedFavorite.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSelectedFavorite((prev) =>
+                  prev && prev.id === selectedFavorite.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
               onRatingChange={({ average, count }) => {
                 setFavorites((prev) =>
                   prev.map((r) =>
@@ -709,6 +804,21 @@ export default function Profile() {
               isPrivate={!selectedCreatedRoute.visibility}
               rating={selectedCreatedRoute.rating ?? null}
               ratingCount={selectedCreatedRoute.rating_count ?? null}
+              initialCompleted={normalizeCompletedFlag(
+                selectedCreatedRoute.isCompleted ?? false
+              )}
+              onCompletedChange={(next) => {
+                setCreatedRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedCreatedRoute.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSelectedCreatedRoute((prev) =>
+                  prev && prev.id === selectedCreatedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
               onRatingChange={({ average, count }) => {
                 setCreatedRoutes((prev) =>
                   prev.map((r) =>
@@ -913,6 +1023,14 @@ function normalizeFavoriteRoute(
         : Array.isArray((route as any).imageUrls)
           ? (route as any).imageUrls
           : [],
+    isCompleted: normalizeCompletedFlag(
+      route.is_completed ??
+      route.completed ??
+      route.isCompleted ??
+      route.completed_by_user ??
+      (route as any)?.completedByUser
+    ),
+    completedAt: route.completed_at ?? route.completedAt ?? null,
   };
 }
 
@@ -1214,6 +1332,7 @@ function FavoritesPanel({
         images={route.images}
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
+        isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1308,6 +1427,7 @@ function CreatedRoutesPanel({
         images={route.images}
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
+        isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
         onClick={() => onViewRoute(route)}
       />
     </div>

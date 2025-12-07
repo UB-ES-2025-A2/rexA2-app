@@ -27,6 +27,7 @@ type Props = {
   favoriteUrl?: string;
   unfavoriteUrl?: string;
   onSavedChange?: (saved: boolean) => void;
+  isCompleted?: boolean;
 };
 
 const RoutePreviewCard: React.FC<Props> = ({
@@ -47,12 +48,14 @@ const RoutePreviewCard: React.FC<Props> = ({
   favoriteUrl,
   unfavoriteUrl,
   onSavedChange,
+  isCompleted = false,
 }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
   const [remoteCover, setRemoteCover] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const { token } = useAuth();
+  const completed = Boolean(isCompleted);
 
   useEffect(() => {
     setSaved(initialSaved);
@@ -202,6 +205,15 @@ const RoutePreviewCard: React.FC<Props> = ({
         onClick?.();
       }}
     >
+      {completed ? (
+        <div
+          className="route-preview-completion done"
+          aria-label="Ruta realizada"
+        >
+          <span className="route-preview-status-dot" aria-hidden="true" />
+          <span>Realizada</span>
+        </div>
+      ) : null}
       <div className="route-preview-content">
         <div className="route-preview-thumb">
           {coverImage ? (

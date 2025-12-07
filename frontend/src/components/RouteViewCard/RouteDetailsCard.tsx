@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import "../../styles/RouteDetailsCard.css";
 import type { Category } from "../types";
 import CommentButton from "../CommentButton";
@@ -12,6 +12,7 @@ import StarRating from "../StarRating";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
 import { fetchWithAuth } from "../../services/api";
+import { getRouteCompletionStatus, setRouteCompletionStatus } from "../../services/completion";
 
 interface RouteDetailsCardProps {
   name: string;
@@ -33,6 +34,8 @@ interface RouteDetailsCardProps {
   isOwnRoute?: boolean;
   onEdit?: (routeData?: any) => void;
   onRatingChange?: (stats: { average: number | null; count: number }) => void;
+  initialCompleted?: boolean;
+  onCompletedChange?: (completed: boolean) => Promise<void> | void;
 }
 
 const AVERAGE_WALKING_SPEED_KMH = 4;
@@ -124,6 +127,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   isOwnRoute = false,
   onEdit,
   onRatingChange,
+  initialCompleted = false,
+  onCompletedChange,
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
@@ -140,8 +145,34 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       count: typeof ratingCount === "number" ? ratingCount : 0,
     })
   );
+  const statsFetchedRef = useRef<string | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const useExternalComments = Boolean(onShowComments);
+  const [completionSaving, setCompletionSaving] = useState(false);
+  const normalizeCompletedFlag = (value: any, fallback = false) => {
+    if (value === undefined || value === null) return fallback;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      return normalized === "true" || normalized === "1" || normalized === "yes";
+    }
+    return value === true || value === 1;
+  };
+  const extractCompletedFromRoute = (payload: any): boolean | null => {
+    if (!payload) return null;
+    const raw =
+      payload.is_completed ??
+      payload.completed ??
+      payload.isCompleted ??
+      payload.completed_by_user ??
+      payload.completedByUser ??
+      payload.done ??
+      (payload as any)?.user_completed;
+    if (raw === undefined || raw === null) return null;
+    return normalizeCompletedFlag(raw);
+  };
+  const [completed, setCompleted] = useState<boolean>(
+    normalizeCompletedFlag(initialCompleted)
+  );
 
   useEffect(() => {
     const loadRoute = async () => {
@@ -173,6 +204,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
                   ? ratingCount
                   : 0,
           });
+          const completedFromApi = extractCompletedFromRoute(data);
+          if (completedFromApi !== null) {
+            setCompleted(completedFromApi);
+          }
         }
         // Si no está ok, dejamos los datos tal como estaban (se mostrará la prop inicial)
       } catch (err) {
@@ -185,8 +220,40 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   }, [routeId, token, showAlert]);
 
   useEffect(() => {
+    const apiCompleted = extractCompletedFromRoute(routeData);
+    if (apiCompleted !== null) {
+      setCompleted(apiCompleted);
+    }
+  }, [routeData]);
+
+  useEffect(() => {
+    setCompleted((prev) => normalizeCompletedFlag(initialCompleted, prev));
+  }, [initialCompleted]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCompletion = async () => {
+      if (!routeId || !token) return;
+      try {
+        const status = await getRouteCompletionStatus(routeId);
+        if (cancelled) return;
+        setCompleted(status);
+        await onCompletedChange?.(status);
+      } catch (err) {
+        console.warn("No se pudo obtener estado de completado", err);
+        showAlert("No se pudo cargar el estado de la ruta.", "error");
+      }
+    };
+    fetchCompletion();
+    return () => {
+      cancelled = true;
+    };
+  }, [routeId, token]);
+
+  useEffect(() => {
     const fetchStats = async () => {
       if (!routeId || !token) return;
+      if (statsFetchedRef.current === routeId) return;
       try {
         const res = await fetchWithAuth(`/routes/${routeId}/rating`);
         if (!res.ok) return;
@@ -203,10 +270,12 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         onRatingChange?.({ average, count });
       } catch (err) {
         console.warn("No se pudo obtener stats de valoración", err);
+      } finally {
+        statsFetchedRef.current = routeId;
       }
     };
     fetchStats();
-  }, [routeId, token, onRatingChange]);
+  }, [routeId, token]);
 
   useEffect(() => {
     const checkOwnership = async () => {
@@ -356,6 +425,35 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       onShowComments?.();
     } else {
       setCommentsOpen(true);
+    }
+  };
+
+  const handleCompletionToggle = async () => {
+    if (!isAuthenticated) {
+      showAlert("Inicia sesión para marcar la ruta como realizada.", "error");
+      return;
+    }
+    if (completionSaving) return;
+    const next = !completed;
+    const prev = completed;
+    setCompleted(next);
+    setCompletionSaving(true);
+    try {
+      const saved = await setRouteCompletionStatus(routeId, next);
+      setCompleted(saved);
+      await onCompletedChange?.(saved);
+      showAlert(
+        saved ? "Ruta marcada como realizada." : "Ruta marcada como pendiente.",
+        "success"
+      );
+    } catch (err) {
+      console.error("Error cambiando estado de la ruta:", err);
+      setCompleted(prev);
+      const detail =
+        err instanceof Error ? err.message : "No se pudo actualizar el estado de la ruta.";
+      showAlert(detail, "error");
+    } finally {
+      setCompletionSaving(false);
     }
   };
 
@@ -558,6 +656,21 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               </>
             ) : null}
           </div>
+
+      <div className="route-details-card__status" aria-live="polite">
+        <button
+          type="button"
+          className="route-status-toggle"
+          onClick={handleCompletionToggle}
+          disabled={!isAuthenticated || completionSaving}
+        >
+          {completionSaving
+            ? "Guardando..."
+            : completed
+              ? "Ruta realizada"
+              : "Marcar como realizada"}
+        </button>
+      </div>
 
           <div
             className="route-details-card__footer"

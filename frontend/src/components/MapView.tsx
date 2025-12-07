@@ -304,13 +304,18 @@ export default function MapView({
   // Update popup position on map move
   useEffect(() => {
     const map = mapRef.current;
+    if (!mapLoaded) return;
     if (!map || !popupLocation) {
       setPopupPos(null);
       return;
     }
 
     const updatePos = () => {
-      const pos = map.project(popupLocation);
+      const pos = map?.project(popupLocation);
+      if (!pos) {
+        setPopupPos(null);
+        return;
+      }
       setPopupPos({ x: pos.x, y: pos.y });
     };
 

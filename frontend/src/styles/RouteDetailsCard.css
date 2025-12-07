@@ -188,6 +188,38 @@
   font-weight: 600;
 }
 
+.route-details-card__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto;
+  max-width: 560px;
+}
+
+.route-status-toggle {
+  border: 1px solid #d0d7ff;
+  background: #ffffff;
+  color: #4338ca;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 6px 18px rgba(67, 56, 202, 0.08);
+}
+
+.route-status-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(67, 56, 202, 0.12);
+  border-color: #4338ca;
+}
+
+.route-status-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .route-details-card__rating-summary {
   display: flex;
   align-items: center;
@@ -415,6 +447,8 @@
 .route-details-card__edit-btn:hover {
   box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
   transform: translateY(-1px);
+}
+
 .route-details-card__meta {
   display: flex;
   gap: 8px;
@@ -452,5 +486,4 @@
 
 .pill-dot.difficulty {
   background: linear-gradient(135deg, #f97316, #ef4444);
-}
 }
