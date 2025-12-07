@@ -1140,3 +1140,50 @@ body.profile-body-host {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =========================================
+   SCROLL FIXES - AnimatedList en secciones
+   ========================================= */
+/* Cards con AnimatedList deben tener altura limitada para scroll interno */
+.card.fill {
+  max-height: calc(100vh - var(--header-h) - clamp(36px, 6vw, 104px));
+  overflow: hidden;
+}
+
+/* section-title no debe colapsar */
+.card.fill .section-title {
+  flex-shrink: 0;
+}
+
+/* scroll-list-container debe crecer y permitir scroll */
+.card.fill > .scroll-list-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* alertas y textos muted no deben colapsar */
+.card.fill .alert,
+.card.fill > .muted {
+  flex-shrink: 0;
+}
+
+/* El panel de perfil necesita scroll propio */
+.card.fill.profile-panel {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Elementos del perfil que no deben colapsar */
+.profile-panel .panel-header {
+  flex-shrink: 0;
+}
+
+.profile-panel .profile-top {
+  flex-shrink: 0;
+}
+
+.profile-panel .stats-summary {
+  flex-shrink: 0;
+}
