@@ -100,13 +100,14 @@ const normalizeCompletedFlag = (value: any, fallback = false) => {
 export default function Profile() {
   const [active, setActive] = useState<TabKey>("favorites");
   const navigate = useNavigate();
-  const { token, logout } = useAuth();
+  const { user, token, logout } = useAuth();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileStatus, setProfileStatus] = useState<
     "idle" | "loading" | "error"
   >("loading");
   const [profileError, setProfileError] = useState("");
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
 
   const [draftExtras, setDraftExtras] = useState<ProfileDraft>(() =>
     createDraftFromProfile()
@@ -661,19 +662,12 @@ export default function Profile() {
 
   return (
     <div className="profile-root">
-      <div className="profile-topbar">
-        <div className="topbar-left">
-          <Link
-            to="/descubrir"
-            className="profile-brand"
-            aria-label="Volver a descubrir"
-          >
+      <header className="primary-header profile-header">
+        <div className="header__start">
+          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
             REX
           </Link>
-          <nav
-            className="main-nav profile-nav"
-            aria-label="Navegación principal"
-          >
+          <nav className="main-nav" aria-label="Navegación principal">
             <NavLink
               to="/descubrir"
               className={({ isActive }) =>
@@ -693,7 +687,63 @@ export default function Profile() {
             </NavLink>
           </nav>
         </div>
-      </div>
+
+        <div className="header__search"></div>
+
+        <div className="header__cta">
+          <div className="profile-menu-container">
+            <button
+              className="profile-menu-btn"
+              onClick={() => setProfileMenuOpen((v) => !v)}
+              aria-label="Perfil"
+              aria-haspopup={token ? "menu" : undefined}
+              aria-expanded={token ? profileMenuOpen : undefined}
+            >
+              <span>👤</span>
+            </button>
+            <div
+              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+              role="menu"
+              aria-label="Profile menu"
+            >
+              {user || token ? (
+                <>
+                  <Link
+                    className="profile-menu__item"
+                    role="menuitem"
+                    to="/perfil"
+                    onClick={() => setProfileMenuOpen(false)}
+                  >
+                    Mi perfil
+                  </Link>
+                  <button
+                    className="profile-menu__item"
+                    role="menuitem"
+                    onClick={() => {
+                      logout();
+                      setProfileMenuOpen(false);
+                      navigate("/");
+                    }}
+                  >
+                    Cerrar sesión
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    navigate("/descubrir");
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Ir a descubrir
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </header>
 
       <main className="profile-layout">
         <section className="content">
