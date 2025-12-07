@@ -61,6 +61,8 @@ type RouteItem = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
+  isCompleted?: boolean;
+  completedAt?: string | null;
 };
 
 type SelectedUser = {
@@ -78,6 +80,15 @@ const API = import.meta.env.VITE_API_URL || window.location.origin;
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
 
 const formatRouteFromApi = (route: any): RouteItem => ({
   id: route.id,
@@ -169,6 +180,14 @@ const formatRouteFromApi = (route: any): RouteItem => ({
   difficulty: route.difficulty,
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
+  isCompleted: normalizeCompletedFlag(
+    route.is_completed ??
+    route.completed ??
+    route.isCompleted ??
+    route.completed_by_user ??
+    route.completedByUser
+  ),
+  completedAt: route.completed_at ?? route.completedAt ?? null,
 });
 
 
@@ -565,6 +584,14 @@ export default function Home() {
               ownerName: data.owner_name || data.user?.name || "",
               ownerUsername: data.owner_username || data.user?.username || "",
               createdAt: data.created_at || data.createdAt,
+              isCompleted: normalizeCompletedFlag(
+                data.is_completed ??
+                data.completed ??
+                data.isCompleted ??
+                data.completed_by_user ??
+                data.completedByUser
+              ),
+              completedAt: data.completed_at ?? data.completedAt ?? null,
             };
 
             setSelectedRoute(formattedRoute);
@@ -672,6 +699,14 @@ export default function Home() {
                 : typeof route.userRating === "number"
                   ? route.userRating
                   : null,
+            isCompleted: normalizeCompletedFlag(
+              route.is_completed ??
+              route.completed ??
+              route.isCompleted ??
+              route.completed_by_user ??
+              route.completedByUser
+            ),
+            completedAt: route.completed_at ?? route.completedAt ?? null,
             // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
             user_id: route.user_id,
@@ -1101,6 +1136,28 @@ export default function Home() {
               rating={selectedRoute.rating ?? null}
               ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
+              initialCompleted={normalizeCompletedFlag(
+                (selectedRoute as any).isCompleted ??
+                (selectedRoute as any).completed ??
+                false
+              )}
+              onCompletedChange={(next) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSummaryRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+              }}
               onEdit={(rd) => {
                 const payload = rd
                   ? {
@@ -1342,6 +1399,9 @@ export default function Home() {
                                   ratingAverage={r.rating ?? null}
                                   ratingCount={r.rating_count ?? null}
                                   initialSaved={favoriteIds.has(String(r.id))}
+                                  isCompleted={normalizeCompletedFlag(
+                                    (r as any).isCompleted ?? (r as any).completed ?? false
+                                  )}
                                 />
                               </div>
                             ))}

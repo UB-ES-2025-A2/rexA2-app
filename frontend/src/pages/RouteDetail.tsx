@@ -19,12 +19,27 @@ type ApiRoute = {
   rating?: number | null;
   rating_count?: number | null;
   images?: string[];
+  is_completed?: boolean;
+  completed?: boolean;
+  isCompleted?: boolean;
+  completed_by_user?: boolean;
+  completedAt?: string;
+  completed_at?: string;
 };
 
 const API_BASE = (
   import.meta.env.VITE_API_URL?.trim() ||
   (typeof window !== "undefined" ? window.location.origin : "")
 ).replace(/\/$/, "");
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
 
 const normalizePoints = (points: ApiPoint[] | undefined): Array<[number, number]> => {
   if (!points) return [];
@@ -96,6 +111,18 @@ export default function RouteDetail() {
   }, [routeId]);
 
   const points = useMemo(() => normalizePoints(route?.points), [route]);
+  const completedFlag = useMemo(
+    () =>
+      normalizeCompletedFlag(
+        route?.is_completed ??
+        route?.completed ??
+        route?.isCompleted ??
+        (route as any)?.completed_by_user ??
+        (route as any)?.completedByUser ??
+        false
+      ),
+    [route]
+  );
 
   return (
     <div className="route-detail">
@@ -151,6 +178,19 @@ export default function RouteDetail() {
               isPrivate={!route.visibility}
               rating={route.rating ?? null}
               ratingCount={route.rating_count ?? null}
+              initialCompleted={completedFlag}
+              onCompletedChange={(next) =>
+                setRoute((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        is_completed: next,
+                        completed: next,
+                        isCompleted: next,
+                      }
+                    : prev
+                )
+              }
               onClose={() => navigate(-1)}
             />
           </div>
