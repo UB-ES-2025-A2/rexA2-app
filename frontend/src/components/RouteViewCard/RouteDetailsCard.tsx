@@ -404,10 +404,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         setRouteData((prev: any) =>
           prev
             ? {
-                ...prev,
-                rating: average ?? prev.rating,
-                rating_count: count ?? prev.rating_count,
-              }
+              ...prev,
+              rating: average ?? prev.rating,
+              rating_count: count ?? prev.rating_count,
+            }
             : prev
         );
         onRatingChange?.({ average, count });
@@ -487,10 +487,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
   const difficultyLabel = displayDifficulty
     ? {
-        easy: "Fácil",
-        medium: "Media",
-        hard: "Alta",
-      }[displayDifficulty.toLowerCase()] ?? displayDifficulty
+      easy: "Fácil",
+      medium: "Media",
+      hard: "Alta",
+    }[displayDifficulty.toLowerCase()] ?? displayDifficulty
     : null;
 
   const slugifyName = (value: string) =>
@@ -766,20 +766,20 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             ) : null}
           </div>
 
-      <div className="route-details-card__status" aria-live="polite">
-        <button
-          type="button"
-          className="route-status-toggle"
-          onClick={handleCompletionToggle}
-          disabled={!isAuthenticated || completionSaving}
-        >
-          {completionSaving
-            ? "Guardando..."
-            : completed
-              ? "Ruta realizada"
-              : "Marcar como realizada"}
-        </button>
-      </div>
+          <div className="route-details-card__status" aria-live="polite">
+            <button
+              type="button"
+              className="route-status-toggle"
+              onClick={handleCompletionToggle}
+              disabled={!isAuthenticated || completionSaving}
+            >
+              {completionSaving
+                ? "Guardando..."
+                : completed
+                  ? "Ruta realizada"
+                  : "Marcar como realizada"}
+            </button>
+          </div>
 
           <div
             className="route-details-card__footer"
@@ -834,7 +834,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       <ShareModal
         open={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        link={`${window.location.origin}/?route=${routeId}`}
+        link={`${window.location.origin}/mapa?route=${routeId}`}
       />
     </>
   );
