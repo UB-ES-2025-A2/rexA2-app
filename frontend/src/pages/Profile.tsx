@@ -129,6 +129,7 @@ export default function Profile() {
   const [favoritesError, setFavoritesError] = useState("");
   const [selectedFavorite, setSelectedFavorite] =
     useState<FavoriteRoute | null>(null);
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [createdRoutes, setCreatedRoutes] = useState<FavoriteRoute[]>([]);
   const [createdStatus, setCreatedStatus] = useState<
     "idle" | "loading" | "error"
@@ -142,6 +143,31 @@ export default function Profile() {
     (typeof window !== "undefined"
       ? localStorage.getItem("access_token") || ""
       : "");
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCompleted = async () => {
+      if (!accessToken) {
+        setCompletedIds(new Set());
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/routes/completed/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const ids = Array.isArray(data?.route_ids) ? data.route_ids.map(String) : [];
+        if (!cancelled) setCompletedIds(new Set(ids));
+      } catch (err) {
+        console.warn("No se pudieron cargar rutas completadas", err);
+      }
+    };
+    loadCompleted();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   useEffect(() => {
     const root = document.getElementById("root");
@@ -232,9 +258,14 @@ export default function Profile() {
           throw new Error(detail || "No se pudieron cargar tus rutas creadas.");
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setCreatedRoutes(
-          data.map((route) => normalizeFavoriteRoute(route, ownerFallback))
-        );
+        const mapped = data.map((route) => {
+          const normalized = normalizeFavoriteRoute(route, ownerFallback);
+          return {
+            ...normalized,
+            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+          };
+        });
+        setCreatedRoutes(mapped);
         setCreatedStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -247,7 +278,7 @@ export default function Profile() {
 
     fetchCreatedRoutes();
     return () => controller.abort();
-  }, [accessToken, profile?.username, profile?.email]);
+  }, [accessToken, profile?.username, profile?.email, completedIds]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -274,7 +305,14 @@ export default function Profile() {
           );
         }
         const data = (await res.json()) as FavoriteRouteApi[];
-        setFavorites(data.map((route) => normalizeFavoriteRoute(route)));
+        const mapped = data.map((route) => {
+          const normalized = normalizeFavoriteRoute(route);
+          return {
+            ...normalized,
+            isCompleted: completedIds.has(normalized.id) || normalized.isCompleted,
+          };
+        });
+        setFavorites(mapped);
         setFavoritesStatus("idle");
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -287,7 +325,32 @@ export default function Profile() {
 
     fetchFavorites();
     return () => controller.abort();
-  }, [accessToken]);
+  }, [accessToken, completedIds]);
+
+  useEffect(() => {
+    setFavorites((prev) =>
+      prev.map((r) => ({
+        ...r,
+        isCompleted: completedIds.has(r.id) || r.isCompleted,
+      }))
+    );
+    setCreatedRoutes((prev) =>
+      prev.map((r) => ({
+        ...r,
+        isCompleted: completedIds.has(r.id) || r.isCompleted,
+      }))
+    );
+    setSelectedFavorite((prev) =>
+      prev
+        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        : prev
+    );
+    setSelectedCreatedRoute((prev) =>
+      prev
+        ? { ...prev, isCompleted: completedIds.has(prev.id) || prev.isCompleted }
+        : prev
+    );
+  }, [completedIds]);
 
   useEffect(() => {
     if (active !== "favorites" && selectedFavorite) {
