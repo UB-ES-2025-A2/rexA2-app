@@ -33,6 +33,16 @@ export function translateErrorMessage(msg: string): string {
         return "Uno de los campos tiene un formato incorrecto.";
     }
 
+    // Token errors
+    if (lower.includes("token") || lower.includes("signature")) {
+        return "Tu sesión ha expirado. Inicia sesión de nuevo.";
+    }
+
+    // Network errors
+    if (lower.includes("failed to fetch") || lower.includes("network error") || lower.includes("connection refused")) {
+        return "No se ha podido conectar con el servidor. Comprueba tu conexión.";
+    }
+
     // Return original if no match found (or maybe a generic one?)
     // For now, let's return the original but maybe cleaned up a bit
     return msg;
