@@ -28,6 +28,7 @@ import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
 import RouteSummaryCard from "../components/RouteSummaryCard";
 import { getMyCompletedRouteIds } from "../services/completion";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type RouteItem = {
   id: string;
@@ -778,8 +779,11 @@ export default function Home() {
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
-        setRoutesError("No se han podido cargar los resultados");
-        showAlert("No se han podido cargar los resultados", "error");
+        const msg = translateErrorMessage(error instanceof Error ? error.message : "No se han podido cargar los resultados");
+        setRoutesError(msg);
+        // Avoid calling showAlert in a loop if it causes re-renders, but now AlertContext is fixed.
+        // Still, it's better to show the error in the UI state (routesError) than a toast for initial load failures.
+        // showAlert(msg, "error"); 
         setRoutes([]);
       } finally {
         setRoutesLoading(false);
