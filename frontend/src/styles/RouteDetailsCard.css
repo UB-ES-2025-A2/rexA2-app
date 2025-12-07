@@ -81,6 +81,52 @@
   transform: scale(1.1);
 }
 
+.route-details-card__download-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 40px;
+}
+
+.route-details-card__download-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.25);
+  filter: brightness(1.02);
+}
+
+.route-details-card__download-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.route-details-card__download-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.route-details-card__download-label {
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .route-details-card__body {
   display: flex;
   flex-direction: column;
@@ -362,6 +408,12 @@
   gap: 10px;
   margin-top: 1rem;
   flex-wrap: wrap;
+}
+
+.route-details-card__download-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-weight: 700;
 }
 
 .save-container {
