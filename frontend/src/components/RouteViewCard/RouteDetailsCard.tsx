@@ -136,6 +136,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [routeData, setRouteData] = useState<any>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [userRating, setUserRating] = useState<number | null>(null);
   const [ratingSaving, setRatingSaving] = useState(false);
   const [routeOwnership, setRouteOwnership] = useState<boolean | null>(null);
@@ -491,12 +493,119 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       }[displayDifficulty.toLowerCase()] ?? displayDifficulty
     : null;
 
+  const slugifyName = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      .toLowerCase() || "ruta";
+
+  const handleDownloadPdf = async () => {
+    if (!routeId) return;
+    if (!isAuthenticated) {
+      showAlert("Inicia sesión para descargar la ruta en PDF.", "error");
+      return;
+    }
+
+    setDownloadingPdf(true);
+    setDownloadError(null);
+    try {
+      const res = await fetchWithAuth(`/routes/${routeId}/pdf`, { method: "GET" });
+
+      if (!res.ok) {
+        let detail = "No se pudo generar el PDF. Inténtalo de nuevo más tarde.";
+        const body = await res.json().catch(() => null);
+        if (body?.detail) detail = String(body.detail);
+        if (res.status >= 500) {
+          detail = "Error del servidor al generar el PDF. Inténtalo de nuevo más tarde.";
+        }
+        throw new Error(detail);
+      }
+
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) {
+        throw new Error("El PDF generado está vacío.");
+      }
+
+      const fileName = `${slugifyName(name)}-rex.pdf`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+
+      showAlert("Descarga del PDF con éxito.", "success");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "No se pudo generar el PDF. Revisa tu conexión o inténtalo más tarde.";
+      const networkHint =
+        err instanceof TypeError
+          ? "Revisa tu conexión o vuelve a intentarlo."
+          : "";
+      const finalMessage = networkHint ? `${message} ${networkHint}`.trim() : message;
+      setDownloadError(finalMessage);
+      showAlert(finalMessage, "error");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   return (
     <>
       <div className="route-details-card">
         <header className="route-details-card__header">
           <h2 className="route-details-card__title">{name}</h2>
           <div className="route-details-card__header-actions">
+            <button
+              type="button"
+              className="route-details-card__download-btn"
+              onClick={handleDownloadPdf}
+              disabled={downloadingPdf}
+              aria-busy={downloadingPdf}
+              aria-label="Descargar ruta en PDF"
+            >
+              <span className="route-details-card__download-icon" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-6Z"
+                    fill="currentColor"
+                    opacity="0.9"
+                  />
+                  <path
+                    d="M14 2v5a1 1 0 0 0 1 1h4"
+                    stroke="white"
+                    strokeWidth="1.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M8.8 15.7c.6 0 1.1-.4 1.1-1.1 0-.7-.5-1.1-1.1-1.1H7.7v2.2h1.1Z"
+                    fill="white"
+                  />
+                  <path
+                    d="M7.1 12.5h1.7c1 0 1.8.8 1.8 2 0 1.2-.7 2-1.8 2H7.1v-4Zm4 .2h1.2c.8 0 1.3.4 1.3 1.2 0 .8-.5 1.2-1.3 1.2H11.8v1.4H11V12.7Zm.8.7v1.2h.4c.5 0 .8-.2.8-.6s-.3-.6-.8-.6h-.4Zm3.4-.7h1.6c1 0 1.6.6 1.6 1.5 0 .9-.6 1.5-1.6 1.5h-.8v1.2h-.8v-4.2Zm.8.7v1.4h.7c.5 0 .8-.2.8-.7s-.3-.7-.8-.7h-.7Z"
+                    fill="white"
+                  />
+                </svg>
+              </span>
+              <span className="route-details-card__download-label">
+                {downloadingPdf ? "Generando..." : "PDF"}
+              </span>
+            </button>
             {isAuthor && onEdit ? (
               <button
                 className="route-details-card__edit-btn"
@@ -699,6 +808,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               )}
             </div>
           </div>
+          {downloadError ? (
+            <p className="route-details-card__download-error" role="alert">
+              {downloadError}
+            </p>
+          ) : null}
         </section>
       </div>
 
