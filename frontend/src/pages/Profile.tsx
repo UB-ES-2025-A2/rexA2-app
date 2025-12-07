@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
 import { translateErrorMessage } from "../utils/errorTranslator";
 import MapView from "../components/MapView";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
@@ -102,6 +103,7 @@ export default function Profile() {
   const [active, setActive] = useState<TabKey>("favorites");
   const navigate = useNavigate();
   const { user, token, logout } = useAuth();
+  const { setUnit } = useUnitPreference();
 
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileStatus, setProfileStatus] = useState<
@@ -348,17 +350,17 @@ export default function Profile() {
     setSelectedFavorite((prev) =>
       prev
         ? {
-            ...prev,
-            isCompleted: completedIds.has(prev.id) || prev.isCompleted,
-          }
+          ...prev,
+          isCompleted: completedIds.has(prev.id) || prev.isCompleted,
+        }
         : prev
     );
     setSelectedCreatedRoute((prev) =>
       prev
         ? {
-            ...prev,
-            isCompleted: completedIds.has(prev.id) || prev.isCompleted,
-          }
+          ...prev,
+          isCompleted: completedIds.has(prev.id) || prev.isCompleted,
+        }
         : prev
     );
   }, [completedIds]);
@@ -427,8 +429,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowers(rawItems.map(normalizeFollower));
         setFollowersStatus("idle");
@@ -496,8 +498,8 @@ export default function Profile() {
         const rawItems: FollowerAPI[] = Array.isArray(data)
           ? data
           : Array.isArray(data.items)
-          ? data.items
-          : [];
+            ? data.items
+            : [];
 
         setFollowing(rawItems.map(normalizeFollower));
         setFollowingStatus("idle");
@@ -584,6 +586,8 @@ export default function Profile() {
       }
       const updated = normalizeProfile((await res.json()) as ProfileResponse);
       setProfile(updated);
+      // Sync unit preference to global context so all components update immediately
+      setUnit(updated.preferred_units);
       setIsEditing(false);
     } catch (err) {
       setProfileError(
@@ -905,29 +909,29 @@ function normalizeFavoriteRoute(
 ): FavoriteRoute {
   const normalizedPoints: Array<[number, number]> = Array.isArray(route.points)
     ? route.points
-        .map((point: any) => {
-          if (Array.isArray(point) && point.length >= 2) {
-            const [lng, lat] = point;
-            return typeof lng === "number" && typeof lat === "number"
-              ? [lng, lat]
-              : null;
-          }
-          const lng =
-            point?.longitude ??
-            point?.lng ??
-            point?.lon ??
-            (Array.isArray(point?.coordinates) ? point.coordinates[0] : null);
-          const lat =
-            point?.latitude ??
-            point?.lat ??
-            point?.latitud ??
-            (Array.isArray(point?.coordinates) ? point.coordinates[1] : null);
-          if (typeof lng === "number" && typeof lat === "number") {
-            return [lng, lat];
-          }
-          return null;
-        })
-        .filter((p): p is [number, number] => Array.isArray(p))
+      .map((point: any) => {
+        if (Array.isArray(point) && point.length >= 2) {
+          const [lng, lat] = point;
+          return typeof lng === "number" && typeof lat === "number"
+            ? [lng, lat]
+            : null;
+        }
+        const lng =
+          point?.longitude ??
+          point?.lng ??
+          point?.lon ??
+          (Array.isArray(point?.coordinates) ? point.coordinates[0] : null);
+        const lat =
+          point?.latitude ??
+          point?.lat ??
+          point?.latitud ??
+          (Array.isArray(point?.coordinates) ? point.coordinates[1] : null);
+        if (typeof lng === "number" && typeof lat === "number") {
+          return [lng, lat];
+        }
+        return null;
+      })
+      .filter((p): p is [number, number] => Array.isArray(p))
     : [];
 
   const createdAtRaw = (route as any)?.createdAt ?? route.created_at ?? null;
@@ -935,8 +939,8 @@ function normalizeFavoriteRoute(
     typeof createdAtRaw === "string"
       ? createdAtRaw
       : createdAtRaw
-      ? new Date(createdAtRaw).toISOString()
-      : "";
+        ? new Date(createdAtRaw).toISOString()
+        : "";
 
   return {
     id: route.id ?? route._id ?? "",
@@ -956,23 +960,23 @@ function normalizeFavoriteRoute(
       typeof route.rating_count === "number"
         ? route.rating_count
         : typeof (route as any).ratingCount === "number"
-        ? (route as any).ratingCount
-        : null,
+          ? (route as any).ratingCount
+          : null,
     user_rating:
       typeof route.user_rating === "number" ? route.user_rating : null,
     images: Array.isArray(route.images)
       ? route.images
       : Array.isArray((route as any).image_urls)
-      ? (route as any).image_urls
-      : Array.isArray((route as any).imageUrls)
-      ? (route as any).imageUrls
-      : [],
+        ? (route as any).image_urls
+        : Array.isArray((route as any).imageUrls)
+          ? (route as any).imageUrls
+          : [],
     isCompleted: normalizeCompletedFlag(
       route.is_completed ??
-        route.completed ??
-        route.isCompleted ??
-        route.completed_by_user ??
-        (route as any)?.completedByUser
+      route.completed ??
+      route.isCompleted ??
+      route.completed_by_user ??
+      (route as any)?.completedByUser
     ),
     completedAt: route.completed_at ?? route.completedAt ?? null,
   };
@@ -1250,9 +1254,8 @@ function PersonalData({
               {isEditing ? (
                 <div className="unit-options">
                   <label
-                    className={`unit-chip ${
-                      viewExtras.units === "km" ? "selected" : ""
-                    }`}
+                    className={`unit-chip ${viewExtras.units === "km" ? "selected" : ""
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1264,9 +1267,8 @@ function PersonalData({
                     <span>Km</span>
                   </label>
                   <label
-                    className={`unit-chip ${
-                      viewExtras.units === "mi" ? "selected" : ""
-                    }`}
+                    className={`unit-chip ${viewExtras.units === "mi" ? "selected" : ""
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1292,33 +1294,29 @@ function PersonalData({
 
       <div className="profile-inline-nav secondary-nav">
         <button
-          className={`inline-nav-btn ${
-            activeTab === "created" ? "active" : ""
-          }`}
+          className={`inline-nav-btn ${activeTab === "created" ? "active" : ""
+            }`}
           onClick={() => onChangeTab("created")}
         >
           Mis rutas
         </button>
         <button
-          className={`inline-nav-btn ${
-            activeTab === "favorites" ? "active" : ""
-          }`}
+          className={`inline-nav-btn ${activeTab === "favorites" ? "active" : ""
+            }`}
           onClick={() => onChangeTab("favorites")}
         >
           Favoritas
         </button>
         <button
-          className={`inline-nav-btn ${
-            activeTab === "followers" ? "active" : ""
-          }`}
+          className={`inline-nav-btn ${activeTab === "followers" ? "active" : ""
+            }`}
           onClick={() => onChangeTab("followers")}
         >
           Seguidores
         </button>
         <button
-          className={`inline-nav-btn ${
-            activeTab === "following" ? "active" : ""
-          }`}
+          className={`inline-nav-btn ${activeTab === "following" ? "active" : ""
+            }`}
           onClick={() => onChangeTab("following")}
         >
           Siguiendo
