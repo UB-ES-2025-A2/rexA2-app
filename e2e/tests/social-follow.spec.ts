@@ -6,10 +6,11 @@ const FOLLOWER_PASSWORD = "Aa1!passw";
 const FOLLOWEE_USERNAME = "followee_user";
 
 async function loginAsFollower(page) {
-  await page.goto("/");
+  await page.goto("/mapa");
 
-  const profileButton = page.getByRole("button", { name: "Profile" });
+  const profileButton = page.getByRole("button", { name: /Perfil|Profile/i });
   await profileButton.click();
+  await page.getByRole("menuitem", { name: /Iniciar sesión/i }).click();
 
   await expect(page.getByText("Welcome back")).toBeVisible();
 

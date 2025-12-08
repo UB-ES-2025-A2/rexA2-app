@@ -11,10 +11,11 @@ test.beforeEach(async ({ page }) => {
 
 test.describe("Autenticación (login)", () => {
   test("login correcto cierra el modal de autenticación", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/descubrir");
 
-    const profileButton = page.getByRole("button", { name: "Profile" });
+    const profileButton = page.getByRole("button", { name: /Perfil|Profile/i });
     await profileButton.click();
+    await page.getByRole("menuitem", { name: /Iniciar sesión/i }).click();
 
     const title = page.getByText("Welcome back");
     await expect(title).toBeVisible();
@@ -33,10 +34,11 @@ test.describe("Autenticación (login)", () => {
   test("login incorrecto muestra un mensaje de error y mantiene el modal abierto", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/descubrir");
 
-    const profileButton = page.getByRole("button", { name: "Profile" });
+    const profileButton = page.getByRole("button", { name: /Perfil|Profile/i });
     await profileButton.click();
+    await page.getByRole("menuitem", { name: /Iniciar sesión/i }).click();
 
     const title = page.getByText("Welcome back");
     await expect(title).toBeVisible();
