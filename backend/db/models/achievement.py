@@ -123,6 +123,15 @@ THEME_LEVELS = [
     ("level_3", 10, "Leyenda"),
 ]
 
+DISTANCE_ACHIEVEMENTS: list[dict[str, Any]] = [
+    {"code": "distance_10", "name": "Caminante I", "threshold_value": 10, "rarity": "common"},
+    {"code": "distance_25", "name": "Caminante II", "threshold_value": 25, "rarity": "common"},
+    {"code": "distance_50", "name": "Caminante III", "threshold_value": 50, "rarity": "rare"},
+    {"code": "distance_100", "name": "Senderista", "threshold_value": 100, "rarity": "epic"},
+    {"code": "distance_250", "name": "Ultrawalker", "threshold_value": 250, "rarity": "legendary"},
+    {"code": "distance_500", "name": "Maratonista", "threshold_value": 500, "rarity": "legendary"},
+]
+
 
 async def ensure_completed_routes_seed() -> None:
     col = db_client.db[ACHIEVEMENTS_COLL]
@@ -161,11 +170,26 @@ async def ensure_theme_achievements_seed() -> None:
             }
             await col.update_one({"code": code}, {"$set": payload}, upsert=True)
 
+async def ensure_distance_achievements_seed() -> None:
+    col = db_client.db[ACHIEVEMENTS_COLL]
+    for ach in DISTANCE_ACHIEVEMENTS:
+        payload = {
+            "code": ach["code"],
+            "name": ach["name"],
+            "description": f"Acumula {ach['threshold_value']} km completados.",
+            "category": "distance_travelled",
+            "threshold_value": ach["threshold_value"],
+            "icon": "🛤️",
+            "rarity": ach.get("rarity"),
+        }
+        await col.update_one({"code": ach["code"]}, {"$set": payload}, upsert=True)
+
 
 async def ensure_all_achievements_seed() -> None:
     await ensure_completed_routes_seed()
     await ensure_created_routes_seed()
     await ensure_theme_achievements_seed()
+    await ensure_distance_achievements_seed()
 
 
 async def get_completed_routes_count(user_id: str) -> int:
@@ -307,6 +331,106 @@ async def list_theme_achievements(user_id: str) -> List[Dict[str, Any]]:
     return await _list_by_category(user_id, "theme")
 
 
+async def get_total_distance_completed(user_id: str) -> float:
+    """
+    Suma de distance_km de rutas completadas (únicas) por el usuario.
+    """
+    if "user_routes_completed" not in await db_client.db.list_collection_names():
+        return 0.0
+    pipeline = [
+        {"$match": {"user_id": str(user_id)}},
+        {
+            "$addFields": {
+                "route_oid": {
+                    "$convert": {"input": "$route_id", "to": "objectId", "onError": None, "onNull": None}
+                }
+            }
+        },
+        {"$match": {"route_oid": {"$ne": None}}},
+        {
+            "$lookup": {
+                "from": "routes",
+                "localField": "route_oid",
+                "foreignField": "_id",
+                "as": "route",
+            }
+        },
+        {"$unwind": "$route"},
+        {
+            "$group": {
+                "_id": "$route_oid",
+                "distance": {"$first": {"$ifNull": ["$route.distance_km", 0]}},
+            }
+        },
+        {"$group": {"_id": None, "total": {"$sum": "$distance"}}},
+    ]
+    agg = await db_client.db["user_routes_completed"].aggregate(pipeline).to_list(length=1)
+    total = float(agg[0].get("total", 0)) if agg else 0.0
+    return round(total, 2)
+
+
+async def recalculate_distance_achievements(user_id: str) -> list[Dict[str, Any]]:
+    await ensure_distance_achievements_seed()
+    total_km = await get_total_distance_completed(user_id)
+    achievements = (
+        await db_client.db[ACHIEVEMENTS_COLL]
+        .find({"category": "distance_travelled"})
+        .sort("threshold_value", 1)
+        .to_list(None)
+    )
+    progress_col = db_client.db[USER_ACHIEVEMENTS_COLL]
+    newly_unlocked: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+
+    for ach in achievements:
+        ach_id = ach.get("_id")
+        if ach_id is None:
+            continue
+        threshold = float(ach.get("threshold_value", 0))
+        unlocked = total_km >= threshold
+
+        existing = await progress_col.find_one(
+            {"user_id": str(user_id), "achievement_id": ach_id},
+            {"is_unlocked": 1, "unlocked_at": 1},
+        )
+
+        update: Dict[str, Any] = {"current_value": total_km}
+
+        if existing is None:
+            update["is_unlocked"] = unlocked
+            update["unlocked_at"] = now if unlocked else None
+            await progress_col.update_one(
+                {"user_id": str(user_id), "achievement_id": ach_id},
+                {"$set": update},
+                upsert=True,
+            )
+            if unlocked:
+                newly_unlocked.append(_serialize_achievement_unlock(ach, total_km, update["unlocked_at"]))
+            continue
+
+        if unlocked and not existing.get("is_unlocked"):
+            update["is_unlocked"] = True
+            update["unlocked_at"] = now
+            newly_unlocked.append(_serialize_achievement_unlock(ach, total_km, now))
+        else:
+            update["is_unlocked"] = existing.get("is_unlocked", False)
+            if existing.get("unlocked_at"):
+                update["unlocked_at"] = existing["unlocked_at"]
+
+        await progress_col.update_one(
+            {"user_id": str(user_id), "achievement_id": ach_id},
+            {"$set": update},
+            upsert=True,
+        )
+
+    return newly_unlocked
+
+
+async def list_distance_achievements(user_id: str) -> List[Dict[str, Any]]:
+    await recalculate_distance_achievements(user_id)
+    return await _list_by_category(user_id, "distance_travelled")
+
+
 def _serialize_achievement_unlock(ach: dict[str, Any], current_value: int, unlocked_at: datetime | None) -> dict[str, Any]:
     return {
         "code": ach.get("code"),
@@ -348,7 +472,7 @@ async def _list_by_category(user_id: str, category: str) -> List[Dict[str, Any]]
                 "description": ach.get("description"),
                 "category": ach.get("category"),
                 "threshold_value": ach.get("threshold_value", 0),
-                "current_value": int(progress.get("current_value") or 0),
+                "current_value": progress.get("current_value") or 0,
                 "is_unlocked": bool(progress.get("is_unlocked", False)),
                 "icon": ach.get("icon"),
                 "rarity": ach.get("rarity"),

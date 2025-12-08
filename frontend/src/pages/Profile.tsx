@@ -15,6 +15,7 @@ import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import CompletedRoutesAchievements from "../components/Achievements/CompletedRoutesAchievements";
 import CreatedRoutesAchievements from "../components/Achievements/CreatedRoutesAchievements";
 import ThemeAchievementsBlock from "../components/Achievements/ThemeAchievementsBlock";
+import DistanceAchievementsBlock from "../components/Achievements/DistanceAchievementsBlock";
 
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
@@ -889,6 +890,10 @@ export default function Profile() {
               refreshToken={achievementsRefreshKey}
             />
             <CreatedRoutesAchievements
+              userId={profile?.id}
+              refreshToken={achievementsRefreshKey}
+            />
+            <DistanceAchievementsBlock
               userId={profile?.id}
               refreshToken={achievementsRefreshKey}
             />

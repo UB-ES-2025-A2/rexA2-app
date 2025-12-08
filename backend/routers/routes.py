@@ -852,8 +852,11 @@ async def set_route_completion_status(
         user_id = str(current_user["_id"])
         newly_unlocked = await achievement_crud.recalculate_completed_routes_achievements(user_id)
         theme_unlocks = await achievement_crud.recalculate_theme_achievements(user_id)
+        distance_unlocks = await achievement_crud.recalculate_distance_achievements(user_id)
         if theme_unlocks:
             newly_unlocked = (newly_unlocked or []) + theme_unlocks
+        if distance_unlocks:
+            newly_unlocked = (newly_unlocked or []) + distance_unlocks
     except Exception:
         # Evitamos filtrar detalles de persistencia al cliente
         raise HTTPException(status_code=500, detail="No se pudo actualizar el estado de la ruta")
