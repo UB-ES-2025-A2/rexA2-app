@@ -70,17 +70,17 @@ export async function setupBackendMocks(page: Page) {
   let followState = false;
   const ratingState: Record<string, Record<string, number>> = {};
 
-  const routes: MockRoute[] = [
-    {
-      id: "route-1",
-      _id: "route-1",
-      name: "Ruta de prueba",
+const routes: MockRoute[] = [
+  {
+    id: "route-1",
+    _id: "route-1",
+    name: "Ruta de prueba",
       description: "Ruta E2E de ejemplo",
       category: "montaña",
       points: [
-        { latitude: 0, longitude: 0 },
-        { latitude: 1, longitude: 1 },
-        { latitude: 2, longitude: 2 },
+        { latitude: 41.3851, longitude: 2.1734 },
+        { latitude: 41.39, longitude: 2.18 },
+        { latitude: 41.395, longitude: 2.185 },
       ],
       visibility: true,
       owner_id: FOLLOWEE_USER.id,
@@ -97,9 +97,9 @@ export async function setupBackendMocks(page: Page) {
       description: "Ruta del usuario autenticado",
       category: "ciudad",
       points: [
-        { latitude: 1, longitude: 0 },
-        { latitude: 2, longitude: 1 },
-        { latitude: 3, longitude: 2 },
+        { latitude: 41.3851, longitude: 2.1734 },
+        { latitude: 41.382, longitude: 2.17 },
+        { latitude: 41.379, longitude: 2.165 },
       ],
       visibility: true,
       owner_id: PRIMARY_USER.id,

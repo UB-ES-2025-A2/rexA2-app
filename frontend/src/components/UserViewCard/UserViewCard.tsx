@@ -7,6 +7,15 @@ import "../../styles/UserViewCard.css";
 
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
+
 type RouteItem = {
   id: string;
   name: string;
@@ -16,6 +25,11 @@ type RouteItem = {
   visibility: boolean;
   rating?: number | null;
   rating_count?: number | null;
+  distanceKm?: number | null;
+  durationMinutes?: number | null;
+  difficulty?: string | null;
+  images?: string[];
+  isCompleted?: boolean;
 };
 
 type Props = {
@@ -278,6 +292,9 @@ const UserViewCard: React.FC<Props> = ({
               : typeof route.ratingCount === "number"
                 ? route.ratingCount
                 : null,
+          isCompleted: normalizeCompletedFlag(
+            route.is_completed ?? route.completed ?? route.isCompleted
+          ),
         }));
 
         setRoutes(formatted);
@@ -331,9 +348,8 @@ const UserViewCard: React.FC<Props> = ({
           {shouldShowFollowButton && (
             <button
               type="button"
-              className={`usercard__follow-btn ${
-                isFollowing ? "usercard__follow-btn--following" : ""
-              }`}
+              className={`usercard__follow-btn ${isFollowing ? "usercard__follow-btn--following" : ""
+                }`}
               onClick={handleFollowClick}
               disabled={followLoading}
             >
@@ -360,9 +376,14 @@ const UserViewCard: React.FC<Props> = ({
               name={r.name}
               category={r.category as Category}
               points={r.points}
+              images={r.images ?? []}
+              distanceKm={r.distanceKm}
+              durationMinutes={r.durationMinutes}
+              difficulty={r.difficulty}
               ratingAverage={r.rating ?? null}
               ratingCount={r.rating_count ?? null}
               initialSaved={false}
+              isCompleted={normalizeCompletedFlag(r.isCompleted ?? false)}
               onClick={() => onRouteClick?.(r)}
             />
           ))
