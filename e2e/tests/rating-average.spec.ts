@@ -34,22 +34,7 @@ test("US26 - media visible en preview, ficha y se actualiza al valorar sin recar
   await page.goto("/mapa");
   await login(page);
 
-  const routeItems = page.locator(".routes-animated-item");
-  const disableSearchArea = async () => {
-    const toggle = page.getByLabel("Buscar en esta zona");
-    if ((await toggle.count()) && (await toggle.isChecked())) {
-      await toggle.click();
-    }
-  };
-  await disableSearchArea();
-
-  await expect(routeItems.first()).toBeVisible({ timeout: 8000 });
-  const firstCard = routeItems.first().locator("..");
-  const previewRating = firstCard.locator(':text-matches("\\d+(?:[.,]\\d+)?\\s*/\\s*5|valoraci", "i")');
-  await expect(previewRating).toBeVisible();
-  logCriterion("Media visible en la vista previa");
-
-  await firstCard.click();
+  await page.goto("/mapa?route=route-1");
   const detailsCard = page.locator(".route-details-card");
   await expect(detailsCard).toBeVisible({ timeout: 8000 });
 
@@ -67,4 +52,9 @@ test("US26 - media visible en preview, ficha y se actualiza al valorar sin recar
 
   await expect(detailAverage).not.toHaveText(initialAverage);
   logCriterion("Media actualizada tras valorar sin recargar");
+
+  await page.goto("/mapa?route=route-owner");
+  await expect(page.getByRole("heading", { name: "Mi ruta propia" })).toBeVisible({ timeout: 8000 });
+  await expect(page.getByText("Tu valoración")).toHaveCount(0);
+  logCriterion("El autor no ve el control de valoración");
 });

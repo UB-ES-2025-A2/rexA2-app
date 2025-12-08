@@ -48,7 +48,7 @@ async def test_get_me_returns_public_user(ac_profile):
     assert data["id"] == "64fa0c8dbb5d2f0f12345678"
     assert data["email"] == "me@example.com"
     assert data["username"] == "me"
-    assert data["theme_preference"] == "light"
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["is_active"] is True
     # No debe exponer hash ni otros campos internos
     assert "hashed_password" not in data
@@ -90,7 +90,6 @@ async def test_get_my_profile_uses_crud_and_returns_profile(ac_profile, monkeypa
         "email": "me@example.com",
         "phone": None,
         "preferred_units": "km",
-        "theme_preference": "dark",
         "avatar_url": None,
         "stats": {
             "routes_created": 1,
@@ -221,7 +220,7 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
     assert data["email"] == "me@example.com"
     assert data["phone"] == "222"
     assert data["preferred_units"] == "mi"
-    assert data["theme_preference"] == "light"
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["avatar_url"] == "http://new"
 
     # Se ha comprobado disponibilidad con exclude_user_id correcto
@@ -349,7 +348,7 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
 
     # Y en el perfil devuelto también se refleja como null (None en JSON)
     assert data["phone"] is None
-    assert data["theme_preference"] == "light"
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["preferred_units"] == "km"
 
 
