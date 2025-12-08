@@ -7,7 +7,6 @@ from ..client import get_db
 from ...core.security import get_password_hash
 from . import follow as follow_crud
 USERS_COL = None
-UNSET = object()
 
 def _users_col():
     """
@@ -27,7 +26,6 @@ async def create_user(
     name: Optional[str] = None,
     phone: Optional[str] = None,
     preferred_units: str = "km",
-    theme_preference: str = "light",
     avatar_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -47,7 +45,6 @@ async def create_user(
         "name": name,                               # None por defecto
         "phone": phone,                             # None por defecto
         "preferred_units": preferred_units or "km", # valor por defecto
-        "theme_preference": theme_preference or "light",
         "avatar_url": avatar_url,                   # None por defecto
         "is_active": True,
     }
@@ -130,7 +127,6 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
         "email": user.get("email", ""),
         "phone": user.get("phone"),
         "preferred_units": user.get("preferred_units") or "km",
-        "theme_preference": user.get("theme_preference") or "light",
         "avatar_url": user.get("avatar_url"),
         "stats": {
             "routes_created": created,
@@ -156,11 +152,10 @@ async def is_username_taken(
 async def update_user_fields(
     user_id: str,
     *,
-    username: Optional[str] | object = UNSET,
-    phone: Optional[str] | object = UNSET,
-    preferred_units: Optional[str] | object = UNSET,
-    theme_preference: Optional[str] | object = UNSET,
-    avatar_url: Optional[str] | object = UNSET,
+    username: Optional[str] = None,
+    phone: Optional[str] = None,
+    preferred_units: Optional[str] = None,
+    avatar_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     PATCH parcial del usuario. Aplica $set y $unset según corresponda y devuelve el doc actualizado.
@@ -170,27 +165,22 @@ async def update_user_fields(
     to_set: Dict[str, Any] = {}
     to_unset: Dict[str, Any] = {}
 
-    if username is not UNSET and username is not None:
+    if username is not None:
         to_set["username"] = username
 
     # Si phone/avatar_url llegan como None, eliminamos el campo (unset)
-    if phone is not UNSET:
-        if phone is None:
-            to_unset["phone"] = ""         # el valor de $unset es ignorado; borra el campo
-        else:
-            to_set["phone"] = phone
+    if phone is None:
+        to_unset["phone"] = ""         # el valor de $unset es ignorado; borra el campo
+    else:
+        to_set["phone"] = phone
 
-    if preferred_units is not UNSET and preferred_units is not None:
+    if preferred_units is not None:
         to_set["preferred_units"] = preferred_units
 
-    if theme_preference is not UNSET and theme_preference is not None:
-        to_set["theme_preference"] = theme_preference
-
-    if avatar_url is not UNSET:
-        if avatar_url is None:
-            to_unset["avatar_url"] = ""
-        else:
-            to_set["avatar_url"] = avatar_url
+    if avatar_url is None:
+        to_unset["avatar_url"] = ""
+    else:
+        to_set["avatar_url"] = avatar_url
 
     update: Dict[str, Any] = {}
     if to_set:

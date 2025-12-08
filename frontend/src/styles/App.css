@@ -611,19 +611,6 @@ root {
   color: var(--primary);
 }
 
-.theme-dark .profile-menu a.profile-menu__item,
-.theme-dark .profile-menu button {
-  background: transparent;
-  color: #f2f6ff;
-  border-radius: 8px;
-}
-
-.theme-dark .profile-menu a.profile-menu__item:hover,
-.theme-dark .profile-menu button:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
-}
-
 .home__header,
 .primary-header {
   display: grid;
@@ -704,22 +691,6 @@ root {
   color: var(--primary-ink);
   background: var(--gradient-primary);
   box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
-}
-
-.theme-dark .main-nav {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-}
-
-.theme-dark .main-nav__link {
-  color: #e6edff;
-}
-
-.theme-dark .main-nav__link:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .header__cta {
