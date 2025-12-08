@@ -70,14 +70,19 @@ class FakeRoutesCol:
     async def update_one(self, filter_, update):
         matched = None
         for d in self._docs:
-            if "_id" in filter_ and d.get("_id") != filter_["_id"]:
+            # Coincidencia exacta con todos los pares clave/valor del filtro
+            ok = True
+            for k, v in filter_.items():
+                if k == "comments.id":
+                    has_parent = any(c.get("id") == v for c in d.get("comments", []))
+                    if not has_parent:
+                        ok = False
+                        break
+                elif d.get(k) != v:
+                    ok = False
+                    break
+            if not ok:
                 continue
-
-            parent_id = filter_.get("comments.id")
-            if parent_id:
-                has_parent = any(c.get("id") == parent_id for c in d.get("comments", []))
-                if not has_parent:
-                    continue
 
             matched = d
             break
@@ -91,6 +96,12 @@ class FakeRoutesCol:
             return res
 
         res.matched_count = 1
+
+        set_ops = update.get("$set", {})
+        if set_ops:
+            for key, val in set_ops.items():
+                matched[key] = val
+            res.modified_count = 1
 
         push_ops = update.get("$push", {})
         for key, val in push_ops.items():
@@ -141,6 +152,7 @@ def _route(owner="u1", name="Ruta", vis=True):
         "visibility": vis,
         "description": "d",
         "category": "c",
+        "images": [],
         "duration_minutes": 30,
         "rating": 4.0,
         "created_at": datetime.now(timezone.utc),
@@ -201,6 +213,7 @@ async def test_create_route_without_duration_and_rating_sets_none(fake_db):
     assert "rating" in r
     assert r["duration_minutes"] is None
     assert r["rating"] is None
+    assert r["images"] == []
 
 @pytest.mark.anyio
 async def test_get_route_by_id_not_found_returns_none(fake_db):
@@ -241,6 +254,38 @@ async def test_add_comment_and_reply(fake_db):
     updated = await route_crud.get_route_by_id(route_id)
     assert len(updated["comments"][0]["replies"]) == 1
     assert updated["comments"][0]["replies"][0]["content"] == "Hola"
+
+
+@pytest.mark.anyio
+async def test_update_route_updates_images_and_fields(fake_db):
+    created = await route_crud.create_route("u1", _route(name="Old"))
+    route_id = str(created["_id"])
+
+    new_payload = {
+        "name": "New name",
+        "points": [{"latitude": 2, "longitude": 2}]*3,
+        "visibility": True,
+        "description": "Nueva desc",
+        "category": "new-cat",
+        "duration_minutes": 45,
+        "rating": None,
+        "images": ["https://cdn.example.com/route.png"],
+    }
+
+    updated = await route_crud.update_route(route_id, "u1", new_payload)
+    assert updated is not None
+    assert updated["name"] == "New name"
+    assert updated["images"] == ["https://cdn.example.com/route.png"]
+    assert updated["visibility"] is True
+
+
+@pytest.mark.anyio
+async def test_update_route_wrong_owner_returns_none(fake_db):
+    created = await route_crud.create_route("u1", _route(name="Old"))
+    route_id = str(created["_id"])
+
+    updated = await route_crud.update_route(route_id, "other", _route(name="New name"))
+    assert updated is None
 
 
 # ========== US-11: CRUD get_public_route_by_name ==========

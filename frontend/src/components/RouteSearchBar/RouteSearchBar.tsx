@@ -1,52 +1,84 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/RouteSearchBar.css";
+import { useRef } from "react";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
+import { kmToMiles } from "../../utils/formatDistance";
 
-interface Route {
-  id: string;
-  name: string;
-  description: string;
+export type SearchScope = "routes" | "users";
+
+export type DistanceFilter = "all" | "lt5" | "5to10" | "10to20" | "gt20";
+export type DurationFilter = "all" | "lt1" | "1to3" | "3to6" | "gt6";
+export type DifficultyFilter = "all" | "easy" | "medium" | "hard";
+export type ThemeFilter =
+  | "all"
+  | "nature"
+  | "urban"
+  | "cultural"
+  | "gastronomia"
+  | "exploracion-urbana"
+  | "aventura"
+  | "deporte"
+  | "historia"
+  | "entretenimiento"
+  | "otros"
+  | string;
+
+export type FiltersState = {
   category: string;
-  points: Array<[number, number]>;
-  visibility: boolean;
-  is_owner?: boolean;
-  ownerName?: string;
-  ownerUsername?: string;
-  username?: string;
-  email?: string;
-  owner_id?: string | number;
-  user_id?: string | number;
-  ownerId?: string | number;
-  userId?: string | number;
-  user?: { id?: string | number; username?: string; name?: string; email?: string };
-}
+  pointsFilter: string;
+  distance: DistanceFilter;
+  duration: DurationFilter;
+  difficulty: DifficultyFilter;
+  theme: ThemeFilter;
+};
 
-type SearchScope = "routes" | "users";
+const DEFAULT_FILTERS: FiltersState = {
+  category: "all",
+  pointsFilter: "all",
+  distance: "all",
+  duration: "all",
+  difficulty: "all",
+  theme: "all",
+};
 
 interface RouteSearchBarProps {
-  routes: Route[];
   mode: SearchScope;
   query: string;
   onQueryChange: (query: string) => void;
-  onApplyFilters?: (filters: { category: string; pointsFilter: string }) => void;
+  onApplyFilters?: (filters: FiltersState) => void;
+  filters?: FiltersState;
   isLoading?: boolean;
+  categoryOptions?: Array<{ value: string; label?: string }>;
 }
 
 const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
-  routes,
   mode,
   query,
   onQueryChange,
   onApplyFilters,
+  filters = DEFAULT_FILTERS,
   isLoading = false,
+  categoryOptions,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [pointsFilter, setPointsFilter] = useState<string>("all");
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { unit } = useUnitPreference();
+  const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [dragStartY, setDragStartY] = useState<number | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isCollapsing, setIsCollapsing] = useState(false);
 
-  const categories = useMemo(() => {
-    const cats = new Set(routes.map((r) => r.category));
-    return Array.from(cats).sort();
-  }, [routes]);
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
+
+  const updateFilters = (partial: Partial<FiltersState>) => {
+    setLocalFilters((prev) => {
+      const next = { ...prev, ...partial };
+      if (mode === "routes" && onApplyFilters) onApplyFilters(next);
+      return next;
+    });
+  };
 
   const handleFilterClick = () => {
     setShowFilterModal(!showFilterModal);
@@ -54,31 +86,28 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
   const handleApplyFilters = () => {
     setShowFilterModal(false);
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: selectedCategory,
-        pointsFilter: pointsFilter,
-      });
-    }
+    if (onApplyFilters) onApplyFilters(localFilters);
   };
 
   const handleResetFilters = () => {
-    setSelectedCategory("all");
-    setPointsFilter("all");
-    if (onApplyFilters) {
-      onApplyFilters({
-        category: "all",
-        pointsFilter: "all",
-      });
-    }
+    setLocalFilters(DEFAULT_FILTERS);
+    if (onApplyFilters) onApplyFilters(DEFAULT_FILTERS);
   };
 
   const handleCloseModal = () => {
     setShowFilterModal(false);
+    setIsCollapsing(false);
+    setDragStartY(null);
+    setDragOffset(0);
   };
 
   const hasActiveFilters =
-    selectedCategory !== "all" || pointsFilter !== "all";
+    localFilters.category !== "all" ||
+    localFilters.pointsFilter !== "all" ||
+    localFilters.distance !== "all" ||
+    localFilters.duration !== "all" ||
+    localFilters.difficulty !== "all" ||
+    localFilters.theme !== "all";
 
   useEffect(() => {
     if (mode !== "routes") {
@@ -86,13 +115,82 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
     }
   }, [mode]);
 
+  useEffect(() => {
+    const handleOutside = (ev: PointerEvent) => {
+      if (!showFilterModal) return;
+      if (containerRef.current && !containerRef.current.contains(ev.target as Node)) {
+        handleCloseModal();
+      }
+    };
+    document.addEventListener("pointerdown", handleOutside);
+    return () => document.removeEventListener("pointerdown", handleOutside);
+  }, [showFilterModal]);
+
+  const isDragging = dragStartY !== null;
+
+  const handleDragStart = (clientY: number) => {
+    setDragStartY(clientY);
+  };
+
+  const handleDragMove = (clientY: number) => {
+    if (!isDragging || dragStartY === null) return;
+    const delta = clientY - dragStartY;
+    const clamped = Math.max(-160, Math.min(140, delta));
+    setDragOffset(clamped);
+  };
+
+  const handleDragEnd = () => {
+    if (dragOffset < -90 || dragOffset > 120) {
+      handleCloseModal();
+    }
+    setDragStartY(null);
+    setDragOffset(0);
+  };
+
+  const collapseIntoBar = () => {
+    setIsCollapsing(true);
+    setDragOffset(-18);
+    setTimeout(() => {
+      handleCloseModal();
+    }, 150);
+  };
+
   const placeholder =
     mode === "users"
       ? "Buscar usuarios por nombre, username o email..."
       : "Buscar rutas por nombre, creador o descripción...";
 
+  const computedCategoryOptions = useMemo(() => {
+    const fallback = [
+      { label: "Todas", value: "all" },
+      { label: "Gastronomía", value: "gastronomia" },
+      { label: "Naturaleza", value: "nature" },
+      { label: "Aventura", value: "aventura" },
+      { label: "Deporte", value: "deporte" },
+      { label: "Historia", value: "historia" },
+      { label: "Entretenimiento", value: "entretenimiento" },
+      { label: "Urbana", value: "urban" },
+      { label: "Cultural", value: "cultural" },
+      { label: "Otros", value: "otros" },
+    ];
+
+    const source = categoryOptions && categoryOptions.length > 0 ? categoryOptions : fallback;
+    const seen = new Set<string>();
+    const result: Array<{ value: string; label?: string }> = [];
+    const add = (opt: { value: string; label?: string }) => {
+      const key = opt.value.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      result.push(opt);
+    };
+
+    add({ label: "Todas", value: "all" });
+    source.forEach(add);
+    return result;
+  }, [categoryOptions]);
+
   return (
-    <div className="route-search-bar">
+    <div className="route-search-bar" ref={containerRef}>
       <div className="search-container">
         <div className="bg" />
         <div className="search-input-wrapper">
@@ -166,62 +264,108 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
             {showFilterModal && mode === "routes" && (
               <div
                 className="filter-modal-overlay"
-                onClick={handleCloseModal}
+                onPointerMove={(e) => handleDragMove(e.clientY)}
+                onPointerUp={handleDragEnd}
+                onPointerCancel={handleDragEnd}
               >
                 <div
                   className="filter-modal"
                   onClick={(e) => e.stopPropagation()}
+                  style={{
+                    transform: `translateY(${dragOffset}px) scale(${isCollapsing ? 0.85 : dragOffset < 0 ? Math.max(0.9, 1 + dragOffset / 280) : 1})`,
+                    opacity: isCollapsing
+                      ? 0.15
+                      : dragOffset !== 0
+                        ? 1 - Math.min(Math.abs(dragOffset) / 320, 0.35)
+                        : 1,
+                    ["--drag-progress" as any]: Math.min(1, Math.max(0, -dragOffset / 120)),
+                  }}
                 >
                   <div className="filter-modal-header">
                     <h3>Explorar por filtros</h3>
-                    <button
-                      className="filter-modal-close"
-                      onClick={handleCloseModal}
-                      title="Cerrar"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
                   </div>
 
-                  <div className="filter-section">
-                    <label className="filter-label">Categoria</label>
-                    <select
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todas las categorias</option>
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <div className="filter-modal-body">
+                    <div className="filter-section">
+                      <div className="filter-label">Distancia</div>
+                      <div className="filter-chip-group">
+                        {[
+                          { label: "Cualquiera", value: "all" as DistanceFilter },
+                          { label: unit === "mi" ? `<${Math.round(kmToMiles(5))} mi` : "<5 km", value: "lt5" as DistanceFilter },
+                          { label: unit === "mi" ? `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi` : "5–10 km", value: "5to10" as DistanceFilter },
+                          { label: unit === "mi" ? `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi` : "10–20 km", value: "10to20" as DistanceFilter },
+                          { label: unit === "mi" ? `>${Math.round(kmToMiles(20))} mi` : ">20 km", value: "gt20" as DistanceFilter },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            className={`filter-chip ${localFilters.distance === option.value ? "active" : ""
+                              }`}
+                            onClick={() => updateFilters({ distance: option.value })}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
 
-                  <div className="filter-section">
-                    <label className="filter-label">Numero de puntos</label>
-                    <select
-                      value={pointsFilter}
-                      onChange={(e) => setPointsFilter(e.target.value)}
-                      className="filter-select-modal"
-                    >
-                      <option value="all">Todos los puntos</option>
-                      <option value="few">Pocas (1-5 puntos)</option>
-                      <option value="medium">Media (6-15 puntos)</option>
-                      <option value="many">Muchas (+15 puntos)</option>
-                    </select>
+                    <div className="filter-section">
+                      <div className="filter-label">Duración aproximada</div>
+                      <div className="filter-chip-group">
+                        {[
+                          { label: "Cualquiera", value: "all" as DurationFilter },
+                          { label: "<1h", value: "lt1" as DurationFilter },
+                          { label: "1–3h", value: "1to3" as DurationFilter },
+                          { label: "3–6h", value: "3to6" as DurationFilter },
+                          { label: ">6h", value: "gt6" as DurationFilter },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            className={`filter-chip ${localFilters.duration === option.value ? "active" : ""
+                              }`}
+                            onClick={() => updateFilters({ duration: option.value })}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="filter-section">
+                      <div className="filter-label">Dificultad (opcional)</div>
+                      <div className="filter-chip-group">
+                        {[
+                          { label: "Todas", value: "all" as DifficultyFilter },
+                          { label: "Fácil", value: "easy" as DifficultyFilter },
+                          { label: "Media", value: "medium" as DifficultyFilter },
+                          { label: "Alta", value: "hard" as DifficultyFilter },
+                        ].map((option) => (
+                          <button
+                            key={option.value}
+                            className={`filter-chip ${localFilters.difficulty === option.value ? "active" : ""
+                              }`}
+                            onClick={() => updateFilters({ difficulty: option.value })}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="filter-section">
+                      <div className="filter-label">Categoría temática</div>
+                      <div className="filter-chip-group">
+                        {computedCategoryOptions.map((option) => (
+                          <button
+                            key={option.value}
+                            className={`filter-chip ${localFilters.theme === option.value ? "active" : ""
+                              }`}
+                            onClick={() => updateFilters({ theme: option.value as ThemeFilter })}
+                          >
+                            {option.label ?? option.value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="filter-modal-actions">
@@ -229,7 +373,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       className="filter-modal-btn reset"
                       onClick={handleResetFilters}
                     >
-                      Limpiar
+                      Restablecer
                     </button>
                     <button
                       className="filter-modal-btn apply"
@@ -238,6 +382,18 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       Explorar
                     </button>
                   </div>
+
+                  <div
+                    className={`filter-modal-handle bottom ${isDragging ? "dragging" : ""}`}
+                    onPointerDown={(e) => handleDragStart(e.clientY)}
+                    onClick={collapseIntoBar}
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Cerrar filtros"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") collapseIntoBar();
+                    }}
+                  />
                 </div>
               </div>
             )}

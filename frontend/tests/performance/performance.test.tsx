@@ -1,23 +1,24 @@
 import React from "react";
 import { render, cleanup } from "@testing-library/react";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
+
+vi.mock("../../src/context/UnitPreferenceContext", () => ({
+  useUnitPreference: () => ({
+    unit: "km",
+    setUnit: vi.fn(),
+    formatDistance: (distanceKm: number | null | undefined) =>
+      distanceKm == null ? "0 km" : `${distanceKm} km`,
+  }),
+}));
 
 import RouteSearchBar from "../../src/components/RouteSearchBar/RouteSearchBar";
 import TextField from "../../src/components/TextField";
 import { validatePassword } from "../../src/utils/validation";
 
-const buildRoutes = (count: number) =>
+const buildCategories = (count: number) =>
   Array.from({ length: count }, (_, i) => ({
-    id: `route-${i}`,
-    name: `Ruta ${i}`,
-    description: `Descripcion ${i}`,
-    category: `cat-${i % 10}`,
-    points: [
-      [i, i + 1],
-      [i + 2, i + 3],
-      [i + 4, i + 5],
-    ] as Array<[number, number]>,
-    visibility: true,
+    value: `cat-${i}`,
+    label: `Categoria ${i}`,
   }));
 
 afterEach(() => {
@@ -26,16 +27,16 @@ afterEach(() => {
 
 describe("Tests de rendimiento web", () => {
   test("RouteSearchBar maneja un catálogo grande sin degradar", () => {
-    const routes = buildRoutes(2000);
+    const categories = buildCategories(2000);
     const handleQueryChange = () => {};
 
     const start = performance.now();
     const { unmount } = render(
       <RouteSearchBar
-        routes={routes}
         mode="routes"
         query=""
         onQueryChange={handleQueryChange}
+        categoryOptions={categories}
       />
     );
     const durationMs = performance.now() - start;
