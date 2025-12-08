@@ -312,6 +312,8 @@ body.profile-body-host {
 .card.fill {
   flex: 1;
   min-height: 0;
+  position: relative;
+  z-index: 2;
 }
 
 .card:hover {
@@ -1722,6 +1724,127 @@ body.profile-body-host {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
+}
+
+.themes-grid {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.theme-card {
+  border: 1px solid var(--glass-border);
+  border-radius: calc(var(--radius) - 2px);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02), rgba(99, 102, 241, 0.04));
+  padding: 14px 12px 10px;
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.theme-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.theme-card__icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.12);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.theme-card__title {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.theme-card__pill {
+  margin-left: auto;
+  background: rgba(99, 102, 241, 0.16);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.theme-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.theme-level {
+  padding: 10px 10px 8px;
+  border: 1px solid rgba(226, 232, 240, 0.4);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.theme-level:first-child {
+  margin-top: 0;
+}
+
+.theme-level__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+}
+
+.theme-level__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  gap: 6px;
+}
+
+.theme-level__name {
+  font-weight: 700;
+  color: #5f738c;
+  letter-spacing: 0.4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.theme-level__count {
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.theme-level__threshold {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.theme-level.unlocked {
+  border-color: rgba(99, 102, 241, 0.55);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.1));
+}
+
+.theme-level.locked .achievement-progress__fill {
+  opacity: 0.7;
+}
+
+.theme-card .achievement-progress__bar {
+  background: rgba(15, 23, 42, 0.2);
+}
+
+.theme-card .achievement-progress__fill {
+  background: var(--gradient-primary);
 }
 
 .theme-dark .achievements-section {

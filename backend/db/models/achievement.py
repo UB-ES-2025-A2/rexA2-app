@@ -8,6 +8,7 @@ import backend.db.client as db_client
 ACHIEVEMENTS_COLL = "achievements"
 USER_ACHIEVEMENTS_COLL = "user_achievements"
 
+# === Seeds: rutas completadas ===
 DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
     {
         "code": "completed_routes_1",
@@ -56,6 +57,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
     },
 ]
 
+# === Seeds: rutas creadas ===
 DEFAULT_CREATED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
     {
         "code": "created_routes_1",
@@ -104,74 +106,205 @@ DEFAULT_CREATED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
     },
 ]
 
+# === Seeds: logros por temática ===
+THEME_DEFINITIONS: list[dict[str, Any]] = [
+    {"id": "naturaleza", "name": "Naturaleza", "icon": "🌲"},
+    {"id": "gastronomia", "name": "Gastronomía", "icon": "🍲"},
+    {"id": "exploracion-urbana", "name": "Exploración urbana", "icon": "🏙️"},
+    {"id": "aventura", "name": "Aventura", "icon": "🧗"},
+    {"id": "cultura", "name": "Cultura", "icon": "🏛️"},
+    {"id": "deporte", "name": "Deporte", "icon": "🏃"},
+    {"id": "entretenimiento", "name": "Entretenimiento", "icon": "🎉"},
+]
+
+THEME_LEVELS = [
+    ("level_1", 1, "Explorador"),
+    ("level_2", 5, "Apasionado"),
+    ("level_3", 10, "Leyenda"),
+]
+
 
 async def ensure_completed_routes_seed() -> None:
-    """
-    Inserta o actualiza los logros de rutas completadas por defecto.
-    """
     col = db_client.db[ACHIEVEMENTS_COLL]
     for ach in DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS:
-        code = ach["code"]
         await col.update_one(
-            {"code": code},
-            {
-                "$set": {
-                    "name": ach["name"],
-                    "description": ach["description"],
-                    "category": ach["category"],
-                    "threshold_value": ach["threshold_value"],
-                    "icon": ach.get("icon"),
-                    "rarity": ach.get("rarity"),
-                }
-            },
+            {"code": ach["code"]},
+            {"$set": ach},
             upsert=True,
         )
 
 
 async def ensure_created_routes_seed() -> None:
-    """
-    Inserta o actualiza los logros de rutas creadas por defecto.
-    """
     col = db_client.db[ACHIEVEMENTS_COLL]
     for ach in DEFAULT_CREATED_ROUTES_ACHIEVEMENTS:
-        code = ach["code"]
         await col.update_one(
-            {"code": code},
-            {
-                "$set": {
-                    "name": ach["name"],
-                    "description": ach["description"],
-                    "category": ach["category"],
-                    "threshold_value": ach["threshold_value"],
-                    "icon": ach.get("icon"),
-                    "rarity": ach.get("rarity"),
-                }
-            },
+            {"code": ach["code"]},
+            {"$set": ach},
             upsert=True,
         )
+
+
+async def ensure_theme_achievements_seed() -> None:
+    col = db_client.db[ACHIEVEMENTS_COLL]
+    for theme in THEME_DEFINITIONS:
+        for level_code, threshold, label in THEME_LEVELS:
+            code = f"theme_{theme['id']}_{level_code}"
+            payload = {
+                "code": code,
+                "name": f"{label} de {theme['name']}",
+                "description": f"Completa {threshold} rutas de {theme['name']}.",
+                "category": "theme",
+                "threshold_value": threshold,
+                "icon": theme.get("icon"),
+                "rarity": "common" if threshold <= 1 else "rare" if threshold == 5 else "epic",
+                "theme_id": theme["id"],
+            }
+            await col.update_one({"code": code}, {"$set": payload}, upsert=True)
 
 
 async def ensure_all_achievements_seed() -> None:
     await ensure_completed_routes_seed()
     await ensure_created_routes_seed()
+    await ensure_theme_achievements_seed()
 
 
 async def get_completed_routes_count(user_id: str) -> int:
-    """
-    Devuelve el total de rutas marcadas como completadas para el usuario.
-    """
     if "user_routes_completed" not in await db_client.db.list_collection_names():
         return 0
     return await db_client.db["user_routes_completed"].count_documents({"user_id": str(user_id)})
 
 
 async def recalculate_completed_routes_achievements(user_id: str) -> list[Dict[str, Any]]:
-    """
-    Recalcula el progreso de logros basados en rutas completadas para un usuario.
-    """
     await ensure_completed_routes_seed()
     count = await get_completed_routes_count(user_id)
     return await _recalculate_for_category(user_id, "completed_routes", count)
+
+
+async def list_completed_routes_achievements(user_id: str) -> List[Dict[str, Any]]:
+    await recalculate_completed_routes_achievements(user_id)
+    return await _list_by_category(user_id, "completed_routes")
+
+
+async def get_created_routes_count(user_id: str) -> int:
+    if "routes" not in await db_client.db.list_collection_names():
+        return 0
+    return await db_client.db["routes"].count_documents({"owner_id": str(user_id), "visibility": True})
+
+
+async def recalculate_created_routes_achievements(user_id: str) -> list[Dict[str, Any]]:
+    await ensure_created_routes_seed()
+    count = await get_created_routes_count(user_id)
+    return await _recalculate_for_category(user_id, "created_routes", count)
+
+
+async def list_created_routes_achievements(user_id: str) -> List[Dict[str, Any]]:
+    await recalculate_created_routes_achievements(user_id)
+    return await _list_by_category(user_id, "created_routes")
+
+
+async def get_completed_routes_per_theme(user_id: str) -> dict[str, int]:
+    if "user_routes_completed" not in await db_client.db.list_collection_names():
+        return {}
+
+    pipeline = [
+        {"$match": {"user_id": str(user_id)}},
+        {
+            "$addFields": {
+                "route_oid": {
+                    "$convert": {
+                        "input": "$route_id",
+                        "to": "objectId",
+                        "onError": None,
+                        "onNull": None,
+                    }
+                }
+            }
+        },
+        {"$match": {"route_oid": {"$ne": None}}},
+        {
+            "$lookup": {
+                "from": "routes",
+                "localField": "route_oid",
+                "foreignField": "_id",
+                "as": "route",
+            }
+        },
+        {"$unwind": "$route"},
+        {
+            "$group": {
+                "_id": {"$toLower": {"$ifNull": ["$route.theme", {"$ifNull": ["$route.category", "otros"]}]}},
+                "count": {"$sum": 1},
+            }
+        },
+    ]
+
+    agg = await db_client.db["user_routes_completed"].aggregate(pipeline).to_list(length=None)
+    return {doc["_id"]: int(doc.get("count", 0)) for doc in agg if doc.get("_id")}
+
+
+async def recalculate_theme_achievements(user_id: str) -> list[Dict[str, Any]]:
+    await ensure_theme_achievements_seed()
+    counts = await get_completed_routes_per_theme(user_id)
+    achievements = (
+        await db_client.db[ACHIEVEMENTS_COLL]
+        .find({"category": "theme"})
+        .sort([("theme_id", 1), ("threshold_value", 1)])
+        .to_list(None)
+    )
+
+    progress_col = db_client.db[USER_ACHIEVEMENTS_COLL]
+    newly_unlocked: list[dict[str, Any]] = []
+    now = datetime.now(timezone.utc)
+
+    for ach in achievements:
+        ach_id = ach.get("_id")
+        if ach_id is None:
+            continue
+        theme_id = str(ach.get("theme_id") or "").lower()
+        count = counts.get(theme_id, 0)
+        threshold = int(ach.get("threshold_value", 0))
+        unlocked = count >= threshold
+
+        existing = await progress_col.find_one(
+            {"user_id": str(user_id), "achievement_id": ach_id},
+            {"is_unlocked": 1, "unlocked_at": 1},
+        )
+
+        update: Dict[str, Any] = {"current_value": count}
+
+        if existing is None:
+            update["is_unlocked"] = unlocked
+            update["unlocked_at"] = now if unlocked else None
+            await progress_col.update_one(
+                {"user_id": str(user_id), "achievement_id": ach_id},
+                {"$set": update},
+                upsert=True,
+            )
+            if unlocked:
+                newly_unlocked.append(_serialize_achievement_unlock(ach, count, update["unlocked_at"]))
+            continue
+
+        if unlocked and not existing.get("is_unlocked"):
+            update["is_unlocked"] = True
+            update["unlocked_at"] = now
+            newly_unlocked.append(_serialize_achievement_unlock(ach, count, now))
+        else:
+            update["is_unlocked"] = existing.get("is_unlocked", False)
+            if existing.get("unlocked_at"):
+                update["unlocked_at"] = existing["unlocked_at"]
+
+        await progress_col.update_one(
+            {"user_id": str(user_id), "achievement_id": ach_id},
+            {"$set": update},
+            upsert=True,
+        )
+
+    return newly_unlocked
+
+
+async def list_theme_achievements(user_id: str) -> List[Dict[str, Any]]:
+    await recalculate_theme_achievements(user_id)
+    return await _list_by_category(user_id, "theme")
 
 
 def _serialize_achievement_unlock(ach: dict[str, Any], current_value: int, unlocked_at: datetime | None) -> dict[str, Any]:
@@ -183,50 +316,17 @@ def _serialize_achievement_unlock(ach: dict[str, Any], current_value: int, unloc
         "threshold_value": ach.get("threshold_value", 0),
         "icon": ach.get("icon"),
         "rarity": ach.get("rarity"),
+        "theme_id": ach.get("theme_id"),
         "current_value": current_value,
         "unlocked_at": unlocked_at,
     }
-
-
-async def list_completed_routes_achievements(user_id: str) -> List[Dict[str, Any]]:
-    """
-    Devuelve el progreso de logros de rutas completadas para un usuario.
-    """
-    await recalculate_completed_routes_achievements(user_id)
-    return await _list_by_category(user_id, "completed_routes")
-
-
-async def get_created_routes_count(user_id: str) -> int:
-    """
-    Devuelve el total de rutas publicadas (visibility=True) creadas por el usuario.
-    """
-    if "routes" not in await db_client.db.list_collection_names():
-        return 0
-    return await db_client.db["routes"].count_documents({"owner_id": str(user_id), "visibility": True})
-
-
-async def recalculate_created_routes_achievements(user_id: str) -> list[Dict[str, Any]]:
-    """
-    Recalcula el progreso de logros basados en rutas creadas/publicadas para un usuario.
-    """
-    await ensure_created_routes_seed()
-    count = await get_created_routes_count(user_id)
-    return await _recalculate_for_category(user_id, "created_routes", count)
-
-
-async def list_created_routes_achievements(user_id: str) -> List[Dict[str, Any]]:
-    """
-    Devuelve el progreso de logros de rutas creadas/publicadas para un usuario.
-    """
-    await recalculate_created_routes_achievements(user_id)
-    return await _list_by_category(user_id, "created_routes")
 
 
 async def _list_by_category(user_id: str, category: str) -> List[Dict[str, Any]]:
     achievements = (
         await db_client.db[ACHIEVEMENTS_COLL]
         .find({"category": category})
-        .sort("threshold_value", 1)
+        .sort([("theme_id", 1), ("threshold_value", 1)])
         .to_list(None)
     )
     ach_ids = [ach["_id"] for ach in achievements if "_id" in ach]
@@ -252,6 +352,7 @@ async def _list_by_category(user_id: str, category: str) -> List[Dict[str, Any]]
                 "is_unlocked": bool(progress.get("is_unlocked", False)),
                 "icon": ach.get("icon"),
                 "rarity": ach.get("rarity"),
+                "theme_id": ach.get("theme_id"),
             }
         )
 
@@ -313,37 +414,3 @@ async def _recalculate_for_category(user_id: str, category: str, count: int) -> 
         )
 
     return newly_unlocked
-
-    achievements = (
-        await db_client.db[ACHIEVEMENTS_COLL]
-        .find({"category": "completed_routes"})
-        .sort("threshold_value", 1)
-        .to_list(None)
-    )
-    ach_ids = [ach["_id"] for ach in achievements if "_id" in ach]
-    progress_list = (
-        await db_client.db[USER_ACHIEVEMENTS_COLL]
-        .find({"user_id": str(user_id), "achievement_id": {"$in": ach_ids}})
-        .to_list(None)
-    )
-    progress_map = {str(item.get("achievement_id")): item for item in progress_list}
-
-    result: list[dict[str, Any]] = []
-    for ach in achievements:
-        ach_id = ach.get("_id")
-        progress = progress_map.get(str(ach_id), {}) if ach_id is not None else {}
-        result.append(
-            {
-                "code": ach.get("code"),
-                "name": ach.get("name"),
-                "description": ach.get("description"),
-                "category": ach.get("category"),
-                "threshold_value": ach.get("threshold_value", 0),
-                "current_value": int(progress.get("current_value") or 0),
-                "is_unlocked": bool(progress.get("is_unlocked", False)),
-                "icon": ach.get("icon"),
-                "rarity": ach.get("rarity"),
-            }
-        )
-
-    return result

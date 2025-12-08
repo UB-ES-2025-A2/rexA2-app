@@ -14,6 +14,7 @@ import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import CompletedRoutesAchievements from "../components/Achievements/CompletedRoutesAchievements";
 import CreatedRoutesAchievements from "../components/Achievements/CreatedRoutesAchievements";
+import ThemeAchievementsBlock from "../components/Achievements/ThemeAchievementsBlock";
 
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
@@ -775,21 +776,11 @@ export default function Profile() {
             onGoToCreated={() => setActive("created")}
             activeTab={active}
             onChangeTab={setActive}
-            onLogout={() => {
-              logout();
-              navigate("/");
-            }}
-          />
-          <div className="achievements-wrapper">
-            <CompletedRoutesAchievements
-              userId={profile?.id}
-              refreshToken={achievementsRefreshKey}
-            />
-            <CreatedRoutesAchievements
-              userId={profile?.id}
-              refreshToken={achievementsRefreshKey}
-            />
-          </div>
+          onLogout={() => {
+            logout();
+            navigate("/");
+          }}
+        />
           {active === "favorites" && (
             <FavoritesPanel
               favorites={favorites}
@@ -892,6 +883,20 @@ export default function Profile() {
               error={followingError}
             />
           )}
+          <div className="achievements-wrapper">
+            <CompletedRoutesAchievements
+              userId={profile?.id}
+              refreshToken={achievementsRefreshKey}
+            />
+            <CreatedRoutesAchievements
+              userId={profile?.id}
+              refreshToken={achievementsRefreshKey}
+            />
+          </div>
+          <ThemeAchievementsBlock
+            userId={profile?.id}
+            refreshToken={achievementsRefreshKey}
+          />
         </section>
       </main>
     </div>
