@@ -41,7 +41,7 @@ test("US25 - valoración de rutas cumple criterios de aceptación", async ({
   await login(page);
 
   const detailsCard = page.locator(".route-details-card");
-  const routeItems = page.locator(".routes-animated-item");
+  const routeCards = page.locator(".route-preview-card");
   const disableSearchArea = async () => {
     const areaToggle = page.getByLabel("Buscar en esta zona");
     if ((await areaToggle.count()) && (await areaToggle.isChecked())) {
@@ -50,10 +50,10 @@ test("US25 - valoración de rutas cumple criterios de aceptación", async ({
   };
 
   await disableSearchArea();
-  await expect(routeItems.first()).toBeVisible({ timeout: 8000 });
+  await expect(routeCards.first()).toBeVisible({ timeout: 8000 });
 
   // Abrir ruta ajena desde la lista
-  await routeItems.first().locator("..").click();
+  await routeCards.first().click();
   await expect(detailsCard).toBeVisible({ timeout: 8000 });
   await expect(page.getByRole("heading", { name: /Ruta de prueba/i })).toBeVisible();
   await expect(page.getByText("Tu valoración")).toBeVisible();
@@ -72,8 +72,8 @@ test("US25 - valoración de rutas cumple criterios de aceptación", async ({
   await expect(detailsCard).toHaveCount(0);
 
   await disableSearchArea();
-  await expect(routeItems.nth(1)).toBeVisible({ timeout: 8000 });
-  await routeItems.nth(1).locator("..").click();
+  await expect(routeCards.nth(1)).toBeVisible({ timeout: 8000 });
+  await routeCards.nth(1).click();
   await expect(page.getByRole("heading", { name: "Mi ruta propia" })).toBeVisible({ timeout: 8000 });
   await expect(page.getByText("Tu valoración")).toHaveCount(0);
   logCriterion("El autor no ve el control de valoración");
