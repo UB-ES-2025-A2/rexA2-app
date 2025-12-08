@@ -451,7 +451,11 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       if (Array.isArray(response.newly_unlocked) && response.newly_unlocked.length > 0) {
         response.newly_unlocked.forEach((achievement) => {
           const prefix = achievement.icon ? `${achievement.icon} ` : "";
-          showAlert(`${prefix}Logro desbloqueado: ${achievement.name}`, "success");
+          let message = `${prefix}Logro desbloqueado: ${achievement.name}`;
+          if (achievement.category === "distance_travelled") {
+            message = `${prefix}¡Nuevo logro! Has recorrido más de ${achievement.threshold_value} km`;
+          }
+          showAlert(message, "success");
         });
       }
 

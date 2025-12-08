@@ -14,7 +14,7 @@ class AchievementBase(BaseModel):
 
 
 class AchievementUnlock(AchievementBase):
-    current_value: int | None = None
+    current_value: float | None = None
     unlocked_at: datetime | None = None
 
 
@@ -22,7 +22,7 @@ class AchievementProgress(BaseModel):
     code: str
     name: str
     threshold_value: int
-    current_value: int
+    current_value: float
     is_unlocked: bool
     icon: str | None = None
     rarity: str | None = None
