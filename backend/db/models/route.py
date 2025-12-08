@@ -187,6 +187,7 @@ async def create_route(owner_id: str, route_data:dict) -> dict:
         "visibility": route_data.get("visibility", False),
         "description": route_data["description"],
         "category": route_data["category"],
+        "theme": route_data.get("theme") or route_data.get("category"),
         "created_at": datetime.now(timezone.utc),
         "distance_km": distance_km,
         "duration_minutes": duration_minutes,
@@ -359,6 +360,9 @@ async def update_route(route_id: str, owner_id: str, data: dict) -> dict | None:
         elif key in {"visibility", "rating"}:
             # Estos campos pueden actualizarse explícitamente a None/False
             payload[key] = val
+
+    if "category" in payload:
+        payload["theme"] = payload.get("theme") or payload["category"]
 
     if not payload:
         return await get_route_by_id(route_id)

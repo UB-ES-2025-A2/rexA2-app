@@ -10,6 +10,7 @@ class AchievementBase(BaseModel):
     threshold_value: int = Field(..., ge=0)
     icon: str | None = None
     rarity: str | None = None
+    theme_id: str | None = None
 
 
 class AchievementUnlock(AchievementBase):
@@ -25,3 +26,4 @@ class AchievementProgress(BaseModel):
     is_unlocked: bool
     icon: str | None = None
     rarity: str | None = None
+    theme_id: str | None = None
