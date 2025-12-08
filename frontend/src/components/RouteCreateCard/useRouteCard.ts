@@ -235,6 +235,14 @@ export function useRouteCard({
         return;
       }
 
+      if (Array.isArray((resJson as any)?.newly_unlocked)) {
+        (resJson as any).newly_unlocked.forEach((ach: any) => {
+          const prefix = ach?.icon ? `${ach.icon} ` : "";
+          const name = ach?.name || "Logro desbloqueado";
+          showAlert(`${prefix}${name}`, "success");
+        });
+      }
+
       showAlert("Ruta creada correctamente", "success");
 
       onClose?.();

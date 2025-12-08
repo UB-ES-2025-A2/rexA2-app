@@ -101,6 +101,7 @@ async def test_create_route_conflict_409(ac, monkeypatch):
 @pytest.mark.anyio
 async def test_create_route_ok_201(ac, monkeypatch):
     from backend.db.models import route as route_crud
+    from backend.db.models import achievement as achievement_crud
 
     # Nombre libre => se debe intentar crear
     async def fake_get_route_by_name(owner_id, name):
@@ -115,8 +116,13 @@ async def test_create_route_ok_201(ac, monkeypatch):
             "created_at": "2025-01-01T00:00:00Z",
         }
 
+    async def fake_recalculate(user_id):
+        assert user_id == "user123"
+        return []
+
     monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
     monkeypatch.setattr(route_crud, "create_route", fake_create_route, raising=True)
+    monkeypatch.setattr(achievement_crud, "recalculate_created_routes_achievements", fake_recalculate, raising=True)
 
     payload = {
         "name": "Nueva",
@@ -140,6 +146,7 @@ async def test_create_route_ok_201(ac, monkeypatch):
     assert body["duration_minutes"] == 60
     assert body["rating"] == 4.5
     assert body["images"] == []
+    assert body.get("newly_unlocked") == []
 
 
 @pytest.mark.anyio

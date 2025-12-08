@@ -20,11 +20,13 @@ from backend.db.schemas.route import (
     CommentCreated,
     CountryDiscoverBlock,
     ThemeDiscoverBlock,
+    RouteCreateResponse,
 )
 from backend.core.security import get_current_user, get_current_user_optional
 from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
 from backend.db.models import rating as rating_crud
 from backend.db.models import completion as completion_crud
+from backend.db.models import achievement as achievement_crud
 from backend.db.schemas.completion import CompletionPayload, CompletionStatus
 from backend.db.schemas.completion_list import CompletionList
 from backend.core.events import rating_event_bus, rating_event_payload
@@ -482,7 +484,7 @@ async def check_name(name: str = Query(..., min_length=1), current_user: dict = 
     exists = await route_crud.get_route_by_name(current_user["_id"], name) is not None
     return {"exists": exists}
 
-@router.post("", response_model=RoutePublic, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RouteCreateResponse, status_code=status.HTTP_201_CREATED)
 async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depends(get_current_user)):
     """
     Crea una ruta. Valida unicidad del nombre y delega validaciones de formato a Pydantic.
@@ -495,9 +497,11 @@ async def create_route_endpoint(payload: RouteCreate, current_user: dict = Depen
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Este nombre de ruta ya existe")
     
+    newly_unlocked = await achievement_crud.recalculate_created_routes_achievements(str(current_user["_id"]))
     route = _with_images(route)
     # Normalización _id para el response model (alias "_id" -> "id")
     route["_id"] = str(route["_id"])
+    route["newly_unlocked"] = newly_unlocked
     return route
 
 @router.get("", response_model=list[RoutePublic])
@@ -839,16 +843,20 @@ async def set_route_completion_status(
     """
     await _ensure_route_access(route_id, current_user)
 
+    newly_unlocked: list[dict] = []
     try:
         if payload.completed:
             await completion_crud.mark_completed(str(current_user["_id"]), route_id)
         else:
             await completion_crud.unmark_completed(str(current_user["_id"]), route_id)
+        newly_unlocked = await achievement_crud.recalculate_completed_routes_achievements(
+            str(current_user["_id"])
+        )
     except Exception:
         # Evitamos filtrar detalles de persistencia al cliente
         raise HTTPException(status_code=500, detail="No se pudo actualizar el estado de la ruta")
 
-    return {"completed": payload.completed}
+    return {"completed": payload.completed, "newly_unlocked": newly_unlocked}
 
 
 @router.get("/ratings/stream")

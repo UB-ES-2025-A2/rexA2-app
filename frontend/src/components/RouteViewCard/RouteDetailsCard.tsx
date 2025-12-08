@@ -443,9 +443,18 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     setCompleted(next);
     setCompletionSaving(true);
     try {
-      const saved = await setRouteCompletionStatus(routeId, next);
+      const response = await setRouteCompletionStatus(routeId, next);
+      const saved = response.completed;
       setCompleted(saved);
       await onCompletedChange?.(saved);
+
+      if (Array.isArray(response.newly_unlocked) && response.newly_unlocked.length > 0) {
+        response.newly_unlocked.forEach((achievement) => {
+          const prefix = achievement.icon ? `${achievement.icon} ` : "";
+          showAlert(`${prefix}Logro desbloqueado: ${achievement.name}`, "success");
+        });
+      }
+
       showAlert(
         saved ? "Ruta marcada como realizada." : "Ruta marcada como pendiente.",
         "success"
