@@ -7,6 +7,9 @@ from httpx import AsyncClient, ASGITransport
 from backend.routers.routes import router as routes_router
 from backend.routers import routes as routes_mod  # para referenciar la dependencia exacta
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:ast.NameConstant is deprecated and will be removed in Python 3.14:DeprecationWarning"
+)
 
 @pytest.fixture
 def test_app():
@@ -1059,3 +1062,35 @@ async def test_add_comment_parent_missing_in_crud_returns_404(ac, monkeypatch):
     )
     assert res.status_code == 404
     assert res.json()["detail"] == "Comentario padre no encontrado"
+
+
+@pytest.mark.anyio
+async def test_rate_route_overwrites_previous_value(ac, monkeypatch):
+    """
+    US25: si el usuario cambia las estrellas, se actualiza su valoración
+    y la respuesta refleja el nuevo valor.
+    """
+    from backend.db.models import route as route_crud
+    from backend.db.models import rating as rating_crud
+
+    async def fake_get_route_by_id(route_id: str):
+        assert route_id == "R_OVER"
+        return {"_id": route_id, "owner_id": "other", "visibility": True}
+
+    async def fake_set_user_rating(user_id: str, route_id: str, rating: int):
+        return {"user_rating": rating, "average": 3.5, "count": 4}
+
+    async def fake_get_route_rating_stats(route_id: str):
+        assert route_id == "R_OVER"
+        return {"average": 3.5, "count": 4}
+
+    monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
+    monkeypatch.setattr(rating_crud, "set_user_rating", fake_set_user_rating, raising=True)
+    monkeypatch.setattr(rating_crud, "get_route_rating_stats", fake_get_route_rating_stats, raising=True)
+
+    res = await ac.post("/routes/R_OVER/rating", json={"rating": 2})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["user_rating"] == 2
+    assert body["average"] == 3.5
+    assert body["count"] == 4
