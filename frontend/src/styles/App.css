@@ -670,7 +670,7 @@ root {
 .header__search > * {
   width: min(720px, 100%);
 }
-
+ 
 .main-nav {
   display: inline-flex;
   align-items: center;
