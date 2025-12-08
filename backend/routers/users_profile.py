@@ -16,6 +16,7 @@ async def get_me(user = Depends(get_current_user)):
         "id": str(user["_id"]),
         "email": user.get("email"),
         "username": user.get("username"),
+        "theme_preference": user.get("theme_preference") or "light",
         "is_active": user.get("is_active", True),
     }
 
@@ -44,9 +45,11 @@ async def update_my_profile(payload: UserUpdate, user = Depends(get_current_user
     Edita campos opcionales del perfil (username, phone, preferred_units, avatar_url).
     No permite modificar contadores.
     """
-    if payload.username:
+    updates = payload.model_dump(exclude_unset=True)
+
+    if updates.get("username"):
         taken = await user_crud.is_username_taken(
-            payload.username, exclude_user_id=str(user["_id"])
+            updates["username"], exclude_user_id=str(user["_id"])
         )
         if taken:
             raise HTTPException(status_code=409, detail="Nombre de usuario no disponible")
@@ -54,10 +57,7 @@ async def update_my_profile(payload: UserUpdate, user = Depends(get_current_user
     try:
         updated = await user_crud.update_user_fields(
             str(user["_id"]),
-            username=payload.username,
-            phone=payload.phone,
-            preferred_units=payload.preferred_units,
-            avatar_url=payload.avatar_url,
+            **updates,
         )
     except DuplicateKeyError:
         raise HTTPException(status_code=409, detail="Nombre de usuario no disponible")

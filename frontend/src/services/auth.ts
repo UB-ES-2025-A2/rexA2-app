@@ -1,5 +1,6 @@
 // frontend/src/services/auth.ts
 import { translateErrorMessage } from "../utils/errorTranslator";
+import type { ThemePreference } from "../context/ThemeContext";
 
 const API = import.meta.env.VITE_API_URL || "";
 
@@ -7,6 +8,7 @@ export type User = {
   id?: string;
   email?: string;
   username?: string;
+  theme_preference?: ThemePreference;
 };
 // ---------- Helpers de almacenamiento ----------
 export type AuthResponse = {

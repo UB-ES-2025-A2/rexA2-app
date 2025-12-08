@@ -1,4 +1,5 @@
 import "./styles/App.css";
+import "./styles/theme.css";
 import "./styles/tailwindstyles.css";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";

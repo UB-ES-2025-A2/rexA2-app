@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { useAuth } from "../context/AuthContext";
+import { useTheme, type ThemePreference } from "../context/ThemeContext";
 import { useUnitPreference } from "../context/UnitPreferenceContext";
 import { translateErrorMessage } from "../utils/errorTranslator";
 import MapView from "../components/MapView";
@@ -14,6 +15,7 @@ import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
+type ThemePref = ThemePreference;
 type ProfileStats = {
   routes_created: number;
   routes_completed: number;
@@ -25,6 +27,7 @@ type ProfileResponse = {
   email?: string;
   phone?: string | null;
   preferred_units?: Units | null;
+  theme_preference?: ThemePref | null;
   avatar_url?: string | null;
   stats?: Partial<ProfileStats> | null;
 };
@@ -34,6 +37,7 @@ type ProfileData = {
   email: string;
   phone: string;
   preferred_units: Units;
+  theme_preference: ThemePref;
   avatar_url: string;
   stats: ProfileStats;
 };
@@ -894,6 +898,10 @@ function normalizeProfile(payload: ProfileResponse): ProfileData {
     email: payload.email ?? "",
     phone: payload.phone ?? "",
     preferred_units: payload.preferred_units === "mi" ? "mi" : "km",
+    theme_preference:
+      payload.theme_preference === "dark" || payload.theme_preference === "system"
+        ? payload.theme_preference
+        : "light",
     avatar_url: payload.avatar_url ?? "",
     stats: {
       routes_created: payload.stats?.routes_created ?? 0,
@@ -1070,6 +1078,7 @@ function PersonalData({
   onChangeTab,
   onLogout,
 }: PersonalDataProps) {
+  const { theme, resolvedTheme, setThemePreference, isUpdating: savingTheme } = useTheme();
   const viewExtras = isEditing ? draftExtras : createDraftFromProfile(profile);
   const username = profile?.username ?? "";
   const email = profile?.email ?? "";
@@ -1092,6 +1101,10 @@ function PersonalData({
     avatarInputRef.current?.click();
   };
   const showPhonePill = Boolean(viewExtras.phone);
+  const handleThemeChange = (next: ThemePref) => {
+    if (next === theme) return;
+    void setThemePreference(next);
+  };
 
   return (
     <div className="card fill profile-panel">
@@ -1191,6 +1204,52 @@ function PersonalData({
                 <span className="hero-stat__label">Rutas favoritas</span>
               </button>
             </div>
+          </div>
+
+          <div className="theme-toggle">
+            <div className="theme-toggle__header">
+              <span className="info-label">Tema</span>
+              <span className="theme-toggle__status">
+                {savingTheme
+                  ? "Guardando..."
+                  : resolvedTheme === "dark"
+                    ? "Oscuro activo"
+                    : "Claro activo"}
+              </span>
+            </div>
+            <div
+              className="theme-toggle__controls"
+              role="group"
+              aria-label="Preferencia de tema"
+            >
+              <button
+                type="button"
+                className={`theme-chip ${theme === "light" ? "active" : ""}`}
+                onClick={() => handleThemeChange("light")}
+                aria-pressed={theme === "light"}
+              >
+                Modo claro
+              </button>
+              <button
+                type="button"
+                className={`theme-chip ${theme === "dark" ? "active" : ""}`}
+                onClick={() => handleThemeChange("dark")}
+                aria-pressed={theme === "dark"}
+              >
+                Modo oscuro
+              </button>
+              <button
+                type="button"
+                className={`theme-chip ${theme === "system" ? "active" : ""}`}
+                onClick={() => handleThemeChange("system")}
+                aria-pressed={theme === "system"}
+              >
+                Automático
+              </button>
+            </div>
+            <p className="muted theme-toggle__hint">
+              Se aplica en toda la web y se guarda en tu perfil.
+            </p>
           </div>
         </div>
         {!isEditing && (
