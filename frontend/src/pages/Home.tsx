@@ -7,6 +7,8 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
@@ -28,6 +30,7 @@ import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
 import RouteSummaryCard from "../components/RouteSummaryCard";
 import { getMyCompletedRouteIds } from "../services/completion";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type RouteItem = {
   id: string;
@@ -201,13 +204,14 @@ const DEFAULT_FILTERS: FiltersState = {
   theme: "all",
 };
 
+/*
 const DISTANCE_LABELS: Record<DistanceFilter, string> = {
   all: "Todas las distancias",
   lt5: "<5 km",
   "5to10": "5–10 km",
   "10to20": "10–20 km",
   gt20: ">20 km",
-};
+};*/
 
 const DURATION_LABELS: Record<DurationFilter, string> = {
   all: "Todas las duraciones",
@@ -300,6 +304,7 @@ function normalizeDurationMinutes(
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { unit } = useUnitPreference();
   const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -386,6 +391,26 @@ export default function Home() {
 
     return opts;
   }, [routes, normalizeCategoryKey]);
+
+  // Dynamic distance labels based on unit preference
+  const distanceLabels = useMemo<Record<DistanceFilter, string>>(() => {
+    if (unit === "mi") {
+      return {
+        all: "Todas las distancias",
+        lt5: `<${Math.round(kmToMiles(5))} mi`,
+        "5to10": `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi`,
+        "10to20": `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi`,
+        gt20: `>${Math.round(kmToMiles(20))} mi`,
+      };
+    }
+    return {
+      all: "Todas las distancias",
+      lt5: "<5 km",
+      "5to10": "5–10 km",
+      "10to20": "10–20 km",
+      gt20: ">20 km",
+    };
+  }, [unit]);
 
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
@@ -778,8 +803,11 @@ export default function Home() {
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
-        setRoutesError("No se han podido cargar los resultados");
-        showAlert("No se han podido cargar los resultados", "error");
+        const msg = translateErrorMessage(error instanceof Error ? error.message : "No se han podido cargar los resultados");
+        setRoutesError(msg);
+        // Avoid calling showAlert in a loop if it causes re-renders, but now AlertContext is fixed.
+        // Still, it's better to show the error in the UI state (routesError) than a toast for initial load failures.
+        // showAlert(msg, "error"); 
         setRoutes([]);
       } finally {
         setRoutesLoading(false);
@@ -1320,7 +1348,7 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.distance !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                  Distancia: {distanceLabels[appliedFilters.distance]}
                                 </span>
                               ) : null}
                               {appliedFilters.duration !== "all" ? (

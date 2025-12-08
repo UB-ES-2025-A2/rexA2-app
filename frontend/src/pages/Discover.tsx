@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import "../styles/Discover.css";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type DiscoverRoute = {
   id: string;
@@ -63,10 +66,7 @@ const THEME_GRADIENTS: Record<string, string> = {
   otros: "linear-gradient(135deg, #6366f1, #a855f7)",
 };
 
-const formatDistance = (distanceKm?: number | null) => {
-  if (distanceKm == null) return "Distancia N/D";
-  return `${distanceKm.toFixed(1)} km`;
-};
+// formatDistance is obtained from useUnitPreference context
 
 const formatDuration = (minutes?: number | null) => {
   if (minutes == null) return "Duración N/D";
@@ -252,6 +252,7 @@ export default function Discover() {
     []
   );
   const { token, user, logout } = useAuth();
+  const { formatDistance, unit } = useUnitPreference();
   const navigate = useNavigate();
   const openAuth = (mode: "login" | "signup") => {
     setAuthMode(mode);
@@ -262,6 +263,12 @@ export default function Discover() {
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [durationFilter, setDurationFilter] = useState<
     "any" | "lt1" | "1to3" | "3to6" | "gt6"
+  >("any");
+  const [difficultyFilter, setDifficultyFilter] = useState<
+    "any" | "easy" | "medium" | "hard"
+  >("any");
+  const [distanceRange, setDistanceRange] = useState<
+    "any" | "lt5" | "5to15" | "15to30" | "gt30"
   >("any");
   const [sortBy] = useState<"relevance" | "rating" | "duration">("relevance");
 
@@ -311,10 +318,11 @@ export default function Discover() {
         }
       } catch (err) {
         if (controller.signal.aborted) return;
-        const message =
+        const message = translateErrorMessage(
           err instanceof Error
             ? err.message
-            : "No se pudo cargar descubrimiento.";
+            : "No se pudo cargar descubrimiento."
+        );
         setError(message);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -369,6 +377,19 @@ export default function Discover() {
           return false;
         if (durationFilter === "gt6" && dur <= 360) return false;
       }
+      if (difficultyFilter !== "any") {
+        const diff = (route.difficulty || "").toLowerCase();
+        if (diff !== difficultyFilter) return false;
+      }
+      if (distanceRange !== "any") {
+        const dist = route.distance_km ?? null;
+        if (dist != null) {
+          if (distanceRange === "lt5" && dist >= 5) return false;
+          if (distanceRange === "5to15" && (dist < 5 || dist > 15)) return false;
+          if (distanceRange === "15to30" && (dist <= 15 || dist > 30)) return false;
+          if (distanceRange === "gt30" && dist <= 30) return false;
+        }
+      }
       return true;
     });
 
@@ -397,6 +418,8 @@ export default function Discover() {
     theme,
     ratingFilter,
     durationFilter,
+    difficultyFilter,
+    distanceRange,
     sortBy,
   ]);
 
@@ -413,14 +436,15 @@ export default function Discover() {
       (acc, route) => acc + (route.distance_km ?? 0),
       0
     );
+    const displayDistance = unit === "mi" ? Math.round(kmToMiles(totalKm)) : Math.round(totalKm);
 
     return {
       routes: filteredRoutes.length,
       regions: uniqueCountries.size,
       themes: uniqueThemes.size,
-      distance: Math.round(totalKm),
+      distance: displayDistance,
     };
-  }, [filteredRoutes]);
+  }, [filteredRoutes, unit]);
 
   const countryGroups = useMemo(() => {
     if (countryBlocks.length === 0) return [];
@@ -477,9 +501,9 @@ export default function Discover() {
   ) => {
     const points: Array<[number, number]> = Array.isArray(route.points)
       ? ((route.points as Array<any>).map((p: any) => [
-          p.longitude ?? p.lng ?? p[0],
-          p.latitude ?? p.lat ?? p[1],
-        ]) as Array<[number, number]>)
+        p.longitude ?? p.lng ?? p[0],
+        p.latitude ?? p.lat ?? p[1],
+      ]) as Array<[number, number]>)
       : [];
     const coverImage =
       (Array.isArray(route.images) && route.images[0]) ||
@@ -730,9 +754,8 @@ export default function Discover() {
                     {themeOptions.map((option) => (
                       <button
                         key={option}
-                        className={`pill-chip solid ${
-                          theme === option ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${theme === option ? "active" : ""
+                          }`}
                         onClick={() => setTheme(option)}
                         disabled={loading}
                       >
@@ -760,7 +783,7 @@ export default function Discover() {
                   <p className="stat-hint">Mood para inspirarte</p>
                 </div>
                 <div className="stat-card">
-                  <span className="stat-label">KM totales</span>
+                  <span className="stat-label">{unit === "mi" ? "Millas totales" : "KM totales"}</span>
                   <span className="stat-value">
                     {heroStats.distance ?? "-"}
                   </span>
@@ -775,9 +798,8 @@ export default function Discover() {
                     {[0, 4, 4.5, 4.8].map((threshold) => (
                       <button
                         key={threshold}
-                        className={`pill-chip solid ${
-                          ratingFilter === threshold ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${ratingFilter === threshold ? "active" : ""
+                          }`}
                         onClick={() => setRatingFilter(threshold)}
                         disabled={loading}
                       >
@@ -801,9 +823,8 @@ export default function Discover() {
                     ].map((opt) => (
                       <button
                         key={opt.key}
-                        className={`pill-chip solid ${
-                          durationFilter === opt.key ? "active" : ""
-                        }`}
+                        className={`pill-chip solid ${durationFilter === opt.key ? "active" : ""
+                          }`}
                         onClick={() => setDurationFilter(opt.key as any)}
                         disabled={loading}
                       >
@@ -813,7 +834,62 @@ export default function Discover() {
                   </div>
                 </div>
 
+                <div className="hero-field">
+                  <span className="label">Dificultad</span>
+                  <div className="pill-group wrap">
+                    {[
+                      { key: "any", label: "Todas" },
+                      { key: "easy", label: "Fácil" },
+                      { key: "medium", label: "Media" },
+                      { key: "hard", label: "Alta" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${difficultyFilter === opt.key ? "active" : ""}`}
+                        onClick={() => setDifficultyFilter(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="hero-field">
+                  <span className="label">Distancia</span>
+                  <div className="pill-group wrap">
+                    {[
+                      { key: "any", label: "Cualquiera" },
+                      { key: "lt5", label: unit === "mi" ? `<${Math.round(kmToMiles(5))} mi` : "<5 km" },
+                      { key: "5to15", label: unit === "mi" ? `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(15))} mi` : "5–15 km" },
+                      { key: "15to30", label: unit === "mi" ? `${Math.round(kmToMiles(15))}–${Math.round(kmToMiles(30))} mi` : "15–30 km" },
+                      { key: "gt30", label: unit === "mi" ? `>${Math.round(kmToMiles(30))} mi` : ">30 km" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.key}
+                        className={`pill-chip solid ${distanceRange === opt.key ? "active" : ""}`}
+                        onClick={() => setDistanceRange(opt.key as any)}
+                        disabled={loading}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="surprise-spot">
+                  <button
+                    className="cta-btn ghost-dark"
+                    onClick={() => {
+                      setRatingFilter(0);
+                      setDurationFilter("any");
+                      setDifficultyFilter("any");
+                      setDistanceRange("any");
+                    }}
+                    disabled={loading}
+                  >
+                    Restablecer filtros
+                  </button>
                   <button
                     className="cta-btn ghost-dark"
                     onClick={handleSurprise}

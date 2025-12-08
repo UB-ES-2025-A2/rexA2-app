@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import "../../styles/RouteSearchBar.css";
 import { useRef } from "react";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
+import { kmToMiles } from "../../utils/formatDistance";
 
 export type SearchScope = "routes" | "users";
 
@@ -59,6 +61,7 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
   categoryOptions,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const { unit } = useUnitPreference();
   const [localFilters, setLocalFilters] = useState<FiltersState>(filters);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [dragStartY, setDragStartY] = useState<number | null>(null);
@@ -288,10 +291,10 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
                       <div className="filter-chip-group">
                         {[
                           { label: "Cualquiera", value: "all" as DistanceFilter },
-                          { label: "<5 km", value: "lt5" as DistanceFilter },
-                          { label: "5–10 km", value: "5to10" as DistanceFilter },
-                          { label: "10–20 km", value: "10to20" as DistanceFilter },
-                          { label: ">20 km", value: "gt20" as DistanceFilter },
+                          { label: unit === "mi" ? `<${Math.round(kmToMiles(5))} mi` : "<5 km", value: "lt5" as DistanceFilter },
+                          { label: unit === "mi" ? `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi` : "5–10 km", value: "5to10" as DistanceFilter },
+                          { label: unit === "mi" ? `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi` : "10–20 km", value: "10to20" as DistanceFilter },
+                          { label: unit === "mi" ? `>${Math.round(kmToMiles(20))} mi` : ">20 km", value: "gt20" as DistanceFilter },
                         ].map((option) => (
                           <button
                             key={option.value}
@@ -350,19 +353,19 @@ const RouteSearchBar: React.FC<RouteSearchBarProps> = ({
 
                     <div className="filter-section">
                       <div className="filter-label">Categoría temática</div>
-                    <div className="filter-chip-group">
-                      {computedCategoryOptions.map((option) => (
+                      <div className="filter-chip-group">
+                        {computedCategoryOptions.map((option) => (
                           <button
                             key={option.value}
                             className={`filter-chip ${localFilters.theme === option.value ? "active" : ""
                               }`}
-                          onClick={() => updateFilters({ theme: option.value as ThemeFilter })}
+                            onClick={() => updateFilters({ theme: option.value as ThemeFilter })}
                           >
-                          {option.label ?? option.value}
+                            {option.label ?? option.value}
                           </button>
                         ))}
+                      </div>
                     </div>
-                  </div>
                   </div>
 
                   <div className="filter-modal-actions">

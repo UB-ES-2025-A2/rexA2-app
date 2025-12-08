@@ -1,4 +1,6 @@
+//import React from "react";
 import "../styles/RouteSummaryCard.css";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
 
 type RouteSummaryProps = {
     route: {
@@ -19,6 +21,7 @@ export default function RouteSummaryCard({
     onViewDetails,
     onClose,
 }: RouteSummaryProps) {
+    const { formatDistance } = useUnitPreference();
     const formatDuration = (minutes: number) => {
         const h = Math.floor(minutes / 60);
         const m = minutes % 60;
@@ -72,12 +75,10 @@ export default function RouteSummaryCard({
                             <span>{route.rating.toFixed(1)}</span>
                         </div>
                     )}
-                    {route.distanceKm != null && (
-                        <div className="route-stat" title="Distancia">
-                            <span>•</span>
-                            <span>{route.distanceKm} km</span>
-                        </div>
-                    )}
+                    <div className="route-stat" title="Distancia">
+                        <span>•</span>
+                        <span>{formatDistance(route.distanceKm)}</span>
+                    </div>
                     {route.durationMinutes != null && (
                         <div className="route-stat" title="Duración estimada">
                             <span>•</span>

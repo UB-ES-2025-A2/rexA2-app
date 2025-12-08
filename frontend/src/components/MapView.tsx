@@ -297,7 +297,7 @@ export default function MapView({
     handleMoveEnd();
 
     return () => {
-      map?.off("moveend", handleMoveEnd);
+      map.off("moveend", handleMoveEnd);
     };
   }, [mapLoaded, onBoundsChange]);
 
