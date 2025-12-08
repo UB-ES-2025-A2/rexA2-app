@@ -1,4 +1,4 @@
-:root {
+﻿:root {
   /* PALETA COMPARTIDA */
   --bg: #fafbfc;
   --bg-soft: #ffffff;
@@ -74,15 +74,17 @@ root {
 }
 
 .route-card-panel {
-  background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  padding: 22px 20px;
+  background: radial-gradient(circle at 15% 10%, rgba(99, 102, 241, 0.08), transparent 30%),
+    radial-gradient(circle at 90% 20%, rgba(168, 85, 247, 0.08), transparent 28%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 26px 22px 22px;
   margin: 0;
-  box-shadow: var(--shadow-lg, var(--shadow-md));
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   transition: all 0.2s ease;
   height: 100%;
   max-height: 100%;
@@ -90,16 +92,18 @@ root {
 }
 
 .route-card-panel:hover {
-  border-color: var(--primary);
-  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 14px 34px rgba(99, 102, 241, 0.18);
   transform: translateY(-1px);
 }
 
 .route-card__header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 .route-card__body {
@@ -130,7 +134,7 @@ root {
 .route-card__helper {
   margin: 4px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -138,29 +142,30 @@ root {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 10px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(99, 102, 241, 0.25);
-  background: rgba(99, 102, 241, 0.08);
-  color: #1e1b4b;
-  font-weight: 700;
-  font-size: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  background: linear-gradient(135deg, #eef2ff, #ede9fe);
+  color: #312e81;
+  font-weight: 800;
+  font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .route-card__section {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 14px;
-  background: var(--surface-soft);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  padding: 16px 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(248, 250, 252, 0.95));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .route-card__section-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .route-card__section-title {
@@ -177,7 +182,8 @@ root {
 .route-card__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  gap: 14px 18px;
+  align-items: start;
 }
 
 .route-card-panel .input-group {
@@ -189,7 +195,8 @@ root {
 .route-card-panel label {
   font-weight: 700;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
 }
 
 .route-card-panel input[type="text"],
@@ -201,7 +208,7 @@ root {
   padding: 10px 12px;
   font-size: 14px;
   font-weight: 600;
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
   color: var(--ink);
   transition: all 0.2s ease;
 }
@@ -237,21 +244,25 @@ root {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(99, 102, 241, 0.07);
-  padding: 6px;
-  border-radius: 12px;
-  border: 1px solid rgba(99, 102, 241, 0.12);
+  background: rgba(99, 102, 241, 0.08);
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid rgba(99, 102, 241, 0.14);
+  width: 100%;
+  max-width: 380px;
+  justify-content: center;
 }
 
 .route__tab-btn {
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--ink);
   cursor: pointer;
   font-weight: 700;
   transition: all 0.3s ease;
+  min-width: 150px;
 }
 
 .route__tab-btn:hover {
@@ -270,8 +281,9 @@ root {
 .route-card__points {
   border: 1px dashed rgba(99, 102, 241, 0.25);
   border-radius: 10px;
-  padding: 10px;
+  padding: 12px;
   background: #fff;
+  min-height: 88px;
 }
 
 .route-card__points h4 {
@@ -322,6 +334,7 @@ root {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  padding-top: 6px;
 }
 
 .route-card__actions--footer {
@@ -405,7 +418,7 @@ root {
 .route-card-panel .btn {
   border-radius: 10px;
   border: 1px solid var(--border);
-  background: #fff;
+  background: linear-gradient(180deg, #ffffff, #f4f5fb);
   color: var(--ink);
   font-weight: 700;
   padding: 10px 12px;
@@ -418,8 +431,112 @@ root {
   box-shadow: var(--shadow-md);
 }
 
-/* Estilos del botón de perfil y el menú desplegable */
-/* Estilo para asegurarnos de que el menú flotante se muestra encima del mapa */
+.route-card__alert {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #fecdd3;
+  background: linear-gradient(135deg, #fff1f2, #fee2e2);
+  color: #7f1d1d;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 6px 20px rgba(248, 113, 113, 0.18);
+}
+
+.route-card__alert--error {
+  border-color: #fecdd3;
+}
+
+.input-group.has-error label {
+  color: #b91c1c;
+}
+
+.input-group.has-error input,
+.input-group.has-error textarea,
+.input-group.has-error select {
+  border-color: #ef4444;
+  background: #fff7f7;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.15);
+}
+
+.input-error {
+  color: #b91c1c;
+  font-weight: 700;
+  font-size: 12px;
+  margin: -2px 0 0;
+}
+
+.route-card-panel .btn[disabled] {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.route-card-panel .btn.primary[disabled] {
+  box-shadow: none;
+}
+
+.theme-dark .route-card-panel {
+  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08), transparent 38%),
+    radial-gradient(circle at 80% 10%, rgba(168, 85, 247, 0.08), transparent 32%),
+    #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3);
+}
+
+.theme-dark .route-card__section {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.theme-dark .route-card-panel label,
+.theme-dark .route-card__section-title {
+  color: #f8fafc;
+}
+
+.theme-dark .route-card__helper,
+.theme-dark .route-card-panel .muted {
+  color: #cbd5e1;
+}
+
+.theme-dark .route-card-panel input[type="text"],
+.theme-dark .route-card-panel textarea,
+.theme-dark .route-card-panel select {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.theme-dark .route-card__points {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.theme-dark .route-card__images,
+.theme-dark .route-card__dropzone-hint {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.theme-dark .route-card__dropzone-hint strong {
+  color: #e2e8f0;
+}
+
+.theme-dark .route-card-panel .btn {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.theme-dark .route-card__alert {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(248, 113, 113, 0.4);
+  color: #fecdd3;
+  box-shadow: none;
+}
+
+/* Estilos del bot├│n de perfil y el men├║ desplegable */
+/* Estilo para asegurarnos de que el men├║ flotante se muestra encima del mapa */
 .profile-menu {
   position: absolute;
   top: 50px;
@@ -553,7 +670,7 @@ root {
 .header__search > * {
   width: min(720px, 100%);
 }
-
+ 
 .main-nav {
   display: inline-flex;
   align-items: center;
@@ -670,3 +787,106 @@ root {
     font-size: 1rem;
   }
 }
+
+.route-card__points-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--ink);
+  background: linear-gradient(180deg, #ffffff, #f6f8fb);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.route-card__actions .btn {
+  flex: 1 1 160px;
+  justify-content: center;
+  text-align: center;
+}
+
+/* Geocoder tweaks */
+.route-card-panel .geocoder-container .mapboxgl-ctrl-geocoder {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+}
+
+.route-card-panel .mapboxgl-ctrl-geocoder input {
+  height: 46px;
+  padding-left: 40px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+.route-card-panel .mapboxgl-ctrl-geocoder--icon {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.route-card-panel .mapboxgl-ctrl-geocoder--icon-search {
+  left: 12px;
+}
+
+.route-card-panel .mapboxgl-ctrl-geocoder--button,
+.route-card-panel .mapboxgl-ctrl-geocoder--icon-close,
+.route-card-panel .mapboxgl-ctrl-geocoder--icon-loading {
+  display: none !important;
+}
+
+/* Dark mode refinements */
+.theme-dark .route-card-panel .geocoder-container .mapboxgl-ctrl-geocoder {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.theme-dark .route-card-panel .mapboxgl-ctrl-geocoder input {
+  background: transparent;
+  color: #e2e8f0;
+}
+
+.theme-dark .route-card-panel .mapboxgl-ctrl-geocoder--icon {
+  color: #cbd5e1;
+  opacity: 0.8;
+}
+
+.theme-dark .route__tabs {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.theme-dark .route__tab-btn {
+  color: #e2e8f0;
+}
+
+.theme-dark .route__tab-btn.active {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.32);
+}
+
+.theme-dark .route-card__points,
+.theme-dark .route-card-panel .btn {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+}
+
+.theme-dark .route-card-panel .btn.primary {
+  background: linear-gradient(135deg, #7c3aed, #6366f1);
+  color: #f8fafc;
+  border: none;
+  box-shadow: 0 12px 26px rgba(99, 102, 241, 0.35);
+}
+
+.theme-dark .route-card__points-list li {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+}
+
