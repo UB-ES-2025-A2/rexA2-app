@@ -25,6 +25,7 @@ from backend.core.security import get_current_user, get_current_user_optional
 from backend.db.schemas.rating import RatingPayload, RatingResponse, RatingStatsResponse
 from backend.db.models import rating as rating_crud
 from backend.db.models import completion as completion_crud
+from backend.db.models import achievement as achievement_crud
 from backend.db.schemas.completion import CompletionPayload, CompletionStatus
 from backend.db.schemas.completion_list import CompletionList
 from backend.core.events import rating_event_bus, rating_event_payload
@@ -839,16 +840,20 @@ async def set_route_completion_status(
     """
     await _ensure_route_access(route_id, current_user)
 
+    newly_unlocked: list[dict] = []
     try:
         if payload.completed:
             await completion_crud.mark_completed(str(current_user["_id"]), route_id)
         else:
             await completion_crud.unmark_completed(str(current_user["_id"]), route_id)
+        newly_unlocked = await achievement_crud.recalculate_completed_routes_achievements(
+            str(current_user["_id"])
+        )
     except Exception:
         # Evitamos filtrar detalles de persistencia al cliente
         raise HTTPException(status_code=500, detail="No se pudo actualizar el estado de la ruta")
 
-    return {"completed": payload.completed}
+    return {"completed": payload.completed, "newly_unlocked": newly_unlocked}
 
 
 @router.get("/ratings/stream")

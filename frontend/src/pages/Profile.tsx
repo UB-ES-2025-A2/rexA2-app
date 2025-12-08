@@ -12,6 +12,7 @@ import AnimatedList from "../components/AnimatedList";
 import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
+import CompletedRoutesAchievements from "../components/Achievements/CompletedRoutesAchievements";
 
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
@@ -144,6 +145,7 @@ export default function Profile() {
   const [createdError, setCreatedError] = useState("");
   const [selectedCreatedRoute, setSelectedCreatedRoute] =
     useState<FavoriteRoute | null>(null);
+  const [achievementsRefreshKey, setAchievementsRefreshKey] = useState(0);
 
   const accessToken =
     token ||
@@ -777,6 +779,10 @@ export default function Profile() {
               navigate("/");
             }}
           />
+          <CompletedRoutesAchievements
+            userId={profile?.id}
+            refreshToken={achievementsRefreshKey}
+          />
           {active === "favorites" && (
             <FavoritesPanel
               favorites={favorites}
@@ -815,6 +821,7 @@ export default function Profile() {
                     ? { ...prev, isCompleted: next }
                     : prev
                 );
+                setAchievementsRefreshKey((prev) => prev + 1);
               }}
             />
           )}
@@ -856,6 +863,7 @@ export default function Profile() {
                     ? { ...prev, isCompleted: next }
                     : prev
                 );
+                setAchievementsRefreshKey((prev) => prev + 1);
               }}
               onDeleteRoute={handleDeleteCreatedRoute}
               initialSavedForRoute={(routeId) =>
