@@ -13,6 +13,7 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import defaultAvatar from "../assets/profile_pic.png";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import CompletedRoutesAchievements from "../components/Achievements/CompletedRoutesAchievements";
+import CreatedRoutesAchievements from "../components/Achievements/CreatedRoutesAchievements";
 
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
@@ -779,10 +780,16 @@ export default function Profile() {
               navigate("/");
             }}
           />
-          <CompletedRoutesAchievements
-            userId={profile?.id}
-            refreshToken={achievementsRefreshKey}
-          />
+          <div className="achievements-wrapper">
+            <CompletedRoutesAchievements
+              userId={profile?.id}
+              refreshToken={achievementsRefreshKey}
+            />
+            <CreatedRoutesAchievements
+              userId={profile?.id}
+              refreshToken={achievementsRefreshKey}
+            />
+          </div>
           {active === "favorites" && (
             <FavoritesPanel
               favorites={favorites}

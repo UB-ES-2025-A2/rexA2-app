@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCompletedRoutesAchievements, type AchievementProgress } from "../../services/achievements";
+import { getCreatedRoutesAchievements, type AchievementProgress } from "../../services/achievements";
 import { translateErrorMessage } from "../../utils/errorTranslator";
 
 type Props = {
@@ -7,7 +7,7 @@ type Props = {
   refreshToken?: number;
 };
 
-export default function CompletedRoutesAchievements({ userId, refreshToken }: Props) {
+export default function CreatedRoutesAchievements({ userId, refreshToken }: Props) {
   const [achievements, setAchievements] = useState<AchievementProgress[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [error, setError] = useState("");
@@ -23,7 +23,7 @@ export default function CompletedRoutesAchievements({ userId, refreshToken }: Pr
       setStatus("loading");
       setError("");
       try {
-        const data = await getCompletedRoutesAchievements(userId);
+        const data = await getCreatedRoutesAchievements(userId);
         if (cancelled) return;
         setAchievements(data);
         setStatus("idle");
@@ -46,17 +46,15 @@ export default function CompletedRoutesAchievements({ userId, refreshToken }: Pr
     [achievements]
   );
 
-  if (!userId) {
-    return null;
-  }
+  if (!userId) return null;
 
   return (
     <section className="achievements-section card fill">
       <div className="panel-header compact achievements-header">
         <div>
           <p className="eyebrow">Logros</p>
-          <h3>Rutas completadas</h3>
-          <p className="muted">Desbloquea hitos al marcar rutas como realizadas.</p>
+          <h3>Rutas creadas</h3>
+          <p className="muted">Consigue hitos publicando rutas y compartiéndolas.</p>
         </div>
         <div className="achievements-counter">
           <span className="badge-soft">
@@ -82,7 +80,7 @@ export default function CompletedRoutesAchievements({ userId, refreshToken }: Pr
               aria-label={ach.name}
             >
               <div className="achievement-card__icon" aria-hidden>
-                {ach.icon || "🎯"}
+                {ach.icon || "🛠️"}
               </div>
               <div className="achievement-card__body">
                 <div className="achievement-card__title-row">

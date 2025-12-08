@@ -1718,6 +1718,12 @@ body.profile-body-host {
   padding: 12px;
 }
 
+.achievements-wrapper {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
 .theme-dark .achievements-section {
   background: #0b1220;
   border-color: rgba(255, 255, 255, 0.06);

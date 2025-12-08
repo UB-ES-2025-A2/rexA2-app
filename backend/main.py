@@ -24,7 +24,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     await init_db()
-    await achievement_crud.ensure_completed_routes_seed()
+    await achievement_crud.ensure_all_achievements_seed()
 
 app.include_router(users.router)
 app.include_router(users_profile.router)
