@@ -10,6 +10,7 @@ class UserDB(BaseModel):
     name: Optional[str] = None            # Nombre opcional
     phone: Optional[str] = None            # NEW
     preferred_units: Literal["km", "mi"] = "km"
+    theme_preference: Literal["light", "dark", "system"] = "light"
     avatar_url: Optional[str] = None
 
 # Datos requeridos para crear un usario
@@ -45,6 +46,7 @@ class UserProfile(BaseModel):
     email: EmailStr
     phone: Optional[str] = None
     preferred_units: Literal["km", "mi"] = "km"
+    theme_preference: Literal["light", "dark", "system"] = "light"
     avatar_url: Optional[str] = None
     stats: ProfileStats
     model_config = ConfigDict(from_attributes=True)
@@ -61,6 +63,7 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     phone: Optional[str] = None
     preferred_units: Optional[Literal["km", "mi"]] = None
+    theme_preference: Optional[Literal["light", "dark", "system"]] = None
     avatar_url: Optional[str] = None
 
     @field_validator("phone")
