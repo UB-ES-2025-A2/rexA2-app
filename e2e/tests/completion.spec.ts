@@ -62,6 +62,43 @@ test("US27 - marcar y desmarcar ruta como realizada (subset de criterios)", asyn
   await page.goto("/mapa");
   await login(page);
 
+  const completionState: Record<string, boolean> = {};
+  await page.route("**/routes/*/completion", async (route) => {
+    const url = new URL(route.request().url());
+    const routeId = url.pathname.split("/")[2];
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          completed: completionState[routeId] ?? false,
+          newly_unlocked: [],
+        }),
+      });
+      return;
+    }
+    let payload: { completed?: boolean } = {};
+    try {
+      payload = route.request().postDataJSON() as { completed?: boolean };
+    } catch {
+      try {
+        const raw = route.request().postData();
+        payload = raw ? (JSON.parse(raw) as { completed?: boolean }) : {};
+      } catch {
+        payload = {};
+      }
+    }
+    completionState[routeId] = Boolean(payload.completed);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        completed: completionState[routeId],
+        newly_unlocked: [],
+      }),
+    });
+  });
+
   const routeCards = page.locator(".route-preview-card");
   const disableSearchArea = async () => {
     const areaToggle = page.getByLabel("Buscar en esta zona");
