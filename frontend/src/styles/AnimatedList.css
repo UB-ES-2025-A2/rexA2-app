@@ -124,33 +124,6 @@
 }
 
 /* =========================================
-  GRADIENTS (opcional)
-  ========================================= */
-.top-gradient {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);
-  pointer-events: none;
-  z-index: 10;
-  transition: opacity 0.3s ease;
-}
-
-.bottom-gradient {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 40px;
-  background: linear-gradient(180deg, transparent 0%, var(--surface) 100%);
-  pointer-events: none;
-  z-index: 10;
-  transition: opacity 0.3s ease;
-}
-
-/* =========================================
   RESPONSIVE
   ========================================= */
 @media (max-width: 768px) {

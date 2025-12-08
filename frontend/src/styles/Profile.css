@@ -347,7 +347,7 @@ body.profile-body-host {
 
 .profile-hero-banner {
   height: 150px;
-  background: linear-gradient(135deg, #5b7bff 0%, #4a6cf7 40%, #3b5bdc 100%);
+  background: var(--gradient-primary);
   position: relative;
 }
 
@@ -414,7 +414,7 @@ body.profile-body-host {
   margin: 0;
   font-size: clamp(22px, 3vw, 26px);
   font-weight: 800;
-  color: #c7c9ff
+  color: var(--ink);
 }
 
 .profile-hero-subtitle {
