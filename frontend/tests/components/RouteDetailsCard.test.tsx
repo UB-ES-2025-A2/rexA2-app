@@ -15,6 +15,15 @@ vi.mock("../../src/context/AlertContext", () => ({
   useAlert: () => mockUseAlert(),
 }));
 
+vi.mock("../../src/context/UnitPreferenceContext", () => ({
+  useUnitPreference: () => ({
+    unit: "km",
+    setUnit: vi.fn(),
+    formatDistance: (distanceKm: number | null | undefined) =>
+      distanceKm == null ? "0 km" : `${distanceKm} km`,
+  }),
+}));
+
 vi.mock("../../src/services/api", () => ({
   fetchWithAuth: (...args: any[]) => fetchWithAuthMock(...args),
 }));

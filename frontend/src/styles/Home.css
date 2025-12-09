@@ -14,6 +14,12 @@
   --primary: #6366f1;
   --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   --shadow-md: 0 4px 6px rgba(99, 102, 241, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-strong: rgba(255, 255, 255, 0.22);
+  --glass-border: rgba(255, 255, 255, 0.55);
+  --glass-line: rgba(255, 255, 255, 0.9);
+  --glass-shadow: 0 22px 60px rgba(15, 23, 42, 0.16);
+  --glass-blur: 18px;
 }
 
 * {
@@ -29,7 +35,7 @@ body,
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, #fafbfc 0%, #f0f4ff 100%) fixed;
+  background: radial-gradient(120% 120% at 18% 12%, #f7f9ff 0%, #e6edf7 45%, #dde4ef 100%) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial;
@@ -38,6 +44,63 @@ body {
 
 button {
   font: inherit;
+}
+
+.home {
+  position: relative;
+  min-height: 100vh;
+  background: transparent;
+  overflow: hidden;
+}
+
+.home::before,
+.home::after {
+  content: "";
+  position: absolute;
+  inset: -35%;
+  background: radial-gradient(circle at 25% 30%, rgba(255, 255, 255, 0.7), transparent 36%),
+    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.55), transparent 34%),
+    radial-gradient(circle at 60% 80%, rgba(226, 234, 246, 0.7), transparent 40%);
+  filter: blur(65px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.home::after {
+  inset: -28%;
+  background: linear-gradient(130deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08));
+  mix-blend-mode: screen;
+  filter: blur(52px);
+  opacity: 0.4;
+}
+
+.home__header {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  margin: 12px 12px 0;
+  padding: 14px 18px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  position: sticky;
+  top: 0;
+  z-index: 2200;
+}
+
+.home .main-nav {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.home .main-nav__link {
+  color: #0f172a;
+}
+
+.home .main-nav__link.active {
+  background: var(--gradient-primary);
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(99, 102, 241, 0.26);
 }
 
 .category-label {
@@ -56,11 +119,11 @@ button {
   font-size: 1rem;
   font-weight: 700;
   border-radius: 10px;
-  border: 2px solid var(--close-border);
-  background-color: var(--card);
+  border: 1px solid var(--glass-border);
+  background-color: rgba(255, 255, 255, 0.35);
   color: var(--text);
   outline: none;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  box-shadow: var(--glass-shadow);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   display: block;
   margin: 0 auto;
@@ -83,13 +146,18 @@ button {
   overflow: hidden;
   width: 100%;
   height: calc(100vh - 100px);
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
 }
 
 .home__left-skeleton {
-  background: var(--card);
+  background: var(--glass-bg);
   border-radius: 24px;
-  border: 2px solid var(--close-border);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -97,7 +165,7 @@ button {
   transition: all 0.3s ease;
 }
 
-.home__left-skeleton > div:last-child {
+.home__left-skeleton>div:last-child {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -148,11 +216,11 @@ button {
 .tabs {
   display: flex;
   position: relative;
-  background-color: var(--card);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  background-color: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
   padding: 0.75rem;
   border-radius: 999px;
-  border: 2px solid var(--close-border);
+  border: 1px solid var(--glass-border);
 }
 
 .tabs * {
@@ -177,16 +245,16 @@ button {
   transition: all 0.25s ease;
 }
 
-.container input[type="radio"]:checked + label {
+.container input[type="radio"]:checked+label {
   color: white;
   font-weight: 900;
 }
 
-.container input[id="radio-1"]:checked ~ .glider {
+.container input[id="radio-1"]:checked~.glider {
   transform: translateX(0);
 }
 
-.container input[id="radio-2"]:checked ~ .glider {
+.container input[id="radio-2"]:checked~.glider {
   transform: translateX(100%);
 }
 
@@ -253,6 +321,53 @@ button {
 .routes-reset:hover {
   box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
   transform: translateY(-1px);
+}
+
+.routes-bounds-filter .checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.routes-bounds-filter input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), var(--glass-shadow);
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.routes-bounds-filter input[type="checkbox"]::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.routes-bounds-filter input[type="checkbox"]:checked {
+  border-color: transparent;
+  background: var(--gradient-primary);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.28);
+}
+
+.routes-bounds-filter input[type="checkbox"]:checked::after {
+  background: #fff;
 }
 
 .category-chip-bar {
@@ -341,29 +456,29 @@ button {
   padding: 0;
 }
 
-.route-list > *,
-.user-list > * {
+.route-list>*,
+.user-list>* {
   padding: 0 10px;
   margin-bottom: 10px;
 }
 
-.route-list > *:first-child {
+.route-list>*:first-child {
   padding-top: 10px;
 }
 
-.route-list > *:last-child {
+.route-list>*:last-child {
   padding-bottom: 10px;
 }
 
-.user-list > *:first-child {
+.user-list>*:first-child {
   padding-top: 10px;
 }
 
-.user-list > *:last-child {
+.user-list>*:last-child {
   padding-bottom: 10px;
 }
 
-.home__left-skeleton > p {
+.home__left-skeleton>p {
   padding: 20px 10px;
   text-align: center;
   color: var(--muted);
@@ -385,30 +500,6 @@ button {
   color: var(--muted);
   font-size: 13px;
   margin-top: 4px;
-}
-
-.home__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 20px;
-  border-bottom: 2px solid var(--close-border);
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  position: sticky;
-  top: 0;
-  z-index: 2000;
-}
-
-.brand {
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  color: var(--text);
-  font-size: clamp(22px, 3vw, 34px);
-  background: var(--gradient-primary);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .icon-btn {
@@ -436,31 +527,31 @@ button {
 /* Contenedor del mapa (El borde exterior) */
 .home__map-skeleton {
   position: relative;
-  background: var(--card);
+  background: var(--glass-bg);
   border-radius: 24px;
-  border: 2px solid var(--close-border);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
   /* Flex para controlar al hijo */
-  display: flex; 
+  display: flex;
   flex-direction: column;
   /* Importante para que no se colapse */
   min-height: 0;
   min-width: 0;
   overflow: hidden;
   /* Elimina transformaciones que confunden al ratón */
-  transform: none; 
+  transform: none;
 }
 
 /* El mapa en sí (El hijo directo) */
-.home__map-skeleton > div {
+.home__map-skeleton>.map-view {
   /* ESTO ES LO QUE FALTABA: Obliga al mapa a llenar el hueco */
-  flex: 1; 
+  flex: 1;
   width: 100% !important;
   height: 100% !important;
-  
+
   /* ESTO ARREGLA LAS COORDENADAS: Crea un contexto de posición nuevo */
-  position: relative !important; 
-  
+  position: relative !important;
+
   border-radius: 24px;
   overflow: hidden;
   min-height: 0;
@@ -580,14 +671,6 @@ button {
     height: auto;
   }
 
-  .home__header {
-    padding: 12px 16px;
-  }
-
-  .brand {
-    font-size: 1rem;
-  }
-
   .icon-btn {
     width: 32px;
     height: 32px;
@@ -624,8 +707,8 @@ button {
     height: 26px;
   }
 
-  .route-list > *,
-  .user-list > * {
+  .route-list>*,
+  .user-list>* {
     padding: 0 8px;
     margin-bottom: 8px;
   }
@@ -655,14 +738,6 @@ button {
     height: auto;
     gap: 6px;
     padding: 6px;
-  }
-
-  .home__header {
-    padding: 10px 12px;
-  }
-
-  .brand {
-    font-size: 0.9rem;
   }
 
   .icon-btn {
@@ -702,8 +777,8 @@ button {
     height: 24px;
   }
 
-  .route-list > *,
-  .user-list > * {
+  .route-list>*,
+  .user-list>* {
     padding: 0 6px;
     margin-bottom: 6px;
   }

@@ -13,15 +13,15 @@ export type RouteEditData = {
 };
 
 const CATEGORY_OPTIONS: Category[] = [
-  "gastronomia",
-  "naturaleza",
   "aventura",
   "cultura",
   "deporte",
-  "historia",
-  "urban",
   "entretenimiento",
+  "gastronomia",
+  "historia",
+  "naturaleza",
   "otros",
+  "urban",
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {

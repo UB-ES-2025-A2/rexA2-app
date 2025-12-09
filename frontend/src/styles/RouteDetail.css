@@ -1,0 +1,32 @@
+.route-detail {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fafbfc 0%, #eef2ff 100%);
+  color: var(--ink);
+}
+
+.route-detail__body {
+  padding: 24px 16px 48px;
+  display: flex;
+  justify-content: center;
+}
+
+.route-detail__card {
+  width: min(1200px, 100%);
+}
+
+.route-detail__state {
+  margin: 60px auto;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--muted);
+  text-align: center;
+  font-weight: 700;
+}
+
+.route-detail__state.error {
+  color: #b91c1c;
+  border-color: #fecdd3;
+  background: #fff1f2;
+}

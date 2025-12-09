@@ -69,6 +69,8 @@ function resolveUserFromAuth(request: Request): MockUser | null {
 export async function setupBackendMocks(page: Page) {
   let followState = false;
   const ratingState: Record<string, Record<string, number>> = {};
+  const completionState: Record<string, boolean> = {};
+  const favoriteState: Set<string> = new Set();
 
   const routes: MockRoute[] = [
     {
@@ -76,11 +78,11 @@ export async function setupBackendMocks(page: Page) {
       _id: "route-1",
       name: "Ruta de prueba",
       description: "Ruta E2E de ejemplo",
-      category: "montaña",
+      category: "montaヵa",
       points: [
-        { latitude: 0, longitude: 0 },
-        { latitude: 1, longitude: 1 },
-        { latitude: 2, longitude: 2 },
+        { latitude: 41.3851, longitude: 2.1734 },
+        { latitude: 41.39, longitude: 2.18 },
+        { latitude: 41.395, longitude: 2.185 },
       ],
       visibility: true,
       owner_id: FOLLOWEE_USER.id,
@@ -97,9 +99,9 @@ export async function setupBackendMocks(page: Page) {
       description: "Ruta del usuario autenticado",
       category: "ciudad",
       points: [
-        { latitude: 1, longitude: 0 },
-        { latitude: 2, longitude: 1 },
-        { latitude: 3, longitude: 2 },
+        { latitude: 41.3851, longitude: 2.1734 },
+        { latitude: 41.382, longitude: 2.17 },
+        { latitude: 41.379, longitude: 2.165 },
       ],
       visibility: true,
       owner_id: PRIMARY_USER.id,
@@ -150,10 +152,7 @@ export async function setupBackendMocks(page: Page) {
         payload = {};
       }
 
-      if (
-        payload.email === PRIMARY_USER.email &&
-        payload.password === VALID_PASSWORD
-      ) {
+      if (payload.email === PRIMARY_USER.email && payload.password === VALID_PASSWORD) {
         await route.fulfill(
           jsonResponse({
             access_token: TOKENS[PRIMARY_USER.email],
@@ -163,7 +162,7 @@ export async function setupBackendMocks(page: Page) {
         return;
       }
 
-      await route.fulfill(jsonResponse({ detail: "Credenciales inválidas" }, 401));
+      await route.fulfill(jsonResponse({ detail: "Credenciales invケlidas" }, 401));
       return;
     }
 
@@ -181,13 +180,19 @@ export async function setupBackendMocks(page: Page) {
       return;
     }
 
+    if (pathname === "/routes/completed/me") {
+      const completedIds = Object.entries(completionState)
+        .filter(([, completed]) => completed)
+        .map(([routeId]) => routeId);
+      await route.fulfill(jsonResponse({ route_ids: completedIds }));
+      return;
+    }
+
     if (pathname === "/routes" && method === "GET") {
       const enriched = routes.map((r) => {
         const values = ratingState[r.id] ? Object.values(ratingState[r.id]) : [];
         const average =
-          values.length > 0
-            ? values.reduce((a, b) => a + b, 0) / values.length
-            : r.rating ?? null;
+          values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : r.rating ?? null;
         const count = values.length > 0 ? values.length : r.rating_count ?? 0;
         return { ...r, rating: average, rating_count: count };
       });
@@ -203,11 +208,8 @@ export async function setupBackendMocks(page: Page) {
         await route.fulfill(jsonResponse({ detail: "Ruta no encontrada" }, 404));
         return;
       }
-      const userRating =
-        (authedUser && ratingState[found.id]?.[authedUser.id]) ?? null;
-      const allRatings = ratingState[found.id]
-        ? Object.values(ratingState[found.id])
-        : [];
+      const userRating = (authedUser && ratingState[found.id]?.[authedUser.id]) ?? null;
+      const allRatings = ratingState[found.id] ? Object.values(ratingState[found.id]) : [];
       const average =
         allRatings.length > 0
           ? allRatings.reduce((a, b) => a + b, 0) / allRatings.length
@@ -249,10 +251,7 @@ export async function setupBackendMocks(page: Page) {
           created_at: new Date().toISOString(),
           replies: [],
         };
-        commentsByRoute[routeId] = [
-          newComment,
-          ...(commentsByRoute[routeId] || []),
-        ];
+        commentsByRoute[routeId] = [newComment, ...(commentsByRoute[routeId] || [])];
         await route.fulfill(jsonResponse(newComment, 201));
         return;
       }
@@ -281,12 +280,9 @@ export async function setupBackendMocks(page: Page) {
       if (route.request().method() === "GET") {
         const values = ratingState[found.id] ? Object.values(ratingState[found.id]) : [];
         const averageRaw =
-          values.length > 0
-            ? values.reduce((a, b) => a + b, 0) / values.length
-            : found.rating ?? null;
+          values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : found.rating ?? null;
         const count = values.length > 0 ? values.length : found.rating_count ?? 0;
-        const average =
-          averageRaw == null ? null : Math.round(Number(averageRaw) * 10) / 10;
+        const average = averageRaw == null ? null : Math.round(Number(averageRaw) * 10) / 10;
         await route.fulfill(jsonResponse({ average, count }));
         return;
       }
@@ -295,9 +291,7 @@ export async function setupBackendMocks(page: Page) {
         return;
       }
       if (found.owner_id === authedUser.id) {
-        await route.fulfill(
-          jsonResponse({ detail: "No puedes valorar tu propia ruta" }, 403)
-        );
+        await route.fulfill(jsonResponse({ detail: "No puedes valorar tu propia ruta" }, 403));
         return;
       }
       let payload: { rating?: number } = {};
@@ -308,16 +302,55 @@ export async function setupBackendMocks(page: Page) {
       }
       const rating = Number(payload.rating);
       if (!Number.isFinite(rating)) {
-        await route.fulfill(jsonResponse({ detail: "rating inválido" }, 422));
+        await route.fulfill(jsonResponse({ detail: "rating invケlido" }, 422));
         return;
       }
       ratingState[found.id] = ratingState[found.id] || {};
       ratingState[found.id][authedUser.id] = rating;
       const values = Object.values(ratingState[found.id]);
       const average = values.reduce((a, b) => a + b, 0) / values.length;
-      await route.fulfill(
-        jsonResponse({ user_rating: rating, average, count: values.length })
-      );
+      await route.fulfill(jsonResponse({ user_rating: rating, average, count: values.length }));
+      return;
+    }
+
+    const completionMatch = pathname.match(/^\/routes\/([^/]+)\/completion$/);
+    if (completionMatch) {
+      const routeId = completionMatch[1];
+      if (method === "GET") {
+        await route.fulfill(jsonResponse({ completed: Boolean(completionState[routeId]) }));
+        return;
+      }
+      if (!authedUser) {
+        await route.fulfill(jsonResponse({ detail: "No autorizado" }, 401));
+        return;
+      }
+      let payload: { completed?: boolean } = {};
+      try {
+        payload = (route.request().postDataJSON() as any) ?? {};
+      } catch {
+        payload = {};
+      }
+      completionState[routeId] = Boolean(payload.completed);
+      await route.fulfill(jsonResponse({ completed: completionState[routeId], newly_unlocked: [] }));
+      return;
+    }
+
+    if (pathname === "/users/me/routes/favorites") {
+      const favs = routes.filter((r) => favoriteState.has(r.id));
+      await route.fulfill(jsonResponse(favs));
+      return;
+    }
+
+    const favoriteToggleMatch = pathname.match(/^\/favorites\/([^/]+)$/);
+    if (favoriteToggleMatch) {
+      const routeId = favoriteToggleMatch[1];
+      if (!authedUser) {
+        await route.fulfill(jsonResponse({ detail: "No autorizado" }, 401));
+        return;
+      }
+      if (method === "POST") favoriteState.add(routeId);
+      if (method === "DELETE") favoriteState.delete(routeId);
+      await route.fulfill(jsonResponse({ ok: true }));
       return;
     }
 
