@@ -59,7 +59,7 @@ test("US27 - marcar y desmarcar ruta como realizada (subset de criterios)", asyn
     );
   });
 
-  await page.goto("/mapa");
+  await page.goto("/mapa", { waitUntil: "domcontentloaded" });
   await login(page);
 
   const completionState: Record<string, boolean> = {};
@@ -130,7 +130,7 @@ test("US27 - marcar y desmarcar ruta como realizada (subset de criterios)", asyn
   logCriterion("Cambio inmediato de estado tras marcar como realizada");
 
   // Salir y volver a entrar
-  await page.goto("/mapa");
+  await page.goto("/mapa", { waitUntil: "domcontentloaded" });
   await disableSearchArea();
   await expect(routeCards.first()).toBeVisible({ timeout: 20000 });
   await routeCards.first().click();

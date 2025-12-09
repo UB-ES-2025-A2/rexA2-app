@@ -31,10 +31,10 @@ test.beforeEach(async ({ page }) => {
 test("US26 - media visible en preview, ficha y se actualiza al valorar sin recargar", async ({
   page,
 }) => {
-  await page.goto("/mapa");
+  await page.goto("/mapa", { waitUntil: "domcontentloaded" });
   await login(page);
 
-  await page.goto("/mapa?route=route-1");
+  await page.goto("/mapa?route=route-1", { waitUntil: "domcontentloaded" });
   const detailsCard = page.locator(".route-details-card");
   await expect(detailsCard).toBeVisible({ timeout: 8000 });
 
@@ -53,7 +53,7 @@ test("US26 - media visible en preview, ficha y se actualiza al valorar sin recar
   await expect(detailAverage).not.toHaveText(initialAverage);
   logCriterion("Media actualizada tras valorar sin recargar");
 
-  await page.goto("/mapa?route=route-owner");
+  await page.goto("/mapa?route=route-owner", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Mi ruta propia" })).toBeVisible({ timeout: 8000 });
   await expect(page.getByText("Tu valoración")).toHaveCount(0);
   logCriterion("El autor no ve el control de valoración");
