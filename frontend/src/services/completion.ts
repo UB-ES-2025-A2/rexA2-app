@@ -9,6 +9,7 @@ export type AchievementUnlock = {
   current_value?: number;
   icon?: string | null;
   rarity?: string | null;
+  theme_id?: string | null;
 };
 
 export type CompletionResponse = { completed: boolean; newly_unlocked?: AchievementUnlock[] };

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCompletedRoutesAchievements, type CompletedRoutesAchievement } from "../../services/achievements";
+import { getCompletedRoutesAchievements, type AchievementProgress } from "../../services/achievements";
 import { translateErrorMessage } from "../../utils/errorTranslator";
 
 type Props = {
@@ -8,7 +8,7 @@ type Props = {
 };
 
 export default function CompletedRoutesAchievements({ userId, refreshToken }: Props) {
-  const [achievements, setAchievements] = useState<CompletedRoutesAchievement[]>([]);
+  const [achievements, setAchievements] = useState<AchievementProgress[]>([]);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [error, setError] = useState("");
 

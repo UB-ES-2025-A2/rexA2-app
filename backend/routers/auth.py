@@ -30,7 +30,6 @@ async def me(current_user: dict = Depends(get_current_user)):
         "id": str(current_user["_id"]),
         "email": current_user["email"],
         "username": current_user.get("username"),
-        "theme_preference": current_user.get("theme_preference") or "light",
         "is_active": current_user["is_active"],
     }
 

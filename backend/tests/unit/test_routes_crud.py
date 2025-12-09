@@ -313,3 +313,75 @@ async def test_get_public_route_by_name_not_found_returns_none(fake_db):
     """
     found = await route_crud.get_public_route_by_name("NoExiste")
     assert found is None
+
+
+def _route(name="EditMe", owner="u1", vis=True, **extra):
+    return {
+        "owner_id": owner,
+        "name": name,
+        "description": extra.get("description", "Desc"),
+        "category": extra.get("category", "nature"),
+        "visibility": vis,
+        "points": extra.get(
+            "points",
+            [
+                {"latitude": 0.0, "longitude": 0.0},
+                {"latitude": 0.1, "longitude": 0.1},
+                {"latitude": 0.2, "longitude": 0.2},
+            ],
+        ),
+        "images": extra.get("images", []),
+        "duration_minutes": extra.get("duration_minutes", 30),
+        "rating": extra.get("rating", 4.0),
+        "created_at": extra.get("created_at", datetime.now(timezone.utc)),
+        "comments": extra.get("comments", []),
+    }
+
+@pytest.mark.anyio
+async def test_update_route_keeps_distance_and_difficulty_if_points_unchanged(fake_db):
+    """
+    US35: si actualizamos solo campos "simples" (nombre, descripción, etc.)
+    y no tocamos points, la distancia y la dificultad deben mantenerse.
+    """
+    created = await route_crud.create_route("u1", _route(name="EditMe"))
+    route_id = str(created["_id"])
+    old_distance = created.get("distance_km")
+    old_difficulty = created.get("difficulty")
+
+    payload = {
+        "name": "Nombre actualizado",
+        "description": "Descripción nueva",
+        "category": "nueva-cat",
+        "visibility": True,
+    }
+    updated = await route_crud.update_route(route_id, "u1", payload)
+    assert updated is not None
+    assert updated["name"] == "Nombre actualizado"
+    assert updated["description"] == "Descripción nueva"
+    assert updated["category"] == "nueva-cat"
+
+    assert updated.get("distance_km") == old_distance
+    assert updated.get("difficulty") == old_difficulty
+
+@pytest.mark.anyio
+async def test_update_route_recalculates_distance_when_points_change(fake_db):
+    """
+    US35: al editar la ruta y cambiar los puntos, se debe recalcular la distancia.
+    """
+    created = await route_crud.create_route("u1", _route(name="WithPoints"))
+    route_id = str(created["_id"])
+    old_distance = created.get("distance_km") or 0
+
+    new_points = [
+        {"latitude": 0.0, "longitude": 0.0},
+        {"latitude": 0.0, "longitude": 1.0},
+        {"latitude": 0.0, "longitude": 2.0},
+    ]
+    payload = {"points": new_points}
+
+    updated = await route_crud.update_route(route_id, "u1", payload)
+    assert updated is not None
+    assert updated["points"] == new_points
+
+    assert updated.get("distance_km") is not None
+    assert updated["distance_km"] >= old_distance

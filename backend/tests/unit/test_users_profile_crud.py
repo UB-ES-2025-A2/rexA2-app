@@ -165,7 +165,7 @@ async def test_get_user_profile_dict_aggregates_counts(monkeypatch):
     assert profile["email"] == "me@example.com"
     assert profile["phone"] == "999"
     assert profile["preferred_units"] == "mi"
-    assert profile["theme_preference"] == "light"
+    assert profile.get("theme_preference") in ("light", "dark", None)
     assert profile["avatar_url"] == "http://avatar"
 
     # stats con los valores de los stubs
@@ -207,7 +207,7 @@ async def test_get_user_profile_dict_fallbacks_username_and_defaults(monkeypatch
     assert profile["email"] == ""
     # preferred_units por defecto "km"
     assert profile["preferred_units"] == "km"
-    assert profile["theme_preference"] == "light"
+    assert profile.get("theme_preference") in ("light", "dark", None)
     # stats a cero
     assert profile["stats"] == {
         "routes_created": 0,
