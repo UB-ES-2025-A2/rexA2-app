@@ -29,6 +29,8 @@ def test_app():
     async def fake_current_user(_request=None):
         return {"_id": "user123", "email": "u@e.com", "is_active": True}
     app.dependency_overrides[routes_mod.get_current_user] = fake_current_user
+    # Y su versión opcional para endpoints que permiten anónimo
+    app.dependency_overrides[routes_mod.get_current_user_optional] = fake_current_user
 
     return app
 

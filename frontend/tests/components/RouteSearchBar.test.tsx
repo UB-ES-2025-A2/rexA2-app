@@ -1,52 +1,44 @@
-import React from "react";
+import React, { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 
+vi.mock("../../src/context/UnitPreferenceContext", () => ({
+  useUnitPreference: () => ({
+    unit: "km",
+    setUnit: vi.fn(),
+    formatDistance: (distanceKm: number | null | undefined) =>
+      distanceKm == null ? "0 km" : `${distanceKm} km`,
+  }),
+}));
+
 import RouteSearchBar from "../../src/components/RouteSearchBar/RouteSearchBar";
 
-const sampleRoutes: any[] =[
-  {
-    id: "1",
-    name: "Ruta de montaña",
-    description: "Una ruta por la montaña",
-    category: "montaña",
-    points: [
-      [0, 0],
-      [1, 1],
-      [2, 2],
-    ],
-    visibility: true,
-  },
-  {
-    id: "2",
-    name: "Ruta de playa",
-    description: "Ruta junto al mar",
-    category: "playa",
-    points: [
-      [0, 0],
-      [1, 1],
-      [2, 2],
-      [3, 3],
-      [4, 4],
-      [5, 5],
-    ],
-    visibility: true,
-  },
-];
+function RouteSearchBarHarness({
+  mode = "routes",
+  onQueryChange,
+}: {
+  mode?: "routes" | "users";
+  onQueryChange: (query: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  return (
+    <RouteSearchBar
+      mode={mode}
+      query={query}
+      onQueryChange={(value) => {
+        setQuery(value);
+        onQueryChange(value);
+      }}
+    />
+  );
+}
 
 describe("RouteSearchBar", () => {
   test("usa el placeholder correcto cuando se buscan rutas", () => {
     const handleQueryChange = vi.fn();
 
-    render(
-      <RouteSearchBar
-        routes={sampleRoutes}
-        mode="routes"
-        query=""
-        onQueryChange={handleQueryChange}
-      />
-    );
+    render(<RouteSearchBar mode="routes" query="" onQueryChange={handleQueryChange} />);
 
     expect(
       screen.getByPlaceholderText(
@@ -58,14 +50,7 @@ describe("RouteSearchBar", () => {
   test("usa el placeholder correcto cuando se buscan usuarios", () => {
     const handleQueryChange = vi.fn();
 
-    render(
-      <RouteSearchBar
-        routes={sampleRoutes}
-        mode="users"
-        query=""
-        onQueryChange={handleQueryChange}
-      />
-    );
+    render(<RouteSearchBar mode="users" query="" onQueryChange={handleQueryChange} />);
 
     expect(
       screen.getByPlaceholderText(
@@ -78,14 +63,7 @@ describe("RouteSearchBar", () => {
     const user = userEvent.setup();
     const handleQueryChange = vi.fn();
 
-    render(
-      <RouteSearchBar
-        routes={sampleRoutes}
-        mode="routes"
-        query=""
-        onQueryChange={handleQueryChange}
-      />
-    );
+    render(<RouteSearchBarHarness onQueryChange={handleQueryChange} />);
 
     const input = screen.getByPlaceholderText(
       "Buscar rutas por nombre, creador o descripción..."
@@ -94,11 +72,9 @@ describe("RouteSearchBar", () => {
     await user.type(input, "montaña");
 
     expect(handleQueryChange).toHaveBeenCalled();
-
-    const calls = handleQueryChange.mock.calls.map((c) => c[0]);
-    expect(calls).toEqual(["m", "o", "n", "t", "a", "ñ", "a"]);
+    const lastCall = handleQueryChange.mock.calls.at(-1)?.[0];
+    expect(lastCall).toBe("montaña");
   });
-
 
   test("abre el modal de filtros y aplica filtros llamando a onApplyFilters", async () => {
     const user = userEvent.setup();
@@ -107,7 +83,6 @@ describe("RouteSearchBar", () => {
 
     render(
       <RouteSearchBar
-        routes={sampleRoutes}
         mode="routes"
         query=""
         onQueryChange={handleQueryChange}
@@ -120,20 +95,20 @@ describe("RouteSearchBar", () => {
 
     expect(screen.getByText("Explorar por filtros")).toBeInTheDocument();
 
-    const selects = screen.getAllByRole("combobox");
-    const categorySelect = selects[0];
-    const pointsSelect = selects[1];
-
-    await user.selectOptions(categorySelect, "playa");
-
-    await user.selectOptions(pointsSelect, "few");
+    const difficultyButton = screen.getByRole("button", { name: "Alta" });
+    await user.click(difficultyButton);
 
     const exploreButton = screen.getByRole("button", { name: "Explorar" });
     await user.click(exploreButton);
 
-    expect(handleApplyFilters).toHaveBeenCalledWith({
-      category: "playa",
-      pointsFilter: "few",
+    const lastCall = handleApplyFilters.mock.calls.at(-1)?.[0];
+    expect(lastCall).toMatchObject({
+      category: "all",
+      pointsFilter: "all",
+      distance: "all",
+      duration: "all",
+      difficulty: "hard",
+      theme: "all",
     });
   });
 });
