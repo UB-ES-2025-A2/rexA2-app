@@ -65,7 +65,7 @@
 }
 
 .search-input {
-  background-color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.18);
   border-radius: var(--input-radius);
   position: relative;
   z-index: 10;
@@ -73,13 +73,15 @@
   height: 100%;
   display: flex;
   align-items: center;
-  border: 2px solid #e0e8f5;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.55));
   transition: all 0.3s ease;
+  box-shadow: var(--glass-shadow, 0 12px 24px rgba(15, 23, 42, 0.12));
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(140%);
 }
 
 .search-input:focus-within {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  border-color: var(--glass-line, rgba(255, 255, 255, 0.9));
+  box-shadow: 0 10px 26px rgba(99, 102, 241, 0.22);
 }
 
 .search-input::before {
@@ -224,7 +226,7 @@
 
 .filter {
   z-index: 3;
-  background: none;
+  background: rgba(255, 255, 255, 0.14);
   font-size: 16px;
   position: absolute;
   right: 5px;
@@ -233,13 +235,15 @@
   width: 40px;
   cursor: pointer;
   color: var(--icon-color);
-  border: none;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.55));
   overflow: hidden;
   border-radius: calc(var(--input-radius) * 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(140%);
+  box-shadow: var(--glass-shadow, 0 8px 18px rgba(15, 23, 42, 0.12));
 }
 
 .filter::before {
@@ -297,7 +301,9 @@
 
 .filter:hover {
   filter: brightness(0.95);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.1);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.22);
+  transform: translateY(-2px);
+  color: #4338ca;
 }
 
 .filter:hover svg {
@@ -746,41 +752,92 @@
 
 /* Modal de filtros */
 .filter-modal-overlay {
-  position: fixed;
-  top: 0;
+  position: absolute;
+  top: calc(100% + 6px);
   left: 0;
   right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(1px);
+  background: none;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 70px;
-  z-index: 2000;
+  padding: 0 4px 12px;
+  z-index: 1010;
 }
 
 .filter-modal {
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.3);
   margin-top: 0;
-  border-radius: 16px;
-  border: 2px solid #e0e8f5;
-  padding: 24px;
-  width: 90%;
-  max-width: 400px;
-  box-shadow: 0 20px 60px rgba(99, 102, 241, 0.2);
-  animation: slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  padding: 12px 18px 18px;
+  width: 100%;
+  max-width: 100%;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+  animation: dropFromSearch 0.28s cubic-bezier(0.22, 0.65, 0.33, 1.1);
+  background-image: none;
+  transform-origin: 50% 0;
+  transition: transform 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  overflow: hidden;
+  position: relative;
+  backdrop-filter: blur(var(--glass-blur, 12px)) saturate(140%);
 }
 
-@keyframes slideUp {
+@keyframes dropFromSearch {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
+}
+
+.filter-modal::before {
+  content: "";
+  position: absolute;
+  inset: -2px -2px auto -2px;
+  height: 26px;
+  background: linear-gradient(
+    180deg,
+    rgba(99, 102, 241, 0.14),
+    rgba(99, 102, 241, 0.04)
+  );
+  opacity: var(--drag-progress, 0);
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.filter-modal-handle {
+  width: 54px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  margin: 12px auto 6px;
+  cursor: grab;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.filter-modal-handle.dragging {
+  background: linear-gradient(90deg, #818cf8, #a855f7);
+  transform: translateY(-1px) scaleX(1.05);
+  cursor: grabbing;
+}
+
+.filter-modal-handle.bottom {
+  margin-top: 18px;
+  margin-bottom: 6px;
+}
+
+.filter-modal-body {
+  max-height: min(70vh, 540px);
+  overflow-y: auto;
+  padding: 2px 2px 10px;
+  background: transparent;
 }
 
 .filter-modal-header {
@@ -870,26 +927,28 @@
 .filter-chip {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 2px solid #e0e8f5;
-  background: #f8fafc;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.55));
+  background: rgba(255, 255, 255, 0.18);
   color: #0f172a;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: center;
+  box-shadow: var(--glass-shadow, 0 10px 20px rgba(15, 23, 42, 0.12));
+  backdrop-filter: blur(var(--glass-blur, 12px));
 }
 
 .filter-chip:hover {
-  border-color: #cbd5e1;
-  background: #fff;
-  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.08);
+  border-color: var(--glass-line, rgba(255, 255, 255, 0.9));
+  background: rgba(255, 255, 255, 0.26);
+  box-shadow: 0 12px 22px rgba(99, 102, 241, 0.12);
 }
 
 .filter-chip.active {
   border-color: transparent;
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   color: #fff;
-  box-shadow: 0 8px 16px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2);
 }
 
 .filter-modal-actions {
@@ -901,24 +960,26 @@
 .filter-modal-btn {
   flex: 1;
   padding: 10px 16px;
-  border: 2px solid #e0e8f5;
-  border-radius: 8px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.55));
+  border-radius: 10px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  backdrop-filter: blur(var(--glass-blur, 12px));
+  box-shadow: var(--glass-shadow, 0 10px 20px rgba(15, 23, 42, 0.12));
 }
 
 .filter-modal-btn.reset {
-  background: transparent;
-  color: #64748b;
+  background: rgba(255, 255, 255, 0.1);
+  color: #0f172a;
 }
 
 .filter-modal-btn.reset:hover {
-  background: #f8fafc;
-  border-color: #64748b;
+  background: rgba(255, 255, 255, 0.2);
+  border-color: var(--glass-line, rgba(255, 255, 255, 0.9));
   color: #0f172a;
 }
 
