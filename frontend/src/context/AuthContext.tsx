@@ -14,31 +14,27 @@ const AuthContext = createContext<AuthState | null>(null);
 const API = import.meta.env.VITE_API_URL || window.location.origin;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string>("");
-
-  // 1) Cargar de localStorage al inicio
-  useEffect(() => {
-    const t = localStorage.getItem("access_token") || "";
+  const [user, setUser] = useState<User | null>(() => {
     const u = localStorage.getItem("user");
-
-    console.log("[AUTH] init from localStorage", { rawToken: t, rawUser: u });
-
-    if (t) {
-      setToken(t);
-      console.log("[AUTH] token set from localStorage", t);
-    }
-
     if (u) {
       try {
         const parsed = JSON.parse(u);
-        console.log("[AUTH] parsed user from localStorage", parsed);
-        setUser(parsed);
+        console.log("[AUTH] init user from localStorage", parsed);
+        return parsed;
       } catch (err) {
         console.error("[AUTH] error parsing user from localStorage", err);
       }
     }
-  }, []);
+    return null;
+  });
+
+  const [token, setToken] = useState<string>(() => {
+    const t = localStorage.getItem("access_token") || "";
+    if (t) {
+      console.log("[AUTH] init token from localStorage", t);
+    }
+    return t;
+  });
 
   // 2) Si tenemos token pero no user, pedir /auth/me
   useEffect(() => {

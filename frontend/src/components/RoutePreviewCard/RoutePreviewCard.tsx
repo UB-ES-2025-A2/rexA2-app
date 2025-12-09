@@ -4,6 +4,9 @@ import type { Category } from "../types";
 import "../../styles/RoutePreviewCard.css";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
+import { fetchWithAuth } from "../../services/api";
+import RouteMiniMap from "./RouteMiniMap";
 
 const API = import.meta.env.VITE_API_URL as string || window.location.origin;
 
@@ -12,14 +15,20 @@ type Props = {
   name: string;
   category: Category;
   points: Array<[number, number]>;
+  images?: string[];
+  image_urls?: string[];
+  imageUrls?: string[];
   distanceKm?: number | null;
   durationMinutes?: number | null;
   difficulty?: string | null;
+  ratingAverage?: number | null;
+  ratingCount?: number | null;
   onClick?: () => void;
   initialSaved?: boolean;
   favoriteUrl?: string;
   unfavoriteUrl?: string;
   onSavedChange?: (saved: boolean) => void;
+  isCompleted?: boolean;
 };
 
 const RoutePreviewCard: React.FC<Props> = ({
@@ -27,19 +36,28 @@ const RoutePreviewCard: React.FC<Props> = ({
   name,
   category,
   points,
+  images = [],
+  image_urls,
+  imageUrls,
   distanceKm,
   durationMinutes,
   difficulty,
+  ratingAverage = null,
+  ratingCount = null,
   onClick,
   initialSaved = false,
   favoriteUrl,
   unfavoriteUrl,
   onSavedChange,
+  isCompleted = false,
 }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
+  const [remoteCover, setRemoteCover] = useState<string | null>(null);
   const { showAlert } = useAlert();
   const { token } = useAuth();
+  const { formatDistance } = useUnitPreference();
+  const completed = Boolean(isCompleted);
 
   useEffect(() => {
     setSaved(initialSaved);
@@ -47,6 +65,26 @@ const RoutePreviewCard: React.FC<Props> = ({
 
   const favUrl = favoriteUrl ?? `${API}/favorites/${id}`;
   const unfavUrl = unfavoriteUrl ?? favUrl;
+
+  const formatRating = (value: number | null) =>
+    value == null ? null : (Math.round(value * 10) / 10).toFixed(1);
+  const normalizedRatingCount =
+    typeof ratingCount === "number" && Number.isFinite(ratingCount)
+      ? ratingCount
+      : 0;
+  const canShowRating =
+    ratingAverage != null && Number.isFinite(ratingAverage) && normalizedRatingCount > 0;
+  const displayAverage = formatRating(ratingAverage);
+  const ratingBadge =
+    canShowRating && displayAverage ? (
+      <div
+        className="route-preview-rating-badge"
+        aria-label={`Valoración media ${displayAverage} sobre 5`}
+      >
+        <span className="route-preview-rating__star">★</span>
+        <span className="route-preview-rating__value">{displayAverage}</span>
+      </div>
+    ) : null;
 
   const handleSaveToggle = async () => {
     if (loading) return;
@@ -96,11 +134,50 @@ const RoutePreviewCard: React.FC<Props> = ({
 
   const difficultyLabel = difficulty
     ? {
-        easy: "Fácil",
-        medium: "Media",
-        hard: "Alta",
-      }[difficulty.toLowerCase()] ?? difficulty
+      easy: "Fácil",
+      medium: "Media",
+      hard: "Alta",
+    }[difficulty.toLowerCase()] ?? difficulty
     : null;
+
+  const baseCover =
+    (Array.isArray(images) && images.length > 0
+      ? images[0]
+      : Array.isArray(image_urls) && image_urls.length > 0
+        ? image_urls[0]
+        : Array.isArray(imageUrls) && imageUrls.length > 0
+          ? imageUrls[0]
+          : null);
+
+  const coverImage = baseCover ?? remoteCover;
+
+  useEffect(() => {
+    let cancelled = false;
+    if (baseCover) return;
+    if (!id) return;
+
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`/routes/${id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const imgs =
+          (Array.isArray(data.images) && data.images.filter(Boolean)) ||
+          (Array.isArray(data.image_urls) && data.image_urls.filter(Boolean)) ||
+          (Array.isArray(data.imageUrls) && data.imageUrls.filter(Boolean)) ||
+          [];
+        const single = data.image || data.cover_image || data.thumbnail;
+        const found = imgs.length > 0 ? imgs[0] : single || null;
+        if (!cancelled) setRemoteCover(found);
+      } catch {
+        /* ignore */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, baseCover]);
 
   const formatCategory = (cat: string) => {
     if (!cat) return "Sin categoría";
@@ -130,7 +207,27 @@ const RoutePreviewCard: React.FC<Props> = ({
         onClick?.();
       }}
     >
+      {completed ? (
+        <div
+          className="route-preview-completion done"
+          aria-label="Ruta realizada"
+        >
+          <span className="route-preview-status-dot" aria-hidden="true" />
+          <span>Realizada</span>
+        </div>
+      ) : null}
       <div className="route-preview-content">
+        <div className="route-preview-thumb">
+          {coverImage ? (
+            <img src={coverImage} alt={`Imagen de ${name}`} loading="lazy" />
+          ) : points.length > 0 ? (
+            <RouteMiniMap points={points} className="route-preview-thumb__map" />
+          ) : (
+            <div className="route-preview-thumb__placeholder" aria-label="Ruta sin imagen">
+              <span>🗺️</span>
+            </div>
+          )}
+        </div>
         <div className="route-preview-texts">
           <h3 className="route-preview-title">{name}</h3>
           <p className="route-preview-category">
@@ -141,10 +238,10 @@ const RoutePreviewCard: React.FC<Props> = ({
           </p>
 
           <div className="route-preview-meta">
-            {typeof distanceKm === "number" ? (
+            {distanceKm != null ? (
               <span className="route-preview-pill" title="Distancia aproximada">
                 <span className="pill-dot distance" />
-                {distanceKm} km
+                {formatDistance(distanceKm)}
               </span>
             ) : null}
             {formatDuration(durationMinutes) ? (
@@ -162,39 +259,42 @@ const RoutePreviewCard: React.FC<Props> = ({
           </div>
         </div>
 
-        <label
-          className="save-container preview-save"
-          title={saved ? "Quitar de guardadas" : "Guardar ruta"}
-          onClick={(e) => e.stopPropagation()}
-          onMouseDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            checked={saved}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleSaveToggle();
-            }}
-            disabled={loading}
-            aria-label="Guardar ruta"
-          />
-          <svg
-            viewBox="0 0 32 32"
-            xmlns="http://www.w3.org/2000/svg"
-            className={`save-icon ${loading ? "is-loading" : ""}`}
+        <div className="route-preview-actions">
+          {ratingBadge}
+          <label
+            className="save-container preview-save"
+            title={saved ? "Quitar de guardadas" : "Guardar ruta"}
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
-            role="img"
-            aria-label={saved ? "Quitar de guardadas" : "Guardar ruta"}
+            onKeyDown={(e) => e.stopPropagation()}
           >
-            <path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13  
-              c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002  
-              c1.265,0,2.427,0.579,3.188,1.589C29.954,14.601,30.192,15.88,29.845,17.099z" />
-            <path d="M7,12H3c-0.553,0-1,0.448-1,1v14c0,0.552,0.447,1,1,1h4c0.553,0,1-0.448,1-1V13C8,12.448,7.553,12,7,12z   
-              M5,25.5c-0.828,0-1.5-0.672-1.5-1.5c0-0.828,0.672-1.5,1.5-1.5c0.828,0,1.5,0.672,1.5,1.5C6.5,24.828,5.828,25.5,5,25.5z" />
-          </svg>
-        </label>
+            <input
+              type="checkbox"
+              checked={saved}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSaveToggle();
+              }}
+              disabled={loading}
+              aria-label="Guardar ruta"
+            />
+            <svg
+              viewBox="0 0 32 32"
+              xmlns="http://www.w3.org/2000/svg"
+              className={`save-icon ${loading ? "is-loading" : ""}`}
+              onClick={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              role="img"
+              aria-label={saved ? "Quitar de guardadas" : "Guardar ruta"}
+            >
+              <path d="M29.845,17.099l-2.489,8.725C26.989,27.105,25.804,28,24.473,28H11c-0.553,0-1-0.448-1-1V13  
+                c0-0.215,0.069-0.425,0.198-0.597l5.392-7.24C16.188,4.414,17.05,4,17.974,4C19.643,4,21,5.357,21,7.026V12h5.002  
+                c1.265,0,2.427,0.579,3.188,1.589C29.954,14.601,30.192,15.88,29.845,17.099z" />
+              <path d="M7,12H3c-0.553,0-1,0.448-1,1v14c0,0.552,0.447,1,1,1h4c0.553,0,1-0.448,1-1V13C8,12.448,7.553,12,7,12z   
+                M5,25.5c-0.828,0-1.5-0.672-1.5-1.5c0-0.828,0.672-1.5,1.5-1.5c0.828,0,1.5,0.672,1.5,1.5C6.5,24.828,5.828,25.5,5,25.5z" />
+            </svg>
+          </label>
+        </div>
       </div>
     </div>
   );
