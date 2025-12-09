@@ -843,22 +843,31 @@ async def set_route_completion_status(
     """
     await _ensure_route_access(route_id, current_user)
 
+    user_id = str(current_user["_id"])
     newly_unlocked: list[dict] = []
     try:
         if payload.completed:
-            await completion_crud.mark_completed(str(current_user["_id"]), route_id)
+            await completion_crud.mark_completed(user_id, route_id)
         else:
-            await completion_crud.unmark_completed(str(current_user["_id"]), route_id)
-        user_id = str(current_user["_id"])
+            await completion_crud.unmark_completed(user_id, route_id)
         newly_unlocked = await achievement_crud.recalculate_completed_routes_achievements(user_id)
-        theme_unlocks = await achievement_crud.recalculate_theme_achievements(user_id)
-        if theme_unlocks:
-            newly_unlocked = (newly_unlocked or []) + theme_unlocks
     except Exception:
         # Evitamos filtrar detalles de persistencia al cliente
         raise HTTPException(status_code=500, detail="No se pudo actualizar el estado de la ruta")
 
-    return {"completed": payload.completed, "newly_unlocked": newly_unlocked}
+    for optional_recalc in (
+        achievement_crud.recalculate_theme_achievements,
+        achievement_crud.recalculate_distance_achievements,
+    ):
+        try:
+            extra_unlocks = await optional_recalc(user_id)
+            if extra_unlocks:
+                newly_unlocked = (newly_unlocked or []) + extra_unlocks
+        except Exception:
+            # Si no se pueden recalcular estos logros opcionales, no bloqueamos la operaciÇün principal.
+            continue
+
+    return {"completed": payload.completed, "newly_unlocked": newly_unlocked or []}
 
 
 @router.get("/ratings/stream")

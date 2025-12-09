@@ -18,6 +18,9 @@ const PUBLIC_CATEGORIES: Category[] = [
   "otros",
 ];
 
+type ImageItem = { id: string; url: string; name: string; size?: number };
+type ErrorBag = Record<string, string>;
+
 export function useRouteCard({
   modeDefault,
   drawPoints,
@@ -34,20 +37,19 @@ export function useRouteCard({
   const { token } = useAuth();
   const { showAlert } = useAlert();
 
+  const [errors, setErrors] = useState<ErrorBag>({});
+  const [generalError, setGeneralError] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [mode, setMode] = useState<Mode>(modeDefault);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [category, setCategory] = useState<Category | "">(
-    PUBLIC_CATEGORIES[0] ?? ""
-  );
+  const [category, setCategory] = useState<Category | "">(PUBLIC_CATEGORIES[0] ?? "");
   const [isPrivate, setIsPrivate] = useState(true);
   const [difficulty, setDifficulty] = useState<"" | "easy" | "medium" | "hard">("");
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
   const [nameTooLong, setNameTooLong] = useState(false);
-  const [images, setImages] = useState<
-    { id: string; url: string; name: string; size?: number }[]
-  >(() =>
+  const [images, setImages] = useState<ImageItem[]>(() =>
     (initialImages ?? []).map((url, idx) => ({
       id: `initial-${idx}`,
       url,
@@ -58,6 +60,14 @@ export function useRouteCard({
   const geocoderInstance = useRef<MapboxGeocoder | null>(null);
   const MAX_IMAGES = 10;
   const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+
+  const clearFieldError = (key: string) => {
+    setErrors((prev) => {
+      if (!prev[key]) return prev;
+      const { [key]: _, ...rest } = prev;
+      return rest;
+    });
+  };
 
   useEffect(() => {
     if (mode !== "search") {
@@ -76,7 +86,7 @@ export function useRouteCard({
       accessToken: import.meta.env.VITE_MAPBOX_TOKEN,
       mapboxgl: mapboxgl as any,
       marker: false,
-      placeholder: "Busca un sitio para añadir…",
+      placeholder: "Busca un sitio para anadir puntos",
     });
 
     geocoder.addTo(geocoderRef.current);
@@ -103,11 +113,32 @@ export function useRouteCard({
       setName(v ?? "");
       setNameTooLong(false);
     }
+    setGeneralError("");
+    clearFieldError("name");
+  };
+
+  const onChangeDescription = (v: string) => {
+    setDescription(v ?? "");
+    setGeneralError("");
+    clearFieldError("description");
+  };
+
+  const onChangeCategory = (v: Category | "") => {
+    setCategory(v);
+    setGeneralError("");
+    clearFieldError("category");
+  };
+
+  const onChangeDifficulty = (v: "" | "easy" | "medium" | "hard") => {
+    setDifficulty(v);
+    setGeneralError("");
+    clearFieldError("difficulty");
   };
 
   const addSearchPoint = () => {
     if (!selectedCoord) return;
     setSearchPoints((prev) => [...prev, selectedCoord]);
+    clearFieldError("points");
     try {
       geocoderInstance.current?.clear();
     } catch {}
@@ -120,6 +151,7 @@ export function useRouteCard({
   const clearSearchPoints = () => {
     setSearchPoints([]);
     setSelectedCoord(null);
+    clearFieldError("points");
     try {
       geocoderInstance.current?.clear();
     } catch {}
@@ -127,6 +159,8 @@ export function useRouteCard({
 
   const changeMode = (m: Mode) => {
     setMode(m);
+    setGeneralError("");
+    clearFieldError("points");
     if (m === "search") onResetPoints?.();
     else clearSearchPoints();
   };
@@ -162,42 +196,45 @@ export function useRouteCard({
   };
 
   const handleSave = async () => {
+    setGeneralError("");
+    setErrors({});
     const points = mode === "draw" ? drawPoints : searchPoints;
+    const nextErrors: ErrorBag = {};
 
     if (points.length < 3) {
-      showAlert("Mínimo se han de seleccionar 3 puntos de interés", "error");
-      return;
+      nextErrors.points = "Anade al menos 3 puntos para definir la ruta.";
     }
     if (!name.trim()) {
-      showAlert("Falta añadir nombre a la ruta", "error");
-      return;
+      nextErrors.name = "Ponle un nombre a la ruta.";
+    } else if (name.trim().length > 30) {
+      nextErrors.name = "El nombre debe tener menos de 30 caracteres.";
     }
-    if (name.trim().length > 30) {
-      showAlert("El nombre de la ruta debe tener menos de 30 caracteres", "error");
+    if (!description.trim()) {
+      nextErrors.description = "Describe brevemente la ruta.";
+    }
+    if (!category) {
+      nextErrors.category = "Selecciona una tematica.";
+    }
+    if (images.length > MAX_IMAGES) {
+      nextErrors.images = `Maximo ${MAX_IMAGES} imagenes por ruta.`;
+    }
+    if (!difficulty) {
+      nextErrors.difficulty = "Selecciona la dificultad.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      setGeneralError("Revisa los campos marcados antes de guardar la ruta.");
+      showAlert("Faltan datos obligatorios en el formulario.", "error");
       return;
     }
 
     // Se comprueba unicidad de la ruta
-    const exists = await checkRouteNameExists(name);
+    const exists = await checkRouteNameExists(name.trim());
     if (exists) {
+      setErrors({ name: "Este nombre de ruta ya existe, prueba con otro." });
+      setGeneralError("Ese nombre ya esta utilizado por otra ruta.");
       showAlert("Este nombre de ruta ya existe", "error");
-      return;
-    }
-
-    if (!description.trim()) {
-      showAlert("Falta añadir una descripción a la ruta", "error");
-      return;
-    }
-    if (!category) {
-      showAlert("No se ha seleccionado ninguna categoría", "error");
-      return;
-    }
-    if (images.length > MAX_IMAGES) {
-      showAlert(`Máximo ${MAX_IMAGES} imágenes por ruta.`, "error");
-      return;
-    }
-    if (!difficulty) {
-      showAlert("Selecciona una dificultad para la ruta", "error");
       return;
     }
 
@@ -217,6 +254,7 @@ export function useRouteCard({
     };
 
     try {
+      setIsSaving(true);
       const res = await fetch(`${API}/routes`, {
         method: "POST",
         headers: {
@@ -228,9 +266,8 @@ export function useRouteCard({
 
       const resJson = await res.json().catch(() => null);
       if (!res.ok) {
-        const detail =
-          (resJson as any)?.detail ||
-          "No se pudo guardar la ruta. Revisa que estés autenticado.";
+        const detail = (resJson as any)?.detail || "No se pudo guardar la ruta. Revisa que estes autenticado.";
+        setGeneralError(typeof detail === "string" ? detail : "No se pudo guardar la ruta.");
         showAlert(detail, "error");
         return;
       }
@@ -238,17 +275,19 @@ export function useRouteCard({
       if (Array.isArray((resJson as any)?.newly_unlocked)) {
         (resJson as any).newly_unlocked.forEach((ach: any) => {
           const prefix = ach?.icon ? `${ach.icon} ` : "";
-          const name = ach?.name || "Logro desbloqueado";
-          showAlert(`${prefix}${name}`, "success");
+          const achName = ach?.name || "Logro desbloqueado";
+          showAlert(`${prefix}${achName}`, "success");
         });
       }
 
       showAlert("Ruta creada correctamente", "success");
-
       onClose?.();
     } catch (e) {
       console.error(e);
+      setGeneralError("No se pudo guardar la ruta. Intentalo de nuevo.");
       showAlert("No se pudo guardar la ruta.", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -260,6 +299,9 @@ export function useRouteCard({
       isPrivate,
       category,
       images,
+      errors,
+      generalError,
+      isSaving,
       categoryOptions: PUBLIC_CATEGORIES,
 
       geocoderRef,
@@ -268,10 +310,10 @@ export function useRouteCard({
       selectedCoord,
       onChangeName,
       onTogglePrivate: setIsPrivate,
-      onChangeCategory: (v: Category | "") => setCategory(v),
-      onChangeDescription: setDescription,
+      onChangeCategory,
+      onChangeDescription,
       difficulty,
-      onChangeDifficulty: setDifficulty,
+      onChangeDifficulty,
       onChangeMode: changeMode,
       onAddSearchPoint: addSearchPoint,
       onClearSearchPoints: clearSearchPoints,
@@ -284,15 +326,17 @@ export function useRouteCard({
         const currentCount = images.length;
         const availableSlots = MAX_IMAGES - currentCount;
         if (availableSlots <= 0) {
-          showAlert(`Máximo ${MAX_IMAGES} imágenes por ruta.`, "error");
+          const message = `Maximo ${MAX_IMAGES} imagenes por ruta.`;
+          setErrors((prev) => ({ ...prev, images: message }));
+          showAlert(message, "error");
           return;
         }
         const candidates = Array.from(files).slice(0, availableSlots);
-        const accepted: { id: string; url: string; name: string; size?: number }[] = [];
+        const accepted: ImageItem[] = [];
 
         for (const file of candidates) {
           if (!file.type.startsWith("image/")) {
-            showAlert(`El archivo ${file.name} no es una imagen válida.`, "error");
+            showAlert(`El archivo ${file.name} no es una imagen valida.`, "error");
             continue;
           }
           if (file.size > MAX_IMAGE_SIZE_BYTES) {
@@ -323,6 +367,8 @@ export function useRouteCard({
 
         if (accepted.length) {
           setImages((prev) => [...prev, ...accepted]);
+          clearFieldError("images");
+          setGeneralError("");
         }
       },
       onRemoveImage: (id: string) =>

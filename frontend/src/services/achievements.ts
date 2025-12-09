@@ -80,3 +80,25 @@ export async function getThemeAchievements(userId: string): Promise<AchievementP
     theme_id: item.theme_id,
   }));
 }
+
+export async function getDistanceAchievements(userId: string): Promise<AchievementProgress[]> {
+  const res = await fetchWithAuth(`/api/users/${userId}/achievements/distance`);
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null))?.detail;
+    throw new Error(detail || "No se pudieron cargar los logros por distancia");
+  }
+
+  const data = (await res.json().catch(() => null)) as AchievementProgress[] | null;
+  if (!Array.isArray(data)) return [];
+
+  return data.map((item) => ({
+    code: item.code,
+    name: item.name,
+    threshold_value: item.threshold_value,
+    current_value: item.current_value ?? 0,
+    is_unlocked: Boolean(item.is_unlocked),
+    icon: item.icon,
+    rarity: item.rarity,
+    theme_id: item.theme_id,
+  }));
+}
