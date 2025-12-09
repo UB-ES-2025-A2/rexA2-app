@@ -10,6 +10,9 @@ type Props = {
   images: { id: string; url: string; name: string; size?: number }[];
   difficulty: "" | "easy" | "medium" | "hard";
   categoryOptions?: Category[];
+  errors?: Record<string, string>;
+  generalError?: string;
+  isSaving?: boolean;
 
   geocoderRef: React.RefObject<HTMLDivElement | null>;
   searchPoints: Array<[number, number]>;
@@ -39,12 +42,15 @@ const RouteCardView: React.FC<Props> = ({
   category,
   images,
   difficulty,
+  errors = {},
+  generalError,
+  isSaving = false,
   categoryOptions = [],
   geocoderRef,
   searchPoints,
   drawPoints,
   selectedCoord,
-  nameTooLong, // reservado para futuras ayudas visuales
+  nameTooLong,
   description,
 
   onChangeName,
@@ -67,7 +73,7 @@ const RouteCardView: React.FC<Props> = ({
     if (!cat) return "";
     const labels: Record<string, string> = {
       urban: "Urbana",
-      gastronomia: "Gastronomía",
+      gastronomia: "Gastronomia",
     };
     if (labels[cat]) return labels[cat];
     return cat
@@ -90,7 +96,6 @@ const RouteCardView: React.FC<Props> = ({
         .map((it) => it.getAsFile())
         .filter(Boolean) as File[];
       if (fileList.length) {
-        // Convert array to a FileList-like object for compatibility
         const dataTransfer = new DataTransfer();
         fileList.forEach((f) => dataTransfer.items.add(f));
         onSelectImages(dataTransfer.files);
@@ -109,13 +114,13 @@ const RouteCardView: React.FC<Props> = ({
   };
 
   return (
-    <div className="route-card-panel">
+    <div className="route-card-panel" aria-busy={isSaving}>
       <div className="route-card__header">
         <div>
           <p className="route-card__eyebrow">Crea tu recorrido</p>
-          <h2 className="route__title">Crear Ruta</h2>
+          <h2 className="route__title">Crear ruta</h2>
           <p className="route-card__helper">
-            Define los datos básicos y elige si prefieres buscar puntos o dibujarlos en el mapa.
+            Completa los datos basicos y elige si prefieres buscar puntos o dibujarlos.
           </p>
         </div>
         <span className="route-card__pill">
@@ -123,38 +128,45 @@ const RouteCardView: React.FC<Props> = ({
         </span>
       </div>
 
+      {generalError && (
+        <div className="route-card__alert route-card__alert--error" role="alert">
+          {generalError}
+        </div>
+      )}
+
       <div className="route-card__body">
         <div className="route-card__section">
           <div className="route-card__section-head">
-            <span className="route-card__section-title">Detalles principales</span>
-            <span className="route-card__helper">Nombre, visibilidad y categoría.</span>
+            <span className="route-card__section-title">Informacion rapida</span>
+            <span className="route-card__helper">Nombre, tematica y visibilidad.</span>
           </div>
           <div className="route-card__grid">
-            <div className="input-group">
-              <label htmlFor="route-name">Nombre</label>
+            <div className={`input-group ${errors.name ? "has-error" : ""}`}>
+              <label htmlFor="route-name">Nombre *</label>
               <input
                 id="route-name"
                 type="text"
                 value={name}
                 onChange={(e) => onChangeName(e.target.value)}
-                placeholder="Ej: Ruta gastronómica"
+                placeholder="Ej: Ruta gastronomica por el centro"
               />
+              {errors.name && <p className="input-error">{errors.name}</p>}
               {nameTooLong && (
                 <p className="route-card__helper" style={{ color: "#dc2626" }}>
-                  Máximo 30 caracteres.
+                  Maximo 30 caracteres.
                 </p>
               )}
             </div>
 
-            <div className="input-group">
-              <label htmlFor="category">Categoría</label>
+            <div className={`input-group ${errors.category ? "has-error" : ""}`}>
+              <label htmlFor="category">Categoria *</label>
               <select
                 id="category"
                 value={category}
                 onChange={(e) => onChangeCategory(e.target.value as Category | "")}
               >
                 <option value="" disabled>
-                  Selecciona una categoría…
+                  Selecciona una categoria
                 </option>
                 {categoryOptions.map((cat) => (
                   <option key={cat} value={cat}>
@@ -162,28 +174,27 @@ const RouteCardView: React.FC<Props> = ({
                   </option>
                 ))}
               </select>
+              {errors.category && <p className="input-error">{errors.category}</p>}
             </div>
 
-            <div className="input-group">
-              <label htmlFor="difficulty">Dificultad</label>
+            <div className={`input-group ${errors.difficulty ? "has-error" : ""}`}>
+              <label htmlFor="difficulty">Dificultad *</label>
               <select
                 id="difficulty"
                 value={difficulty}
-                onChange={(e) =>
-                  onChangeDifficulty(e.target.value as "" | "easy" | "medium" | "hard")
-                }
+                onChange={(e) => onChangeDifficulty(e.target.value as "" | "easy" | "medium" | "hard")}
               >
                 <option value="" disabled>
-                  Selecciona dificultad…
+                  Selecciona dificultad
                 </option>
-                <option value="easy">Fácil</option>
+                <option value="easy">Facil</option>
                 <option value="medium">Media</option>
                 <option value="hard">Alta</option>
               </select>
               <p className="route-card__helper">
-                Puedes ajustar la dificultad manualmente; la distancia y duración se calculan
-                automáticamente al guardar.
+                La distancia y duracion se calcularan al guardar.
               </p>
+              {errors.difficulty && <p className="input-error">{errors.difficulty}</p>}
             </div>
 
             <div className="input-group">
@@ -199,7 +210,7 @@ const RouteCardView: React.FC<Props> = ({
                 Privada
               </label>
               <p className="route-card__helper">
-                {isPrivate ? "Solo tú podrás verla" : "Se mostrará a otros usuarios"}
+                {isPrivate ? "Solo tu podras verla" : "Se mostrara a otros usuarios"}
               </p>
             </div>
           </div>
@@ -207,14 +218,14 @@ const RouteCardView: React.FC<Props> = ({
 
         <div className="route-card__section">
           <div className="route-card__section-head">
-            <span className="route-card__section-title">Modo de creación</span>
-            <div className="route__tabs" role="tablist" aria-label="Modo de creación de ruta">
+            <span className="route-card__section-title">Modo de creacion</span>
+            <div className="route__tabs" role="tablist" aria-label="Modo de creacion de ruta">
               <button
                 className={`route__tab-btn ${mode === "search" ? "active" : ""}`}
                 onClick={() => onChangeMode("search")}
                 aria-pressed={mode === "search"}
               >
-                Buscar ubicación
+                Buscar ubicacion
               </button>
               <button
                 className={`route__tab-btn ${mode === "draw" ? "active" : ""}`}
@@ -228,11 +239,9 @@ const RouteCardView: React.FC<Props> = ({
 
           {mode === "search" && (
             <>
-              <p className="route-card__helper">
-                Usa el buscador para localizar puntos y agrégalos a la lista.
-              </p>
+              <p className="route-card__helper">Localiza puntos con el buscador y sumalos.</p>
               <div className="input-group">
-                <label>Ubicación</label>
+                <label>Ubicacion</label>
                 <div ref={geocoderRef} className="geocoder-container" />
               </div>
 
@@ -241,21 +250,17 @@ const RouteCardView: React.FC<Props> = ({
                   className="btn"
                   disabled={!selectedCoord}
                   onClick={onAddSearchPoint}
-                  title="Añadir el resultado actual como punto"
+                  title="Anadir el resultado actual como punto"
                 >
-                  Añadir punto
+                  Anadir punto
                 </button>
-                <button
-                  className="btn"
-                  onClick={onClearSearchPoints}
-                  title="Vaciar lista de puntos"
-                >
+                <button className="btn" onClick={onClearSearchPoints} title="Vaciar lista de puntos">
                   Limpiar puntos
                 </button>
               </div>
 
               <div className="route-card__points">
-                <h4>Puntos añadidos</h4>
+                <h4>Puntos anadidos</h4>
                 <ul className="route-card__points-list">
                   {searchPoints.map(([lng, lat], idx) => (
                     <li key={idx} className="route__point-row">
@@ -268,23 +273,22 @@ const RouteCardView: React.FC<Props> = ({
                         onClick={() => onRemoveSearchPoint(idx)}
                         title="Eliminar"
                       >
-                        ✕
+                        X
                       </button>
                     </li>
                   ))}
                   {searchPoints.length === 0 && (
-                    <li className="muted">No hay puntos añadidos todavía.</li>
+                    <li className="muted">No hay puntos anadidos todavia.</li>
                   )}
                 </ul>
+                {errors.points && <p className="input-error">{errors.points}</p>}
               </div>
             </>
           )}
 
           {mode === "draw" && (
             <>
-              <p className="route-card__helper">
-                Haz clic en el mapa para agregar puntos a la ruta y verlos aquí.
-              </p>
+              <p className="route-card__helper">Haz clic en el mapa y revisa los puntos aqui.</p>
               <div className="route-card__points">
                 <h4>Puntos dibujados</h4>
                 <ul className="route-card__points-list">
@@ -294,17 +298,14 @@ const RouteCardView: React.FC<Props> = ({
                     </li>
                   ))}
                   {drawPoints.length === 0 && (
-                    <li className="muted">No has añadido puntos todavía.</li>
+                    <li className="muted">No has anadido puntos todavia.</li>
                   )}
                 </ul>
+                {errors.points && <p className="input-error">{errors.points}</p>}
               </div>
               <div className="route-card__actions">
                 {onResetDrawPoints && (
-                  <button
-                    className="btn"
-                    onClick={onResetDrawPoints}
-                    title="Borrar puntos dibujados"
-                  >
+                  <button className="btn" onClick={onResetDrawPoints} title="Borrar puntos dibujados">
                     Reiniciar puntos
                   </button>
                 )}
@@ -315,10 +316,8 @@ const RouteCardView: React.FC<Props> = ({
 
         <div className="route-card__section">
           <div className="route-card__section-head">
-            <span className="route-card__section-title">Imágenes (opcional)</span>
-            <span className="route-card__helper">
-              Añade hasta 10 imágenes JPG/PNG (máx. 2 MB). No es obligatorio para guardar la ruta.
-            </span>
+            <span className="route-card__section-title">Imagenes (opcional)</span>
+            <span className="route-card__helper">Hasta 10 imagenes · max 2 MB · Opcional</span>
           </div>
           <div
             className={`route-card__images ${isDragging ? "is-dragging" : ""}`}
@@ -327,7 +326,7 @@ const RouteCardView: React.FC<Props> = ({
             onDragLeave={handleDragLeave}
           >
             <label className="btn" htmlFor="route-images-input">
-              Seleccionar imágenes
+              Seleccionar imagenes
             </label>
             <input
               id="route-images-input"
@@ -341,12 +340,12 @@ const RouteCardView: React.FC<Props> = ({
               }}
             />
             <div className="route-card__dropzone-hint">
-              <strong>Arrastra y suelta</strong> tus imágenes aquí o usa el botón superior.
-              <span>Formatos: PNG, JPG, JPEG, WEBP, GIF. Máx. 2 MB por imagen.</span>
+              <strong>Arrastra y suelta</strong> o usa el boton superior.
+              <span>PNG / JPG / WEBP · max 2 MB</span>
             </div>
-            <p className="route-card__helper">Puedes omitirlas y guardar la ruta igual.</p>
+            {errors.images && <p className="input-error">{errors.images}</p>}
             {images.length === 0 ? (
-              <p className="muted">No has añadido imágenes.</p>
+              <p className="muted">No has anadido imagenes.</p>
             ) : (
               <div className="route-card__image-grid">
                 {images.map((img) => (
@@ -357,7 +356,7 @@ const RouteCardView: React.FC<Props> = ({
                       onClick={() => onRemoveImage(img.id)}
                       title="Eliminar imagen"
                     >
-                      ✕
+                      X
                     </button>
                     <img src={img.url} alt={img.name} loading="lazy" />
                     <div className="route-card__image-meta">
@@ -372,29 +371,30 @@ const RouteCardView: React.FC<Props> = ({
 
         <div className="route-card__section">
           <div className="route-card__section-head">
-            <span className="route-card__section-title">Descripción</span>
-            <span className="route-card__helper">Añade contexto para quien vea tu ruta.</span>
+            <span className="route-card__section-title">Descripcion</span>
+            <span className="route-card__helper">Cuenta en una frase de que va.</span>
           </div>
-          <div className="input-group">
+          <div className={`input-group ${errors.description ? "has-error" : ""}`}>
             <textarea
               id="route-desc"
               value={description}
               onChange={(e) => onChangeDescription(e.target.value)}
-              placeholder="Cuenta brevemente de qué va la ruta…"
+              placeholder="Cuenta brevemente de que va la ruta"
               rows={4}
               maxLength={500}
             />
             <div className="route-card__helper" aria-live="polite">
               {description.length}/500
             </div>
+            {errors.description && <p className="input-error">{errors.description}</p>}
           </div>
         </div>
       </div>
 
       <div className="route-card__actions route-card__actions--footer">
-        <div className="route-card__helper">Revisa que los puntos estén completos.</div>
-        <button className="btn primary" onClick={onSave}>
-          Guardar Ruta
+        <div className="route-card__helper">Revisa que los puntos esten completos.</div>
+        <button className="btn primary" onClick={onSave} disabled={isSaving} aria-live="polite">
+          {isSaving ? "Guardando..." : "Guardar ruta"}
         </button>
       </div>
     </div>
