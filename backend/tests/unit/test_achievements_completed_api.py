@@ -62,6 +62,34 @@ async def test_completed_routes_achievements_ok(ac, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_completed_routes_achievements_empty(ac, monkeypatch):
+  from backend.db.models import achievement as achievement_crud
+
+  async def fake_list(user_id: str):
+    return []
+
+  monkeypatch.setattr(achievement_crud, "list_completed_routes_achievements", fake_list, raising=True)
+
+  res = await ac.get("/api/users/user123/achievements/completed-routes")
+
+  assert res.status_code == 200
+  assert res.json() == []
+
+
+@pytest.mark.anyio
+async def test_completed_routes_achievements_internal_error(ac, monkeypatch):
+  from backend.db.models import achievement as achievement_crud
+
+  async def fake_list(user_id: str):
+    raise RuntimeError("boom")
+
+  monkeypatch.setattr(achievement_crud, "list_completed_routes_achievements", fake_list, raising=True)
+
+  with pytest.raises(RuntimeError):
+    await ac.get("/api/users/user123/achievements/completed-routes")
+
+
+@pytest.mark.anyio
 async def test_completed_routes_achievements_forbidden(ac, achievements_app, monkeypatch):
   app = achievements_app
 
