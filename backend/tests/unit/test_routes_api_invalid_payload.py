@@ -30,3 +30,29 @@ async def test_create_route_422_payload_invalido(ac, monkeypatch):
     
     # Se espera un 422 Unprocessable Entity por validación
     assert res.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_create_route_invalid_images_returns_422(ac, monkeypatch):
+    from backend.db.models import route as route_crud
+
+    async def fake_get_route_by_name(owner_id, name):
+        return None
+
+    async def fake_create_route(owner_id, data):
+        return {"_id": "X", "owner_id": owner_id, **data, "created_at": "2025-01-01T00:00:00Z"}
+
+    monkeypatch.setattr(route_crud, "get_route_by_name", fake_get_route_by_name, raising=True)
+    monkeypatch.setattr(route_crud, "create_route", fake_create_route, raising=True)
+
+    payload = {
+        "name": "Con imágenes inválidas",
+        "points": [{"latitude": 1, "longitude": 1}] * 3,
+        "visibility": True,
+        "description": "d",
+        "category": "c",
+        "images": ["", 123],  # no son URLs válidas
+    }
+
+    res = await ac.post("/routes", json=payload)
+    assert res.status_code == 422

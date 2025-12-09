@@ -13,8 +13,12 @@ type Props = {
   markers?: MarkerData[];
   allowPickPoint?: boolean;
   onPickPoint?: (lng: number, lat: number) => void;
+  onMarkerClick?: (id: string) => void;
   highlightPoints?: Array<[number, number]>;
   fitOnHighlight?: boolean;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
+  popupNode?: React.ReactNode;
+  popupLocation?: [number, number] | null;
 };
 
 async function getRoutedPath(points: Array<[number, number]>): Promise<Array<[number, number]>> {
@@ -52,11 +56,17 @@ export default function MapView({
   onPickPoint,
   highlightPoints = [],
   fitOnHighlight = true,
+  onBoundsChange,
+  markers = [],
+  onMarkerClick,
+  popupNode,
+  popupLocation,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const animationFrameRef = useRef<number | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevViewportRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
@@ -74,6 +84,12 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const safeResize = () => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    };
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
       style: "mapbox://styles/mapbox/streets-v12",
@@ -86,10 +102,10 @@ export default function MapView({
     mapRef.current = map;
 
     map.on("load", () => {
-      setTimeout(() => map.resize(), 50);
-      setTimeout(() => map.resize(), 150);
-      setTimeout(() => map.resize(), 300);
-      setTimeout(() => map.resize(), 500);
+      setTimeout(safeResize, 50);
+      setTimeout(safeResize, 150);
+      setTimeout(safeResize, 300);
+      setTimeout(safeResize, 500);
 
       const trafficLayers = [
         "traffic-lines-incidents-day",
@@ -264,6 +280,59 @@ export default function MapView({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !mapLoaded || !onBoundsChange) return;
+
+    const handleMoveEnd = () => {
+      const bounds = map.getBounds();
+      if (!bounds) return;
+      onBoundsChange({
+        north: bounds.getNorth(),
+        south: bounds.getSouth(),
+        east: bounds.getEast(),
+        west: bounds.getWest(),
+      });
+    };
+
+    map.on("moveend", handleMoveEnd);
+    handleMoveEnd();
+
+    return () => {
+      map.off("moveend", handleMoveEnd);
+    };
+  }, [mapLoaded, onBoundsChange]);
+
+  // Update popup position on map move
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapLoaded) return;
+    if (!map || !popupLocation) {
+      setPopupPos(null);
+      return;
+    }
+
+    const updatePos = () => {
+      const pos = map?.project(popupLocation);
+      if (!pos) {
+        setPopupPos(null);
+        return;
+      }
+      setPopupPos({ x: pos.x, y: pos.y });
+    };
+
+    map.on("move", updatePos);
+    map.on("moveend", updatePos);
+    map.on("zoom", updatePos);
+    updatePos();
+
+    return () => {
+      map.off("move", updatePos);
+      map.off("moveend", updatePos);
+      map.off("zoom", updatePos);
+    };
+  }, [mapLoaded, popupLocation]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     if (!map || !mapLoaded) return;
     map.resize();
   }, [allowPickPoint, mapLoaded]);
@@ -288,23 +357,23 @@ export default function MapView({
         features:
           routedPoints.length > 0
             ? [
-                {
-                  type: "Feature",
-                  geometry: {
-                    type: "LineString",
-                    coordinates: routedPoints,
-                  },
-                  properties: {},
-                } as Feature<LineString>,
-                ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
-                  type: "Feature",
-                  geometry: {
-                    type: "Point",
-                    coordinates: coord,
-                  },
-                  properties: { order: idx + 1 },
-                })),
-              ]
+              {
+                type: "Feature",
+                geometry: {
+                  type: "LineString",
+                  coordinates: routedPoints,
+                },
+                properties: {},
+              } as Feature<LineString>,
+              ...highlightPoints.map<Feature<Point>>((coord, idx) => ({
+                type: "Feature",
+                geometry: {
+                  type: "Point",
+                  coordinates: coord,
+                },
+                properties: { order: idx + 1 },
+              })),
+            ]
             : [],
       };
 
@@ -361,6 +430,44 @@ export default function MapView({
     prevViewportRef.current = null;
     map.easeTo({ center, zoom, duration: 400 });
   }, [center, zoom, mapLoaded, fitOnHighlight, highlightPoints.length]);
+
+  // Renderizar marcadores
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoaded) return;
+
+    // Limpiar marcadores anteriores
+    markerRefs.current.forEach((m) => m.remove());
+    markerRefs.current = [];
+
+    if (!markers || markers.length === 0) return;
+
+    markers.forEach((markerData) => {
+      const el = document.createElement("div");
+      el.className = "map-marker";
+      el.style.backgroundImage = "url('/marker-icon.png')"; // Asegúrate de tener un icono o usa CSS
+      el.style.width = "30px";
+      el.style.height = "30px";
+      el.style.backgroundSize = "cover";
+      el.style.cursor = "pointer";
+
+      // Fallback si no hay imagen, un círculo simple
+      el.style.backgroundColor = "#4f46e5";
+      el.style.borderRadius = "50%";
+      el.style.border = "2px solid white";
+
+      el.addEventListener("click", (e) => {
+        e.stopPropagation(); // Evitar click en el mapa
+        onMarkerClick?.(markerData.id);
+      });
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat([markerData.lng, markerData.lat])
+        .addTo(map);
+
+      markerRefs.current.push(marker);
+    });
+  }, [markers, mapLoaded, onMarkerClick]);
 
   const startAnimations = (map: Map) => {
     if (animationFrameRef.current) {
@@ -422,15 +529,47 @@ export default function MapView({
   }, [forceMapResize]);
 
   return (
-    <div
-      ref={containerRef}
-      className={className ? `map-view ${className}` : "map-view"}
-      style={{
-        width: "100%",
-        height: "100%",
-        position: "relative",
-        transform: "none",
-      }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        className={className ? `map-view ${className}` : "map-view"}
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "relative",
+          transform: "none",
+        }}
+      />
+      {popupNode && popupPos && (
+        <div
+          style={{
+            position: "absolute",
+            left: popupPos.x,
+            top: popupPos.y,
+            transform: "translate(-50%, -100%)",
+            pointerEvents: "auto",
+            zIndex: 1000,
+            paddingBottom: "12px", // Space for the "arrow" feel
+          }}
+        >
+          {popupNode}
+          {/* Optional Arrow */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "4px",
+              left: "50%",
+              transform: "translateX(-50%) rotate(45deg)",
+              width: "16px",
+              height: "16px",
+              background: "rgba(255, 255, 255, 0.65)",
+              backdropFilter: "blur(12px)",
+              borderRight: "1px solid rgba(255, 255, 255, 0.4)",
+              borderBottom: "1px solid rgba(255, 255, 255, 0.4)",
+            }}
+          />
+        </div>
+      )}
+    </>
   );
 }

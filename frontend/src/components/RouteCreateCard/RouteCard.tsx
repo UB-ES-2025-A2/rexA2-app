@@ -7,6 +7,7 @@ export type Props = {
   drawPoints?: Array<[number, number]>;
   onResetPoints?: () => void;
   onClose?: () => void;
+  initialImages?: string[];
 
   ctrl?: ReturnType<typeof useRouteCard>;
 };
@@ -16,9 +17,10 @@ export default function RouteCard({
   drawPoints = [],
   onResetPoints,
   onClose,
+  initialImages,
   ctrl,
 }: Props) {
-  const internal = useRouteCard({ modeDefault, drawPoints, onResetPoints, onClose });
+  const internal = useRouteCard({ modeDefault, drawPoints, onResetPoints, onClose, initialImages });
   const c = ctrl ?? internal;
   return <RouteCardView {...c.viewProps} />;
 }

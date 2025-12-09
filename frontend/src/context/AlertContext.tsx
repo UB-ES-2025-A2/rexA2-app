@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import AlertPortal from "../components/Alert/AlertPortal";
 
@@ -10,14 +10,14 @@ type AlertContextType = {
 };
 
 const AlertContext = createContext<AlertContextType>({
-  showAlert: () => {},
-  hideAlert: () => {},
+  showAlert: () => { },
+  hideAlert: () => { },
 });
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [alert, setAlert] = useState<{ message: string; type: AlertType } | null>(null);
 
-  const showAlert = (msg: string | Error | { detail?: string }, type: AlertType = "error") => {
+  const showAlert = useCallback((msg: string | Error | { detail?: string }, type: AlertType = "error") => {
     let message = "Error desconocido";
 
     if (msg instanceof Error) message = msg.message;
@@ -26,12 +26,14 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     else message = String(msg);
 
     setAlert({ message, type });
-  };
+  }, []);
 
-  const hideAlert = () => setAlert(null);
+  const hideAlert = useCallback(() => setAlert(null), []);
+
+  const value = useMemo(() => ({ showAlert, hideAlert }), [showAlert, hideAlert]);
 
   return (
-    <AlertContext.Provider value={{ showAlert, hideAlert }}>
+    <AlertContext.Provider value={value}>
       {children}
       {alert && (
         <AlertPortal
