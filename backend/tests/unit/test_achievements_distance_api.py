@@ -60,6 +60,33 @@ async def test_distance_achievements_ok(ac, monkeypatch):
 
 
 @pytest.mark.anyio
+async def test_distance_achievements_empty(ac, monkeypatch):
+    from backend.db.models import achievement as achievement_crud
+
+    async def fake_list(user_id: str):
+        return []
+
+    monkeypatch.setattr(achievement_crud, "list_distance_achievements", fake_list, raising=True)
+
+    res = await ac.get("/api/users/user123/achievements/distance")
+    assert res.status_code == 200
+    assert res.json() == []
+
+
+@pytest.mark.anyio
+async def test_distance_achievements_internal_error(ac, monkeypatch):
+    from backend.db.models import achievement as achievement_crud
+
+    async def fake_list(user_id: str):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(achievement_crud, "list_distance_achievements", fake_list, raising=True)
+
+    with pytest.raises(RuntimeError):
+        await ac.get("/api/users/user123/achievements/distance")
+
+
+@pytest.mark.anyio
 async def test_distance_achievements_forbidden(ac, achievements_app):
     app = achievements_app
 
