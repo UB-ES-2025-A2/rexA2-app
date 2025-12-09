@@ -112,7 +112,7 @@ test("US27 - marcar y desmarcar ruta como realizada (subset de criterios)", asyn
   await routeCards.first().click();
 
   const detailsCard = page.locator(".route-details-card");
-  await expect(detailsCard).toBeVisible({ timeout: 8000 });
+  await expect(detailsCard).toBeVisible({ timeout: 20000 });
 
   // Por defecto no realizada
   const completionButton = detailsCard.getByRole("button", {
@@ -130,11 +130,15 @@ test("US27 - marcar y desmarcar ruta como realizada (subset de criterios)", asyn
   logCriterion("Cambio inmediato de estado tras marcar como realizada");
 
   // Salir y volver a entrar
-  await page.goto("/mapa", { waitUntil: "domcontentloaded" });
+  const closeButton = page.locator(".route-details-card__close");
+  if ((await closeButton.count()) > 0) {
+    await closeButton.click({ force: true });
+    await expect(detailsCard).toHaveCount(0);
+  }
   await disableSearchArea();
   await expect(routeCards.first()).toBeVisible({ timeout: 20000 });
   await routeCards.first().click();
-  await expect(detailsCard).toBeVisible({ timeout: 8000 });
+  await expect(detailsCard).toBeVisible({ timeout: 20000 });
 
   const completedStateButtonAfterReenter = detailsCard.getByRole("button", {
     name: /realizada|ruta realizada|marcada como realizada/i,

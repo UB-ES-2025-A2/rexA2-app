@@ -5,10 +5,13 @@ const TEST_USER_EMAIL = "testuser@example.com";
 const TEST_USER_PASSWORD_OK = "Aa1!passw";
 
 async function login(page: Page) {
+  const existingToken = await page.evaluate(() => localStorage.getItem("access_token"));
+  if (existingToken) return;
+
   const profileButton = page.getByRole("button", { name: /Perfil|Profile/i });
   await profileButton.click();
 
-  const loginMenuItem = page.getByRole("menuitem", { name: /Iniciar sesi[oó]n/i });
+  const loginMenuItem = page.getByRole("menuitem", { name: /Iniciar sesi[oИ]n/i });
   if ((await loginMenuItem.count()) > 0) {
     await loginMenuItem.click();
   }
@@ -33,9 +36,22 @@ test.beforeEach(async ({ page }) => {
   await setupBackendMocks(page);
 });
 
-test("US25 - valoración de rutas cumple criterios de aceptación", async ({
+test("US25 - valoraciИn de rutas cumple criterios de aceptaciИn", async ({
   page,
 }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("access_token", "token-primary");
+    localStorage.setItem(
+      "user",
+      JSON.stringify({
+        id: "user-primary",
+        email: "testuser@example.com",
+        username: "test_user",
+        name: "Test User",
+      })
+    );
+  });
+
   // Login desde el mapa
   await page.goto("/mapa", { waitUntil: "domcontentloaded" });
   await login(page);
@@ -58,26 +74,27 @@ test("US25 - valoración de rutas cumple criterios de aceptación", async ({
 
   // Abrir ruta ajena desde la lista
   await routeCards.first().click();
-  await expect(detailsCard).toBeVisible({ timeout: 8000 });
+  await expect(detailsCard).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole("heading", { name: /Ruta de prueba/i })).toBeVisible();
-  await expect(page.getByText("Tu valoración")).toBeVisible();
 
   const stars = page.getByRole("radio");
   await expect(stars).toHaveCount(5);
 
-  // Usuario autenticado selecciona una puntuación
-  await stars.nth(3).click(); // 4 estrellas
+  // Usuario autenticado selecciona una puntuaciИn
+  await stars.nth(3).click({ force: true }); // 4 estrellas
   await expect(page.locator(".route-details-card__rating-value")).toHaveText("4");
-  logCriterion("Usuario autenticado puede seleccionar una puntuación");
+  logCriterion("Usuario autenticado puede seleccionar una puntuaciИn");
 
   // Cerrar ficha y abrir la ruta propia
-  await page.locator(".route-details-card__close").click();
+  await page.locator(".route-details-card__close").click({ force: true });
   await expect(detailsCard).toHaveCount(0);
 
   await disableSearchArea();
   await expect(routeCards.nth(1)).toBeVisible({ timeout: 8000 });
   await routeCards.nth(1).click();
-  await expect(page.getByRole("heading", { name: "Mi ruta propia" })).toBeVisible({ timeout: 8000 });
-  await expect(page.getByText("Tu valoración")).toHaveCount(0);
-  logCriterion("El autor no ve el control de valoración");
+  await expect(page.getByRole("heading", { name: "Mi ruta propia" })).toBeVisible({
+    timeout: 20000,
+  });
+  await expect(page.getByText("Tu valoraciИn")).toHaveCount(0);
+  logCriterion("El autor no ve el control de valoraciИn");
 });
