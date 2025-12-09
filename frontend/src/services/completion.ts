@@ -1,6 +1,18 @@
 import { fetchWithAuth } from "./api";
 
-type CompletionResponse = { completed: boolean };
+export type AchievementUnlock = {
+  code: string;
+  name: string;
+  description?: string;
+  category?: string;
+  threshold_value: number;
+  current_value?: number;
+  icon?: string | null;
+  rarity?: string | null;
+  theme_id?: string | null;
+};
+
+export type CompletionResponse = { completed: boolean; newly_unlocked?: AchievementUnlock[] };
 
 export async function getRouteCompletionStatus(routeId: string): Promise<boolean> {
   const res = await fetchWithAuth(`/routes/${routeId}/completion`);
@@ -15,7 +27,7 @@ export async function getRouteCompletionStatus(routeId: string): Promise<boolean
 export async function setRouteCompletionStatus(
   routeId: string,
   completed: boolean
-): Promise<boolean> {
+): Promise<CompletionResponse> {
   const res = await fetchWithAuth(`/routes/${routeId}/completion`, {
     method: "POST",
     body: JSON.stringify({ completed }),
@@ -25,7 +37,10 @@ export async function setRouteCompletionStatus(
     throw new Error(detail || "No se pudo actualizar el estado de la ruta");
   }
   const data = (await res.json().catch(() => null)) as CompletionResponse | null;
-  return Boolean(data?.completed);
+  return {
+    completed: Boolean(data?.completed),
+    newly_unlocked: Array.isArray(data?.newly_unlocked) ? data?.newly_unlocked : [],
+  };
 }
 
 export async function getMyCompletedRouteIds(): Promise<string[]> {

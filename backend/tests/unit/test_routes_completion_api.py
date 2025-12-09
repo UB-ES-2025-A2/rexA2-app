@@ -21,7 +21,7 @@ async def test_get_completion_ok(ac, monkeypatch):
 
     res = await ac.get("/routes/65e1234567890abcdef12345/completion")
     assert res.status_code == 200
-    assert res.json() == {"completed": True}
+    assert res.json() == {"completed": True, "newly_unlocked": []}
 
 
 @pytest.mark.anyio
@@ -56,6 +56,7 @@ async def test_get_completion_403_private_other_user(ac, monkeypatch):
 async def test_set_completion_true(ac, monkeypatch):
     from backend.db.models import route as route_crud
     from backend.db.models import completion as completion_crud
+    from backend.db.models import achievement as achievement_crud
 
     async def fake_get_route_by_id(route_id):
         return {"_id": route_id, "owner_id": "other", "visibility": True}
@@ -65,12 +66,16 @@ async def test_set_completion_true(ac, monkeypatch):
     async def fake_mark_completed(user_id, route_id):
         called["args"] = (user_id, route_id)
 
+    async def fake_recalculate(user_id):
+        return []
+
     monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
     monkeypatch.setattr(completion_crud, "mark_completed", fake_mark_completed, raising=True)
+    monkeypatch.setattr(achievement_crud, "recalculate_completed_routes_achievements", fake_recalculate, raising=True)
 
     res = await ac.post("/routes/65e1234567890abcdef12345/completion", json={"completed": True})
     assert res.status_code == 200
-    assert res.json() == {"completed": True}
+    assert res.json() == {"completed": True, "newly_unlocked": []}
     assert called["args"] == ("user123", "65e1234567890abcdef12345")
 
 
@@ -78,6 +83,7 @@ async def test_set_completion_true(ac, monkeypatch):
 async def test_set_completion_false(ac, monkeypatch):
     from backend.db.models import route as route_crud
     from backend.db.models import completion as completion_crud
+    from backend.db.models import achievement as achievement_crud
 
     async def fake_get_route_by_id(route_id):
         return {"_id": route_id, "owner_id": "other", "visibility": True}
@@ -87,12 +93,16 @@ async def test_set_completion_false(ac, monkeypatch):
     async def fake_unmark_completed(user_id, route_id):
         called["args"] = (user_id, route_id)
 
+    async def fake_recalculate(user_id):
+        return []
+
     monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)
     monkeypatch.setattr(completion_crud, "unmark_completed", fake_unmark_completed, raising=True)
+    monkeypatch.setattr(achievement_crud, "recalculate_completed_routes_achievements", fake_recalculate, raising=True)
 
     res = await ac.post("/routes/65e1234567890abcdef12345/completion", json={"completed": False})
     assert res.status_code == 200
-    assert res.json() == {"completed": False}
+    assert res.json() == {"completed": False, "newly_unlocked": []}
     assert called["args"] == ("user123", "65e1234567890abcdef12345")
 
 
