@@ -43,6 +43,12 @@
   gap: 12px;
 }
 
+.route-details-card__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .route-details-card__title {
   font-size: 1.4rem;
   font-weight: 800;
@@ -75,6 +81,52 @@
   transform: scale(1.1);
 }
 
+.route-details-card__download-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(239, 68, 68, 0.24);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 40px;
+}
+
+.route-details-card__download-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.25);
+  filter: brightness(1.02);
+}
+
+.route-details-card__download-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.route-details-card__download-icon {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.route-details-card__download-label {
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .route-details-card__body {
   display: flex;
   flex-direction: column;
@@ -82,6 +134,80 @@
   overflow-y: auto;
   min-height: 0;
   padding-right: 8px;
+}
+
+.route-details-card__media {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+  position: relative;
+}
+
+.route-details-card__image-wrapper {
+  position: relative;
+}
+
+.route-details-card__image-wrapper img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  display: block;
+}
+
+.route-details-card__image-controls {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 12px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0));
+}
+
+.route-details-card__image-controls button {
+  background: rgba(15, 23, 42, 0.65);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.2s ease;
+}
+
+.route-details-card__image-controls button:hover {
+  transform: scale(1.08);
+}
+
+.route-details-card__image-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.route-details-card__image-dots button {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.4);
+  padding: 0;
+  cursor: pointer;
+}
+
+.route-details-card__image-dots button.active {
+  background: white;
+  border-color: white;
+}
+
+.route-details-card__placeholder {
+  display: grid;
+  place-items: center;
+  padding: 28px 16px;
+  color: var(--muted);
+  gap: 6px;
+  text-align: center;
 }
 
 .route-details-card__description {
@@ -106,6 +232,38 @@
 .route-details-card__privacy {
   color: var(--muted);
   font-weight: 600;
+}
+
+.route-details-card__status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto;
+  max-width: 560px;
+}
+
+.route-status-toggle {
+  border: 1px solid #d0d7ff;
+  background: #ffffff;
+  color: #4338ca;
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  box-shadow: 0 6px 18px rgba(67, 56, 202, 0.08);
+}
+
+.route-status-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(67, 56, 202, 0.12);
+  border-color: #4338ca;
+}
+
+.route-status-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .route-details-card__rating-summary {
@@ -252,6 +410,12 @@
   flex-wrap: wrap;
 }
 
+.route-details-card__download-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-weight: 700;
+}
+
 .save-container {
   position: relative;
   display: inline-block;
@@ -319,6 +483,22 @@
   background: var(--muted);
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+.route-details-card__edit-btn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: 2px solid var(--close-border);
+  background: #fff;
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.route-details-card__edit-btn:hover {
+  box-shadow: 0 6px 12px rgba(99, 102, 241, 0.12);
+  transform: translateY(-1px);
 }
 
 .route-details-card__meta {
