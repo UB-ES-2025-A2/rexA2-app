@@ -7,6 +7,7 @@ export type User = {
   id?: string;
   email?: string;
   username?: string;
+  theme_preference?: "light" | "dark" | "system";
 };
 // ---------- Helpers de almacenamiento ----------
 export type AuthResponse = {
