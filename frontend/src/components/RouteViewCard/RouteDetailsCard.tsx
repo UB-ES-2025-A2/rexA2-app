@@ -11,6 +11,7 @@ import ShareModal from "../ShareModal";
 import StarRating from "../StarRating";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
+import { useUnitPreference } from "../../context/UnitPreferenceContext";
 import { fetchWithAuth } from "../../services/api";
 import { getRouteCompletionStatus, setRouteCompletionStatus } from "../../services/completion";
 
@@ -132,6 +133,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 }) => {
   const { token, user } = useAuth();
   const { showAlert } = useAlert();
+  const { formatDistance } = useUnitPreference();
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
@@ -404,10 +406,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
         setRouteData((prev: any) =>
           prev
             ? {
-                ...prev,
-                rating: average ?? prev.rating,
-                rating_count: count ?? prev.rating_count,
-              }
+              ...prev,
+              rating: average ?? prev.rating,
+              rating_count: count ?? prev.rating_count,
+            }
             : prev
         );
         onRatingChange?.({ average, count });
@@ -441,9 +443,22 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     setCompleted(next);
     setCompletionSaving(true);
     try {
-      const saved = await setRouteCompletionStatus(routeId, next);
+      const response = await setRouteCompletionStatus(routeId, next);
+      const saved = response.completed;
       setCompleted(saved);
       await onCompletedChange?.(saved);
+
+      if (Array.isArray(response.newly_unlocked) && response.newly_unlocked.length > 0) {
+        response.newly_unlocked.forEach((achievement) => {
+          const prefix = achievement.icon ? `${achievement.icon} ` : "";
+          let message = `${prefix}Logro desbloqueado: ${achievement.name}`;
+          if (achievement.category === "distance_travelled") {
+            message = `${prefix}¡Nuevo logro! Has recorrido más de ${achievement.threshold_value} km`;
+          }
+          showAlert(message, "success");
+        });
+      }
+
       showAlert(
         saved ? "Ruta marcada como realizada." : "Ruta marcada como pendiente.",
         "success"
@@ -487,10 +502,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
 
   const difficultyLabel = displayDifficulty
     ? {
-        easy: "Fácil",
-        medium: "Media",
-        hard: "Alta",
-      }[displayDifficulty.toLowerCase()] ?? displayDifficulty
+      easy: "Fácil",
+      medium: "Media",
+      hard: "Alta",
+    }[displayDifficulty.toLowerCase()] ?? displayDifficulty
     : null;
 
   const slugifyName = (value: string) =>
@@ -693,12 +708,10 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
           </div>
 
           <div className="route-details-card__meta">
-            {typeof displayDistance === "number" ? (
-              <span className="route-details-pill">
-                <span className="pill-dot distance" />
-                {displayDistance} km
-              </span>
-            ) : null}
+            <span className="route-details-pill">
+              <span className="pill-dot distance" />
+              {formatDistance(displayDistance)}
+            </span>
             {formatDuration(displayDuration) ? (
               <span className="route-details-pill">
                 <span className="pill-dot duration" />
@@ -766,20 +779,20 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
             ) : null}
           </div>
 
-      <div className="route-details-card__status" aria-live="polite">
-        <button
-          type="button"
-          className="route-status-toggle"
-          onClick={handleCompletionToggle}
-          disabled={!isAuthenticated || completionSaving}
-        >
-          {completionSaving
-            ? "Guardando..."
-            : completed
-              ? "Ruta realizada"
-              : "Marcar como realizada"}
-        </button>
-      </div>
+          <div className="route-details-card__status" aria-live="polite">
+            <button
+              type="button"
+              className="route-status-toggle"
+              onClick={handleCompletionToggle}
+              disabled={!isAuthenticated || completionSaving}
+            >
+              {completionSaving
+                ? "Guardando..."
+                : completed
+                  ? "Ruta realizada"
+                  : "Marcar como realizada"}
+            </button>
+          </div>
 
           <div
             className="route-details-card__footer"
@@ -834,7 +847,7 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
       <ShareModal
         open={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        link={`${window.location.origin}/?route=${routeId}`}
+        link={`${window.location.origin}/mapa?route=${routeId}`}
       />
     </>
   );

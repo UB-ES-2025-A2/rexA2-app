@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from .achievement import AchievementUnlock
 
 
 class CompletionPayload(BaseModel):
@@ -7,3 +8,4 @@ class CompletionPayload(BaseModel):
 
 class CompletionStatus(BaseModel):
   completed: bool
+  newly_unlocked: list[AchievementUnlock] = []
