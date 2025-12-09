@@ -9,11 +9,9 @@ test.describe("Búsqueda y listado de rutas", () => {
   test("la home muestra la barra de búsqueda y algún estado de resultados", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/mapa");
 
-    const searchInput = page.getByPlaceholder(
-      "Buscar rutas por nombre, creador o descripción..."
-    );
+    const searchInput = page.getByPlaceholder(/Buscar rutas por nombre/i);
     await expect(searchInput).toBeVisible();
 
     await page.waitForTimeout(1000);
@@ -31,11 +29,9 @@ test.describe("Búsqueda y listado de rutas", () => {
   test("es posible escribir en la barra de búsqueda sin errores", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/mapa");
 
-    const searchInput = page.getByPlaceholder(
-      "Buscar rutas por nombre, creador o descripción..."
-    );
+    const searchInput = page.getByPlaceholder(/Buscar rutas por nombre/i);
 
     await expect(searchInput).toBeVisible();
 

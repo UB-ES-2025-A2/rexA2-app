@@ -24,6 +24,9 @@ python-dotenv==1.0.1
 types-python-jose
 types-passlib
 
+# --- Generación de PDF ---
+reportlab==4.2.5
+
 # --- Test ---
 pytest
 pytest.asyncio

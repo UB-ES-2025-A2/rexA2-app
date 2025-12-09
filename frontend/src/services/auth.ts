@@ -1,10 +1,13 @@
 // frontend/src/services/auth.ts
+import { translateErrorMessage } from "../utils/errorTranslator";
+
 const API = import.meta.env.VITE_API_URL || "";
 
 export type User = {
   id?: string;
   email?: string;
   username?: string;
+  theme_preference?: "light" | "dark" | "system";
 };
 // ---------- Helpers de almacenamiento ----------
 export type AuthResponse = {
@@ -44,10 +47,12 @@ export async function checkEmailAvailable(email: string): Promise<boolean> {
 async function parseError(res: Response) {
   const payload = await res.json().catch(async () => await res.text());
   const detail = typeof payload === "string" ? payload : payload?.detail;
-  const error = new Error(detail || `Error ${res.status}`);
+  const rawMsg = detail || `Error ${res.status}`;
+  const error = new Error(translateErrorMessage(rawMsg));
   (error as any).status = res.status;
   return error;
 }
+
 export async function register(payload: { email: string; username: string; password: string }) {
   const res = await fetch(`${API}/users`, {
     method: "POST",
@@ -62,7 +67,7 @@ export async function register(payload: { email: string; username: string; passw
 
 export async function login(payload: { email: string; password: string }): Promise<AuthResponse> {
   // 1) Intento JSON típico
-  const  res = await fetch(`${API}/auth/login`, {
+  const res = await fetch(`${API}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: payload.email, password: payload.password }),
@@ -95,8 +100,24 @@ export async function login(payload: { email: string; password: string }): Promi
   } */
 
   if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new Error(detail || `Error ${res.status}`);
+    let errorMessage = `Error ${res.status}`;
+    try {
+      const payload = await res.json();
+      if (payload?.detail) {
+        if (Array.isArray(payload.detail)) {
+          errorMessage = payload.detail
+            .map((err: any) => err.msg || JSON.stringify(err))
+            .join(". ");
+        } else {
+          errorMessage = String(payload.detail);
+        }
+      }
+    } catch (e) {
+      const text = await res.text().catch(() => "");
+      if (text) errorMessage = text;
+    }
+    // Translate the extracted message
+    throw new Error(translateErrorMessage(errorMessage));
   }
   const data = (await res.json()) as AuthResponse;
   return data;

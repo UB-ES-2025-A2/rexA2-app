@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import List
 from datetime import datetime
+from .achievement import AchievementUnlock
 
 
 class CommentCreate(BaseModel):
@@ -40,16 +41,16 @@ class CommentCreated(BaseModel):
 
 # Modelo simple para representar un punto geográfico
 class Point(BaseModel):
-    latitude: float     # Lattitude en grados
-    longitude: float    # Longtitude en grados
+    latitude: float
+    longitude: float
 
 # Campos comunes para las rutas
 class RouteBase(BaseModel):
-    name: str                       # Nombre de la ruta
-    points: List[Point]             # Lista ordenada de puntos que forman la ruta
-    visibility: bool = False        # Visibilidad de la ruta públicamente (por defecto, no)
-    description: str # | None = None  # Descripción de la ruta (opcional)
-    category: str # | None = None     # Categoría opcional de la ruta
+    name: str
+    points: List[Point]
+    visibility: bool = False
+    description: str
+    category: str
     country_code: str | None = Field(
         default=None,
         description="Código ISO del país (ej. ES, FR, IT)",
@@ -60,7 +61,7 @@ class RouteBase(BaseModel):
         description="Nombre legible del país (ej. España, Francia)",
         max_length=80,
     )
-    images: List[str] = Field(        # URLs opcionales de imágenes asociadas a la ruta
+    images: List[str] = Field(
         default_factory=list,
         description="Lista opcional de URLs de imágenes",
     )
@@ -71,7 +72,7 @@ class RouteBase(BaseModel):
     )
     duration_minutes: int | None = Field(   #Duración estimada en minutos, aun no implementado en el front
         default=None,
-        ge=0,                           # >= 0
+        ge=0,
         description="Duración estimada en minutos (>= 0)",
     )
     difficulty: str | None = Field(
@@ -159,6 +160,11 @@ class RoutePublic(RouteBase):
     rating_count: int | None = None
     user_rating: float | None = None
     images: List[str] = Field(default_factory=list)
+    is_completed: bool = False
+
+
+class RouteCreateResponse(RoutePublic):
+    newly_unlocked: list[AchievementUnlock] = Field(default_factory=list)
 
 
 class RouteUpdate(BaseModel):

@@ -7,6 +7,8 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
@@ -27,6 +29,8 @@ import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
 import RouteSummaryCard from "../components/RouteSummaryCard";
+import { getMyCompletedRouteIds } from "../services/completion";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type RouteItem = {
   id: string;
@@ -61,6 +65,8 @@ type RouteItem = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
+  isCompleted?: boolean;
+  completedAt?: string | null;
 };
 
 type SelectedUser = {
@@ -78,6 +84,15 @@ const API = import.meta.env.VITE_API_URL || window.location.origin;
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
 
 const formatRouteFromApi = (route: any): RouteItem => ({
   id: route.id,
@@ -169,6 +184,14 @@ const formatRouteFromApi = (route: any): RouteItem => ({
   difficulty: route.difficulty,
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
+  isCompleted: normalizeCompletedFlag(
+    route.is_completed ??
+    route.completed ??
+    route.isCompleted ??
+    route.completed_by_user ??
+    route.completedByUser
+  ),
+  completedAt: route.completed_at ?? route.completedAt ?? null,
 });
 
 
@@ -181,13 +204,14 @@ const DEFAULT_FILTERS: FiltersState = {
   theme: "all",
 };
 
+/*
 const DISTANCE_LABELS: Record<DistanceFilter, string> = {
   all: "Todas las distancias",
   lt5: "<5 km",
   "5to10": "5–10 km",
   "10to20": "10–20 km",
   gt20: ">20 km",
-};
+};*/
 
 const DURATION_LABELS: Record<DurationFilter, string> = {
   all: "Todas las duraciones",
@@ -280,6 +304,7 @@ function normalizeDurationMinutes(
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { unit } = useUnitPreference();
   const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -313,6 +338,7 @@ export default function Home() {
 
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
   const [routeSearchQuery, setRouteSearchQuery] = useState("");
@@ -365,6 +391,26 @@ export default function Home() {
 
     return opts;
   }, [routes, normalizeCategoryKey]);
+
+  // Dynamic distance labels based on unit preference
+  const distanceLabels = useMemo<Record<DistanceFilter, string>>(() => {
+    if (unit === "mi") {
+      return {
+        all: "Todas las distancias",
+        lt5: `<${Math.round(kmToMiles(5))} mi`,
+        "5to10": `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi`,
+        "10to20": `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi`,
+        gt20: `>${Math.round(kmToMiles(20))} mi`,
+      };
+    }
+    return {
+      all: "Todas las distancias",
+      lt5: "<5 km",
+      "5to10": "5–10 km",
+      "10to20": "10–20 km",
+      gt20: ">20 km",
+    };
+  }, [unit]);
 
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
@@ -565,6 +611,14 @@ export default function Home() {
               ownerName: data.owner_name || data.user?.name || "",
               ownerUsername: data.owner_username || data.user?.username || "",
               createdAt: data.created_at || data.createdAt,
+              isCompleted: normalizeCompletedFlag(
+                data.is_completed ??
+                data.completed ??
+                data.isCompleted ??
+                data.completed_by_user ??
+                data.completedByUser
+              ),
+              completedAt: data.completed_at ?? data.completedAt ?? null,
             };
 
             setSelectedRoute(formattedRoute);
@@ -601,6 +655,7 @@ export default function Home() {
       setRoutesError(null);
       try {
         let favSet = new Set<string>();
+        let completedSet = new Set<string>();
         if (token) {
           try {
             const favRes = await fetch(`${API}/favorites/me`, {
@@ -613,8 +668,15 @@ export default function Home() {
           } catch (e) {
             console.warn("Error cargando favoritos:", e);
           }
+          try {
+            const completedIds = await getMyCompletedRouteIds();
+            completedSet = new Set((completedIds ?? []).map(String));
+          } catch (e) {
+            console.warn("Error cargando completadas:", e);
+          }
         }
         setFavoriteIds(favSet);
+        setCompletedIds(completedSet);
 
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
@@ -672,6 +734,17 @@ export default function Home() {
                 : typeof route.userRating === "number"
                   ? route.userRating
                   : null,
+            isCompleted:
+              completedSet.has(String(route.id)) ||
+              completedIds.has(String(route.id)) ||
+              normalizeCompletedFlag(
+                route.is_completed ??
+                route.completed ??
+                route.isCompleted ??
+                route.completed_by_user ??
+                route.completedByUser
+              ),
+            completedAt: route.completed_at ?? route.completedAt ?? null,
             // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
             user_id: route.user_id,
@@ -730,8 +803,11 @@ export default function Home() {
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
-        setRoutesError("No se han podido cargar los resultados");
-        showAlert("No se han podido cargar los resultados", "error");
+        const msg = translateErrorMessage(error instanceof Error ? error.message : "No se han podido cargar los resultados");
+        setRoutesError(msg);
+        // Avoid calling showAlert in a loop if it causes re-renders, but now AlertContext is fixed.
+        // Still, it's better to show the error in the UI state (routesError) than a toast for initial load failures.
+        // showAlert(msg, "error"); 
         setRoutes([]);
       } finally {
         setRoutesLoading(false);
@@ -1101,6 +1177,34 @@ export default function Home() {
               rating={selectedRoute.rating ?? null}
               ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
+              initialCompleted={normalizeCompletedFlag(
+                (selectedRoute as any).isCompleted ??
+                (selectedRoute as any).completed ??
+                false
+              )}
+              onCompletedChange={(next) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSummaryRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+                setCompletedIds((prev) => {
+                  const copy = new Set(prev);
+                  if (next) copy.add(String(selectedRoute.id));
+                  else copy.delete(String(selectedRoute.id));
+                  return copy;
+                });
+              }}
               onEdit={(rd) => {
                 const payload = rd
                   ? {
@@ -1244,7 +1348,7 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.distance !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                  Distancia: {distanceLabels[appliedFilters.distance]}
                                 </span>
                               ) : null}
                               {appliedFilters.duration !== "all" ? (
@@ -1342,6 +1446,9 @@ export default function Home() {
                                   ratingAverage={r.rating ?? null}
                                   ratingCount={r.rating_count ?? null}
                                   initialSaved={favoriteIds.has(String(r.id))}
+                                  isCompleted={normalizeCompletedFlag(
+                                    (r as any).isCompleted ?? (r as any).completed ?? false
+                                  )}
                                 />
                               </div>
                             ))}
