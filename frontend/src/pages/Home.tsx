@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import MapView from "../components/MapView";
@@ -7,6 +7,8 @@ import RoutePreviewCard from "../components/RoutePreviewCard/RoutePreviewCard";
 import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
 import RouteEditForm from "../components/RouteViewCard/RouteEditForm";
 import { useAuth } from "../context/AuthContext";
+import { useUnitPreference } from "../context/UnitPreferenceContext";
+import { kmToMiles } from "../utils/formatDistance";
 import { useRouteCard } from "../components/RouteCreateCard/useRouteCard";
 import { useRequireAuth } from "../hooks/useRequireAuth";
 import type { Category } from "../components/types";
@@ -19,12 +21,16 @@ import RouteSearchBar, {
   type DifficultyFilter,
   type ThemeFilter,
 } from "../components/RouteSearchBar/RouteSearchBar";
+import { subscribeToRatingUpdates } from "../services/ratingEvents";
 
 import "../styles/Home.css";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation, Link, NavLink } from "react-router-dom";
 import UserPreviewCard from "../components/UserViewCard/UserPreviewCard";
 import UserCardView from "../components/UserViewCard/UserViewCard";
 import AnimatedList from "../components/AnimatedList";
+import RouteSummaryCard from "../components/RouteSummaryCard";
+import { getMyCompletedRouteIds } from "../services/completion";
+import { translateErrorMessage } from "../utils/errorTranslator";
 
 type RouteItem = {
   id: string;
@@ -36,6 +42,12 @@ type RouteItem = {
   durationMinutes?: number | null;
   difficulty?: string | null;
   theme?: string;
+  images?: string[];
+  image_urls?: string[];
+  imageUrls?: string[];
+  image?: string;
+  cover_image?: string;
+  thumbnail?: string;
   visibility: boolean;
   is_owner?: boolean;
   owner_id?: string | number;
@@ -53,7 +65,8 @@ type RouteItem = {
   rating?: number | null;
   rating_count?: number | null;
   user_rating?: number | null;
-  images?: string[];
+  isCompleted?: boolean;
+  completedAt?: string | null;
 };
 
 type SelectedUser = {
@@ -71,6 +84,15 @@ const API = import.meta.env.VITE_API_URL || window.location.origin;
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;
 const GEO_ZOOM = 13;
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
 
 const formatRouteFromApi = (route: any): RouteItem => ({
   id: route.id,
@@ -133,9 +155,43 @@ const formatRouteFromApi = (route: any): RouteItem => ({
         email: route.email,
       }
       : undefined,
+  images: (() => {
+    const fromImages = Array.isArray(route.images) ? route.images.filter(Boolean) : [];
+    const fromImageUrls = Array.isArray(route.image_urls)
+      ? route.image_urls.filter(Boolean)
+      : Array.isArray(route.imageUrls)
+        ? route.imageUrls.filter(Boolean)
+        : [];
+    const single = route.image || route.cover_image || route.thumbnail;
+    if (fromImages.length > 0) return fromImages;
+    if (fromImageUrls.length > 0) return fromImageUrls;
+    if (single) return [single];
+    return [];
+  })(),
+  image_urls: Array.isArray(route.image_urls)
+    ? route.image_urls.filter(Boolean)
+    : Array.isArray(route.imageUrls)
+      ? route.imageUrls.filter(Boolean)
+      : [],
+  imageUrls: Array.isArray(route.imageUrls)
+    ? route.imageUrls.filter(Boolean)
+    : Array.isArray(route.image_urls)
+      ? route.image_urls.filter(Boolean)
+      : [],
+  image: route.image,
+  cover_image: route.cover_image,
+  thumbnail: route.thumbnail,
   difficulty: route.difficulty,
   distanceKm: route.distance_km ?? route.distanceKm,
   durationMinutes: route.duration_minutes ?? route.durationMinutes,
+  isCompleted: normalizeCompletedFlag(
+    route.is_completed ??
+    route.completed ??
+    route.isCompleted ??
+    route.completed_by_user ??
+    route.completedByUser
+  ),
+  completedAt: route.completed_at ?? route.completedAt ?? null,
 });
 
 
@@ -148,13 +204,14 @@ const DEFAULT_FILTERS: FiltersState = {
   theme: "all",
 };
 
+/*
 const DISTANCE_LABELS: Record<DistanceFilter, string> = {
   all: "Todas las distancias",
   lt5: "<5 km",
   "5to10": "5–10 km",
   "10to20": "10–20 km",
   gt20: ">20 km",
-};
+};*/
 
 const DURATION_LABELS: Record<DurationFilter, string> = {
   all: "Todas las duraciones",
@@ -177,19 +234,6 @@ const DIFFICULTY_LABELS: Record<DifficultyFilter, string> = {
   medium: "Media",
   hard: "Alta",
 };
-
-const CATEGORY_OPTIONS = [
-  "all",
-  "gastronomia",
-  "naturaleza",
-  "aventura",
-  "cultura",
-  "deporte",
-  "historia",
-  "urban",
-  "entretenimiento",
-  "otros",
-];
 
 const CATEGORY_LABELS: Record<string, string> = {
   all: "Todas",
@@ -260,6 +304,7 @@ function normalizeDurationMinutes(
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { unit } = useUnitPreference();
   const { showAlert } = useAlert();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -276,6 +321,7 @@ export default function Home() {
   const [routesError, setRoutesError] = useState<string | null>(null);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<RouteItem | null>(null);
+  const [summaryRoute, setSummaryRoute] = useState<RouteItem | null>(null);
   const [editingRoute, setEditingRoute] = useState<RouteItem | null>(null);
   const [showComments, setShowComments] = useState(false);
 
@@ -288,9 +334,11 @@ export default function Home() {
     east: number;
     west: number;
   } | null>(null);
+  const [filterByBounds, setFilterByBounds] = useState(true);
 
 
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
   const [routeSearchQuery, setRouteSearchQuery] = useState("");
@@ -315,11 +363,61 @@ export default function Home() {
 
   const { requireAuth } = useRequireAuth(openAuth);
 
+  const normalizeCategoryKey = useCallback((value?: string | null) => {
+    if (!value) return "";
+    const base = value.toString().trim().toLowerCase();
+    // Eliminar acentos/diacríticos para comparar de forma robusta
+    return base.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }, []);
+
+  const dynamicCategoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const opts: Array<{ value: string; label: string }> = [
+      { value: "all", label: "Todas" },
+    ];
+
+    routes.forEach((route) => {
+      const rawSource = route.category || route.theme || "";
+      const raw = rawSource.toString().trim();
+      if (!raw) return;
+      const value = normalizeCategoryKey(raw);
+      if (seen.has(value)) return;
+      seen.add(value);
+      opts.push({
+        value,
+        label: CATEGORY_LABELS[value] || raw.charAt(0).toUpperCase() + raw.slice(1),
+      });
+    });
+
+    return opts;
+  }, [routes, normalizeCategoryKey]);
+
+  // Dynamic distance labels based on unit preference
+  const distanceLabels = useMemo<Record<DistanceFilter, string>>(() => {
+    if (unit === "mi") {
+      return {
+        all: "Todas las distancias",
+        lt5: `<${Math.round(kmToMiles(5))} mi`,
+        "5to10": `${Math.round(kmToMiles(5))}–${Math.round(kmToMiles(10))} mi`,
+        "10to20": `${Math.round(kmToMiles(10))}–${Math.round(kmToMiles(20))} mi`,
+        gt20: `>${Math.round(kmToMiles(20))} mi`,
+      };
+    }
+    return {
+      all: "Todas las distancias",
+      lt5: "<5 km",
+      "5to10": "5–10 km",
+      "10to20": "10–20 km",
+      gt20: ">20 km",
+    };
+  }, [unit]);
+
   function handleCloseRouteCard() {
     setRouteCardOpen(false);
     setDrawPoints([]);
     setSelectedRoutePoints([]);
     setShowComments(false);
+    setSummaryRoute(null);
   }
 
   const handleBoundsChange = useCallback(
@@ -336,15 +434,39 @@ export default function Home() {
     onClose: handleCloseRouteCard,
   });
 
+  // Si venimos de Discover con una ruta a resaltar, abrir la ficha en el mapa
+  useEffect(() => {
+    const state = location.state as { highlightRouteId?: string } | null;
+    if (!state?.highlightRouteId || routes.length === 0) return;
+
+    const route = routes.find((r) => r.id === state.highlightRouteId);
+    if (route) {
+      setSelectedRoute(route);
+      setSelectedRoutePoints(route.points);
+      if (route.points.length > 0) {
+        setMapCenter(route.points[0]);
+        setMapZoom(GEO_ZOOM);
+      }
+    }
+    navigate(location.pathname, { replace: true });
+  }, [location.state, routes, navigate]);
+
   // Función para filtrar rutas según los filtros aplicados y categoría seleccionada
   const getFilteredRoutes = () => {
     let filtered = routes;
 
     const normalizedSearch = routeSearchQuery.trim().toLowerCase();
+    const normalizeKey = normalizeCategoryKey;
+    const selectedCategory = (() => {
+      if (appliedFilters.theme !== "all") return normalizeKey(appliedFilters.theme);
+      if (appliedFilters.category !== "all") return normalizeKey(appliedFilters.category);
+      return "";
+    })();
 
     // Aplicar filtros de búsqueda global
     if (appliedFilters.category !== "all") {
-      filtered = filtered.filter((r) => r.category === appliedFilters.category);
+      const catKey = normalizeKey(appliedFilters.category);
+      filtered = filtered.filter((r) => normalizeKey(r.category) === catKey);
     }
 
     if (appliedFilters.pointsFilter !== "all") {
@@ -393,53 +515,13 @@ export default function Home() {
       );
     }
 
-    if (appliedFilters.theme !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
-      );
-    }
-
-    if (appliedFilters.distance !== "all") {
+    if (selectedCategory) {
       filtered = filtered.filter((r) => {
-        const d = r.distanceKm;
-        if (d == null) return false;
-        if (appliedFilters.distance === "lt5") return d < 5;
-        if (appliedFilters.distance === "5to10") return d >= 5 && d < 10;
-        if (appliedFilters.distance === "10to20") return d >= 10 && d <= 20;
-        if (appliedFilters.distance === "gt20") return d > 20;
-        return true;
+        const key =
+          normalizeKey(r.category) ||
+          normalizeKey(r.theme);
+        return key === selectedCategory;
       });
-    }
-
-    if (appliedFilters.duration !== "all") {
-      filtered = filtered.filter((r) => {
-        const minutes = normalizeDurationMinutes(r.durationMinutes, r.distanceKm);
-        if (minutes == null) return false;
-
-        if (appliedFilters.duration === "lt1") return minutes < 60;
-        if (appliedFilters.duration === "1to3")
-          return minutes >= 60 && minutes < 180;
-        if (appliedFilters.duration === "3to6")
-          return minutes >= 180 && minutes <= 360;
-        if (appliedFilters.duration === "gt6") return minutes > 360;
-        return true;
-      });
-    }
-
-    if (appliedFilters.difficulty !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.difficulty &&
-          r.difficulty.toLowerCase() === appliedFilters.difficulty.toLowerCase()
-      );
-    }
-
-    if (appliedFilters.theme !== "all") {
-      filtered = filtered.filter(
-        (r) =>
-          r.theme && r.theme.toLowerCase() === appliedFilters.theme.toLowerCase()
-      );
     }
 
     if (normalizedSearch) {
@@ -466,6 +548,22 @@ export default function Home() {
 
         return searchBucket.some((value) =>
           value.includes(normalizedSearch)
+        );
+      });
+    }
+
+
+
+    // Filtro por zona del mapa (US-29)
+    if (filterByBounds && mapBounds) {
+      filtered = filtered.filter((r) => {
+        if (r.points.length === 0) return false;
+        const [lng, lat] = r.points[0];
+        return (
+          lat >= mapBounds.south &&
+          lat <= mapBounds.north &&
+          lng >= mapBounds.west &&
+          lng <= mapBounds.east
         );
       });
     }
@@ -513,6 +611,14 @@ export default function Home() {
               ownerName: data.owner_name || data.user?.name || "",
               ownerUsername: data.owner_username || data.user?.username || "",
               createdAt: data.created_at || data.createdAt,
+              isCompleted: normalizeCompletedFlag(
+                data.is_completed ??
+                data.completed ??
+                data.isCompleted ??
+                data.completed_by_user ??
+                data.completedByUser
+              ),
+              completedAt: data.completed_at ?? data.completedAt ?? null,
             };
 
             setSelectedRoute(formattedRoute);
@@ -549,6 +655,7 @@ export default function Home() {
       setRoutesError(null);
       try {
         let favSet = new Set<string>();
+        let completedSet = new Set<string>();
         if (token) {
           try {
             const favRes = await fetch(`${API}/favorites/me`, {
@@ -561,8 +668,15 @@ export default function Home() {
           } catch (e) {
             console.warn("Error cargando favoritos:", e);
           }
+          try {
+            const completedIds = await getMyCompletedRouteIds();
+            completedSet = new Set((completedIds ?? []).map(String));
+          } catch (e) {
+            console.warn("Error cargando completadas:", e);
+          }
         }
         setFavoriteIds(favSet);
+        setCompletedIds(completedSet);
 
         const response = await fetch(`${API}/routes`);
         if (!response.ok) throw new Error("Error al cargar las rutas");
@@ -620,6 +734,17 @@ export default function Home() {
                 : typeof route.userRating === "number"
                   ? route.userRating
                   : null,
+            isCompleted:
+              completedSet.has(String(route.id)) ||
+              completedIds.has(String(route.id)) ||
+              normalizeCompletedFlag(
+                route.is_completed ??
+                route.completed ??
+                route.isCompleted ??
+                route.completed_by_user ??
+                route.completedByUser
+              ),
+            completedAt: route.completed_at ?? route.completedAt ?? null,
             // Campos de Usuario y Propietario (Lógica unificada)
             owner_id: route.owner_id,
             user_id: route.user_id,
@@ -678,8 +803,11 @@ export default function Home() {
         setRoutes(formatted);
       } catch (error) {
         console.error("Error obteniendo rutas:", error);
-        setRoutesError("No se han podido cargar los resultados");
-        showAlert("No se han podido cargar los resultados", "error");
+        const msg = translateErrorMessage(error instanceof Error ? error.message : "No se han podido cargar los resultados");
+        setRoutesError(msg);
+        // Avoid calling showAlert in a loop if it causes re-renders, but now AlertContext is fixed.
+        // Still, it's better to show the error in the UI state (routesError) than a toast for initial load failures.
+        // showAlert(msg, "error"); 
         setRoutes([]);
       } finally {
         setRoutesLoading(false);
@@ -688,6 +816,26 @@ export default function Home() {
 
     fetchAll();
   }, [token, showAlert]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToRatingUpdates(({ route_id, average, count }) => {
+      setRoutes((prev) =>
+        prev.map((r) =>
+          String(r.id) === String(route_id)
+            ? { ...r, rating: average ?? null, rating_count: count }
+            : r
+        )
+      );
+
+      setSelectedRoute((prev) =>
+        prev && String(prev.id) === String(route_id)
+          ? { ...prev, rating: average ?? null, rating_count: count }
+          : prev
+      );
+    });
+
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (searchMode !== "users") {
@@ -768,6 +916,7 @@ export default function Home() {
   useEffect(() => {
     const state = location.state as {
       openUserFromFollowers?: SelectedUser;
+      authMode?: "login" | "signup";
     } | null;
 
     if (state?.openUserFromFollowers) {
@@ -777,6 +926,7 @@ export default function Home() {
       setRouteCardOpen(false);
       setSelectedRoutePoints([]);
       setShowComments(false);
+      setSummaryRoute(null);
 
       setSelectedUser({
         id: u.id,
@@ -786,13 +936,21 @@ export default function Home() {
         avatar_url: u.avatar_url,
       });
     }
-  }, [location.state]);
+
+    if (state?.authMode) {
+      openAuth(state.authMode);
+      const { authMode, ...rest } = state;
+      navigate(location.pathname, { replace: true, state: rest });
+    }
+  }, [location.state, navigate]);
 
   const handleOpenUser = (u: any) => {
     setSelectedRoute(null);
     setRouteCardOpen(false);
     setSelectedRoutePoints([]);
+    setSelectedRoutePoints([]);
     setShowComments(false);
+    setSummaryRoute(null);
 
     setSelectedUser({
       id: u.id,
@@ -807,15 +965,13 @@ export default function Home() {
     setAppliedFilters({ ...filters });
   };
 
-  const handleCategorySelect = (category: string) => {
-    setAppliedFilters((prev) => ({ ...prev, category }));
-  };
-
   // Controlar qué puntos se ven en el mapa según el modo actual
   let visiblePoints = selectedRoutePoints;
   if (routeCardOpen) {
     const { mode: createMode, searchPoints } = routeCtrl.viewProps;
     visiblePoints = createMode === "search" ? searchPoints : drawPoints;
+  } else if (summaryRoute) {
+    visiblePoints = summaryRoute.points;
   }
 
   const renderEmptyState = (title: string, subtitle?: string) => (
@@ -840,73 +996,137 @@ export default function Home() {
   const handleMarkerClick = useCallback((id: string) => {
     const route = routes.find((r) => r.id === id);
     if (route) {
-      setSelectedRoute(route);
-      setSelectedRoutePoints(route.points);
+      setSummaryRoute(route);
+      // No seleccionamos la ruta completa todavía, solo el resumen
+      // setSelectedRoute(route);
+      // setSelectedRoutePoints(route.points);
       setShowComments(false);
     }
   }, [routes]);
 
+  const handleViewDetails = () => {
+    if (summaryRoute) {
+      setSelectedRoute(summaryRoute);
+      setSelectedRoutePoints(summaryRoute.points);
+      setSummaryRoute(null);
+    }
+  };
+
+  const handleCloseSummary = () => {
+    setSummaryRoute(null);
+  };
+
   return (
     <div className="home">
       <header className="home__header">
-        <div className="brand">REX</div>
+        <div className="header__start">
+          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
+            REX
+          </Link>
+          <nav className="main-nav" aria-label="Navegación principal">
+            <NavLink
+              to="/descubrir"
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Descubrir
+            </NavLink>
+            <NavLink
+              to="/mapa"
+              end
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Mapa
+            </NavLink>
+          </nav>
+        </div>
 
-        {/* Buscador de rutas */}
-        {!routeCardOpen && !selectedRoute && !selectedUser && (
-          <RouteSearchBar
-            mode={searchMode}
-            query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
-            onQueryChange={(q) =>
-              searchMode === "routes"
-                ? setRouteSearchQuery(q)
-                : setUserSearchQuery(q)
-            }
-            onApplyFilters={handleApplyFilters}
-            filters={appliedFilters}
-            isLoading={searchMode === "users" ? usersLoading : routesLoading}
-          />
-        )}
+        <div className="header__search">
+          {/* Buscador de rutas */}
+          {!routeCardOpen && !selectedRoute && !selectedUser && (
+            <RouteSearchBar
+              mode={searchMode}
+              query={searchMode === "routes" ? routeSearchQuery : userSearchQuery}
+              onQueryChange={(q) =>
+                searchMode === "routes"
+                  ? setRouteSearchQuery(q)
+                  : setUserSearchQuery(q)
+              }
+              onApplyFilters={handleApplyFilters}
+              filters={appliedFilters}
+              isLoading={searchMode === "users" ? usersLoading : routesLoading}
+              categoryOptions={dynamicCategoryOptions}
+            />
+          )}
+        </div>
 
         <div className="profile-menu-container">
           <button
             className="profile-menu-btn"
             onClick={() => {
-              if (user || token) toggleProfileMenu();
-              else openAuth("login");
+              toggleProfileMenu();
             }}
             aria-label="Profile"
-            aria-haspopup={user || token ? "menu" : undefined}
-            aria-expanded={user || token ? profileMenuOpen : undefined}
+            aria-haspopup="menu"
+            aria-expanded={profileMenuOpen}
           >
             <span>👤</span>
           </button>
 
-          {user || token ? (
-            <div
-              className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
-              role="menu"
-              aria-label="Profile menu"
-            >
-              <Link
-                className="profile-menu__item"
-                role="menuitem"
-                to="/perfil"
-                onClick={() => setProfileMenuOpen(false)}
-              >
-                Mi perfil
-              </Link>
-              <button
-                className="profile-menu__item"
-                role="menuitem"
-                onClick={() => {
-                  logout();
-                  setProfileMenuOpen(false);
-                }}
-              >
-                Cerrar sesión
-              </button>
-            </div>
-          ) : null}
+          <div
+            className={`profile-menu ${profileMenuOpen ? "open" : ""}`}
+            role="menu"
+            aria-label="Profile menu"
+          >
+            {user || token ? (
+              <>
+                <Link
+                  className="profile-menu__item"
+                  role="menuitem"
+                  to="/perfil"
+                  onClick={() => setProfileMenuOpen(false)}
+                >
+                  Mi perfil
+                </Link>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    logout();
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    openAuth("login");
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Iniciar sesión
+                </button>
+                <button
+                  className="profile-menu__item"
+                  role="menuitem"
+                  onClick={() => {
+                    openAuth("signup");
+                    setProfileMenuOpen(false);
+                  }}
+                >
+                  Crear cuenta
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -957,6 +1177,34 @@ export default function Home() {
               rating={selectedRoute.rating ?? null}
               ratingCount={selectedRoute.rating_count ?? null}
               isOwnRoute={selectedRoute.is_owner || false}
+              initialCompleted={normalizeCompletedFlag(
+                (selectedRoute as any).isCompleted ??
+                (selectedRoute as any).completed ??
+                false
+              )}
+              onCompletedChange={(next) => {
+                setSelectedRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+                setRoutes((prev) =>
+                  prev.map((r) =>
+                    r.id === selectedRoute.id ? { ...r, isCompleted: next } : r
+                  )
+                );
+                setSummaryRoute((prev) =>
+                  prev && prev.id === selectedRoute.id
+                    ? { ...prev, isCompleted: next }
+                    : prev
+                );
+                setCompletedIds((prev) => {
+                  const copy = new Set(prev);
+                  if (next) copy.add(String(selectedRoute.id));
+                  else copy.delete(String(selectedRoute.id));
+                  return copy;
+                });
+              }}
               onEdit={(rd) => {
                 const payload = rd
                   ? {
@@ -992,6 +1240,7 @@ export default function Home() {
                 setSelectedRoute(null);
                 setSelectedRoutePoints([]);
                 setShowComments(false);
+                setSummaryRoute(null);
                 if (userInitialCenterRef.current) {
                   setMapCenter(userInitialCenterRef.current);
                   setMapZoom(GEO_ZOOM);
@@ -1021,6 +1270,7 @@ export default function Home() {
                 setSelectedRoute(route);
                 setSelectedRoutePoints(route.points);
                 setShowComments(false);
+                setSummaryRoute(null);
               }}
             />
           ) : (
@@ -1073,20 +1323,6 @@ export default function Home() {
 
                     return (
                       <>
-                        <div className="category-chip-bar" aria-label="Filtrar por categoría">
-                          {CATEGORY_OPTIONS.map((cat) => (
-                            <button
-                              key={cat}
-                              className={`category-chip ${appliedFilters.category === cat ? "active" : ""
-                                }`}
-                              onClick={() => handleCategorySelect(cat)}
-                              aria-pressed={appliedFilters.category === cat}
-                            >
-                              {CATEGORY_LABELS[cat] ?? cat}
-                            </button>
-                          ))}
-                        </div>
-
                         <div className="routes-meta">
                           <div className="routes-count">
                             {resultCount} rutas encontradas
@@ -1112,7 +1348,7 @@ export default function Home() {
                               ) : null}
                               {appliedFilters.distance !== "all" ? (
                                 <span className="routes-filter-chip">
-                                  Distancia: {DISTANCE_LABELS[appliedFilters.distance]}
+                                  Distancia: {distanceLabels[appliedFilters.distance]}
                                 </span>
                               ) : null}
                               {appliedFilters.duration !== "all" ? (
@@ -1139,6 +1375,17 @@ export default function Home() {
                               </button>
                             </div>
                           )}
+
+                          <div className="routes-bounds-filter">
+                            <label className="checkbox-label">
+                              <input
+                                type="checkbox"
+                                checked={filterByBounds}
+                                onChange={(e) => setFilterByBounds(e.target.checked)}
+                              />
+                              Buscar en esta zona
+                            </label>
+                          </div>
                         </div>
 
                         {resultCount === 0 ? (
@@ -1179,13 +1426,29 @@ export default function Home() {
                                   name={r.name}
                                   category={r.category as Category}
                                   points={r.points}
-                                  images={r.images ?? []}
+                                  images={
+                                    (Array.isArray((r as any).images) &&
+                                      (r as any).images.length > 0 &&
+                                      (r as any).images) ||
+                                    (Array.isArray((r as any).image_urls) &&
+                                      (r as any).image_urls.length > 0 &&
+                                      (r as any).image_urls) ||
+                                    (Array.isArray((r as any).imageUrls) &&
+                                      (r as any).imageUrls.length > 0 &&
+                                      (r as any).imageUrls) ||
+                                    []
+                                  }
+                                  image_urls={Array.isArray((r as any).image_urls) ? (r as any).image_urls : undefined}
+                                  imageUrls={Array.isArray((r as any).imageUrls) ? (r as any).imageUrls : undefined}
                                   distanceKm={r.distanceKm ?? null}
                                   durationMinutes={r.durationMinutes ?? null}
                                   difficulty={r.difficulty ?? null}
                                   ratingAverage={r.rating ?? null}
                                   ratingCount={r.rating_count ?? null}
                                   initialSaved={favoriteIds.has(String(r.id))}
+                                  isCompleted={normalizeCompletedFlag(
+                                    (r as any).isCompleted ?? (r as any).completed ?? false
+                                  )}
                                 />
                               </div>
                             ))}
@@ -1273,10 +1536,41 @@ export default function Home() {
                 allowPickPoint={routeCardOpen}
                 onPickPoint={handleMapClick}
                 highlightPoints={visiblePoints}
-                fitOnHighlight={!routeCardOpen}
+                fitOnHighlight={!routeCardOpen && !summaryRoute}
                 onBoundsChange={handleBoundsChange}
                 markers={!routeCardOpen && !selectedRoute ? mapMarkers : []}
                 onMarkerClick={handleMarkerClick}
+                popupLocation={
+                  summaryRoute && summaryRoute.points.length > 0
+                    ? summaryRoute.points[0]
+                    : null
+                }
+                popupNode={
+                  summaryRoute && !selectedRoute && !routeCardOpen ? (
+                    <RouteSummaryCard
+                      route={{
+                        id: summaryRoute.id,
+                        name: summaryRoute.name,
+                        distanceKm: summaryRoute.distanceKm,
+                        durationMinutes: summaryRoute.durationMinutes,
+                        rating: summaryRoute.rating,
+                        rating_count: summaryRoute.rating_count,
+                        image:
+                          (Array.isArray((summaryRoute as any).images) &&
+                            (summaryRoute as any).images[0]) ||
+                          (Array.isArray((summaryRoute as any).image_urls) &&
+                            (summaryRoute as any).image_urls[0]) ||
+                          (Array.isArray((summaryRoute as any).imageUrls) &&
+                            (summaryRoute as any).imageUrls[0]) ||
+                          summaryRoute.image ||
+                          summaryRoute.cover_image ||
+                          summaryRoute.thumbnail,
+                      }}
+                      onViewDetails={handleViewDetails}
+                      onClose={handleCloseSummary}
+                    />
+                  ) : null
+                }
               />
 
               <button
@@ -1289,6 +1583,7 @@ export default function Home() {
                       setDrawPoints([]);
                       setSelectedRoutePoints([]);
                       setShowComments(false);
+                      setSummaryRoute(null);
                       return !prev;
                     });
                   })

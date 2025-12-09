@@ -1,0 +1,207 @@
+import { useEffect, useMemo, useState } from "react";
+import { Link, NavLink, useNavigate, useParams, useLocation } from "react-router-dom";
+import RouteDetailsCard from "../components/RouteViewCard/RouteDetailsCard";
+import "../styles/RouteDetail.css";
+import { subscribeToRatingUpdates } from "../services/ratingEvents";
+import { useAlert } from "../context/AlertContext";
+
+type ApiPoint = { latitude?: number; longitude?: number; lat?: number; lng?: number } | [number, number];
+type ApiRoute = {
+  id?: string;
+  _id?: string;
+  name: string;
+  description?: string;
+  category?: string;
+  visibility?: boolean;
+  points?: ApiPoint[];
+  distance_km?: number | null;
+  duration_minutes?: number | null;
+  difficulty?: string | null;
+  rating?: number | null;
+  rating_count?: number | null;
+  images?: string[];
+  is_completed?: boolean;
+  completed?: boolean;
+  isCompleted?: boolean;
+  completed_by_user?: boolean;
+  completedAt?: string;
+  completed_at?: string;
+};
+
+const API_BASE = (
+  import.meta.env.VITE_API_URL?.trim() ||
+  (typeof window !== "undefined" ? window.location.origin : "")
+).replace(/\/$/, "");
+
+const normalizeCompletedFlag = (value: any, fallback = false) => {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "yes";
+  }
+  return value === true || value === 1;
+};
+
+const normalizePoints = (points: ApiPoint[] | undefined): Array<[number, number]> => {
+  if (!points) return [];
+  return points
+    .map((p) => {
+      if (Array.isArray(p)) return [p[0], p[1]] as [number, number];
+      const lng = p.longitude ?? (p as any).lng;
+      const lat = p.latitude ?? (p as any).lat;
+      if (lng == null || lat == null) return null;
+      return [lng, lat] as [number, number];
+    })
+    .filter(Boolean) as Array<[number, number]>;
+};
+
+export default function RouteDetail() {
+  const { routeId } = useParams<{ routeId: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fallbackRoute = (location.state as any)?.fallbackRoute as ApiRoute | undefined;
+  const { showAlert } = useAlert();
+
+  const [route, setRoute] = useState<ApiRoute | null>(fallbackRoute || null);
+  const [loading, setLoading] = useState<boolean>(!fallbackRoute);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!routeId) return;
+    const controller = new AbortController();
+    const fetchRoute = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(`${API_BASE}/routes/${routeId}`, { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`No se pudo cargar la ruta (${res.status})`);
+        }
+        const data = (await res.json()) as ApiRoute;
+        if (!controller.signal.aborted) setRoute(data);
+      } catch (err) {
+        if (controller.signal.aborted) return;
+        const message = err instanceof Error ? err.message : "No se pudo cargar la ruta.";
+        setError(message);
+        showAlert(message, "error");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    if (!fallbackRoute || fallbackRoute.id !== routeId) {
+      fetchRoute();
+    }
+
+    return () => controller.abort();
+  }, [routeId, fallbackRoute, showAlert]);
+
+  useEffect(() => {
+    if (!routeId) return;
+    const unsubscribe = subscribeToRatingUpdates(({ route_id, average, count }) => {
+      if (String(route_id) !== String(routeId)) return;
+      setRoute((prev) =>
+        prev
+          ? {
+              ...prev,
+              rating: average ?? prev.rating ?? null,
+              rating_count: count ?? prev.rating_count ?? null,
+            }
+          : prev
+      );
+    });
+
+    return unsubscribe;
+  }, [routeId]);
+
+  const points = useMemo(() => normalizePoints(route?.points), [route]);
+  const completedFlag = useMemo(
+    () =>
+      normalizeCompletedFlag(
+        route?.is_completed ??
+        route?.completed ??
+        route?.isCompleted ??
+        (route as any)?.completed_by_user ??
+        (route as any)?.completedByUser ??
+        false
+      ),
+    [route]
+  );
+
+  return (
+    <div className="route-detail">
+      <header className="primary-header">
+        <div className="header__start">
+          <Link to="/descubrir" className="brand" aria-label="Volver a descubrir">
+            REX
+          </Link>
+          <nav className="main-nav" aria-label="Navegación principal">
+            <NavLink
+              to="/descubrir"
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Descubrir
+            </NavLink>
+            <NavLink
+              to="/mapa"
+              end
+              className={({ isActive }) =>
+                `main-nav__link ${isActive ? "active" : ""}`
+              }
+            >
+              Mapa
+            </NavLink>
+          </nav>
+        </div>
+
+        <div className="header__cta">
+          <button className="pill-btn" onClick={() => navigate(-1)}>
+            Volver
+          </button>
+        </div>
+      </header>
+
+      <main className="route-detail__body">
+        {loading ? (
+          <div className="route-detail__state">Cargando ruta...</div>
+        ) : error ? (
+          <div className="route-detail__state error">{error}</div>
+        ) : route ? (
+          <div className="route-detail__card">
+            <RouteDetailsCard
+              routeId={route.id || (route as any)._id || routeId || ""}
+              name={route.name}
+              description={route.description || "Sin descripción"}
+              category={(route.category as any) || "otros"}
+              points={points}
+              distanceKm={route.distance_km ?? (route as any).distanceKm ?? null}
+              durationMinutes={route.duration_minutes ?? (route as any).durationMinutes ?? null}
+              difficulty={(route as any).difficulty ?? null}
+              isPrivate={!route.visibility}
+              rating={route.rating ?? null}
+              ratingCount={route.rating_count ?? null}
+              initialCompleted={completedFlag}
+              onCompletedChange={(next) =>
+                setRoute((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        is_completed: next,
+                        completed: next,
+                        isCompleted: next,
+                      }
+                    : prev
+                )
+              }
+              onClose={() => navigate(-1)}
+            />
+          </div>
+        ) : (
+          <div className="route-detail__state">No se encontró la ruta.</div>
+        )}
+      </main>
+    </div>
+  );
+}
