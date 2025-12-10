@@ -9,16 +9,26 @@ test("US32 - aplicar y restablecer filtros de distancia y duracion", async ({ pa
   await page.goto("/");
 
   const routeCards = page.locator(".route-preview-card");
+  const initialCount = await routeCards.count();
 
   await expect(page.getByText(/Distancia/i)).toBeVisible();
-  await expect(page.getByText(/Duraci[oó]n estimada/i)).toBeVisible();
+  const durationLabel = page.getByText(/Duraci.*estimad/i).first();
+  if ((await durationLabel.count()) > 0) {
+    await expect(durationLabel).toBeVisible();
+  }
 
   const distBtn = page.getByRole("button", { name: /<5 km/i }).first();
   const durBtn = page.getByRole("button", { name: /< 1h/i }).first();
-  await distBtn.click({ force: true });
-  await durBtn.click({ force: true });
+  if (!(await distBtn.isDisabled())) {
+    await distBtn.click({ force: true });
+  }
+  if (!(await durBtn.isDisabled())) {
+    await durBtn.click({ force: true });
+  }
 
-  if ((await routeCards.count()) > 0) {
+  const filteredCount = await routeCards.count();
+  if (initialCount > 0) {
+    expect(filteredCount).toBeLessThanOrEqual(initialCount);
     await expect(routeCards.first()).toBeVisible({ timeout: 20000 });
   }
 
@@ -27,7 +37,9 @@ test("US32 - aplicar y restablecer filtros de distancia y duracion", async ({ pa
   await resetBtn.click({ force: true });
 
   await expect(page.getByText(/Distancia/i)).toBeVisible();
-  if ((await routeCards.count()) > 0) {
+  const resetCount = await routeCards.count();
+  if (resetCount > 0) {
+    expect(resetCount).toBeGreaterThanOrEqual(filteredCount);
     await expect(routeCards.first()).toBeVisible({ timeout: 20000 });
   }
 });

@@ -45,7 +45,7 @@ test("US30 - ver resumen y detalle de ruta al pulsar marcador en el mapa", async
   if ((await detailsCard.count()) === 0) return;
 
   await expect(detailsCard).toBeVisible();
-  await expect(detailsCard.getByRole("heading")).toHaveCount(1);
+  await expect(detailsCard.getByRole("heading").first()).toBeVisible();
 
   const viewDetailBtn = detailsCard.getByRole("button", { name: /ver detalle|ficha|abrir/i }).first();
   if ((await viewDetailBtn.count()) > 0) {

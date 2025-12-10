@@ -87,12 +87,23 @@ test("US27 - marcar y desmarcar ruta como realizada", async ({ page }) => {
       }
     }
     completionState[routeId] = Boolean(payload.completed);
+    const newlyUnlocked =
+      completionState[routeId] === true
+        ? [
+            {
+              code: "completed_routes_1",
+              name: "Explorador inicial",
+              category: "completed_routes",
+              threshold_value: 1,
+            },
+          ]
+        : [];
     await route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         completed: completionState[routeId],
-        newly_unlocked: [],
+        newly_unlocked: newlyUnlocked,
       }),
     });
   });
@@ -125,7 +136,8 @@ test("US27 - marcar y desmarcar ruta como realizada", async ({ page }) => {
     name: /realizada|ruta realizada|marcada como realizada|completada/i,
   });
   await expect(completedStateButton).toBeVisible({ timeout: 10000 });
-  logCriterion("Cambio inmediato de estado tras marcar como realizada");
+  await expect(page.getByRole("alert")).toBeVisible({ timeout: 10000 });
+  logCriterion("Cambio inmediato de estado tras marcar como realizada y aviso mostrado");
 
   const closeButton = page.locator(".route-details-card__close");
   if ((await closeButton.count()) > 0) {
