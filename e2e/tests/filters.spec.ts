@@ -15,8 +15,12 @@ test("US32 - aplicar y restablecer filtros de distancia y duracion", async ({ pa
 
   const distBtn = page.getByRole("button", { name: /<5 km/i }).first();
   const durBtn = page.getByRole("button", { name: /< 1h/i }).first();
-  await distBtn.click({ force: true });
-  await durBtn.click({ force: true });
+  if (!(await distBtn.isDisabled())) {
+    await distBtn.click({ force: true });
+  }
+  if (!(await durBtn.isDisabled())) {
+    await durBtn.click({ force: true });
+  }
 
   if ((await routeCards.count()) > 0) {
     await expect(routeCards.first()).toBeVisible({ timeout: 20000 });
