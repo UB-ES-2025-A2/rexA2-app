@@ -70,3 +70,31 @@ async def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Usuario no disponible")
     
     return user
+
+async def get_current_user_optional(request: Request):
+    from backend.db.models import user as user_crud
+
+    token = request.cookies.get("access_token")
+    if not token and (auth := request.headers.get("Authorization")):
+        try:
+            token = auth.split(" ", 1)[1]
+        except IndexError:
+            return None
+
+    if not token:
+        return None
+    
+    try:
+        data = decode_token(token)
+    except HTTPException:
+        return None
+
+    if data.get("type") != "access":
+        return None
+
+    user = await user_crud.get_user_by_email(data["sub"])
+
+    if not user or not user.get("is_active"):
+        return None
+    
+    return user

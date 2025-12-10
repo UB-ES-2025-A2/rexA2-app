@@ -22,6 +22,7 @@ def profile_app():
             "is_active": True,
             "phone": "111",
             "preferred_units": "km",
+            "theme_preference": "light",
             "avatar_url": "http://avatar",
         }
 
@@ -47,6 +48,7 @@ async def test_get_me_returns_public_user(ac_profile):
     assert data["id"] == "64fa0c8dbb5d2f0f12345678"
     assert data["email"] == "me@example.com"
     assert data["username"] == "me"
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["is_active"] is True
     # No debe exponer hash ni otros campos internos
     assert "hashed_password" not in data
@@ -66,6 +68,7 @@ async def test_get_my_profile_uses_crud_and_returns_profile(ac_profile, monkeypa
             "email": "me@example.com",
             "phone": None,
             "preferred_units": "km",
+            "theme_preference": "dark",
             "avatar_url": None,
             "stats": {
                 "routes_created": 1,
@@ -158,12 +161,13 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
         return False
 
     async def fake_update_user_fields(user_id, *, username=None, phone=None,
-                                      preferred_units=None, avatar_url=None):
+                                      preferred_units=None, theme_preference=None, avatar_url=None):
         seen["update"] = {
             "user_id": user_id,
             "username": username,
             "phone": phone,
             "preferred_units": preferred_units,
+            "theme_preference": theme_preference,
             "avatar_url": avatar_url,
         }
         # Devolvemos doc "persistido"
@@ -173,6 +177,7 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
             "email": "me@example.com",
             "phone": phone,
             "preferred_units": preferred_units,
+            "theme_preference": theme_preference or "light",
             "avatar_url": avatar_url,
         }
 
@@ -185,6 +190,7 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
             "email": user["email"],
             "phone": user["phone"],
             "preferred_units": user["preferred_units"],
+            "theme_preference": user.get("theme_preference"),
             "avatar_url": user["avatar_url"],
             "stats": {
                 "routes_created": 0,
@@ -214,6 +220,7 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
     assert data["email"] == "me@example.com"
     assert data["phone"] == "222"
     assert data["preferred_units"] == "mi"
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["avatar_url"] == "http://new"
 
     # Se ha comprobado disponibilidad con exclude_user_id correcto
@@ -223,6 +230,7 @@ async def test_update_my_profile_ok(ac_profile, monkeypatch):
     assert seen["update"]["username"] == "newuser"
     assert seen["update"]["phone"] == "222"
     assert seen["update"]["preferred_units"] == "mi"
+    assert seen["update"]["theme_preference"] is None
     assert seen["update"]["avatar_url"] == "http://new"
 
 
@@ -286,12 +294,13 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
         return False
 
     async def fake_update_user_fields(user_id, *, username=None, phone=None,
-                                      preferred_units=None, avatar_url=None):
+                                      preferred_units=None, theme_preference=None, avatar_url=None):
         seen["update"] = {
             "user_id": user_id,
             "username": username,
             "phone": phone,
             "preferred_units": preferred_units,
+            "theme_preference": theme_preference,
             "avatar_url": avatar_url,
         }
         # Doc resultante en DB
@@ -301,6 +310,7 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
             "email": "me@example.com",
             "phone": phone,
             "preferred_units": "km",
+            "theme_preference": theme_preference or "light",
             "avatar_url": None,
         }
 
@@ -312,6 +322,7 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
             "email": user["email"],
             "phone": user["phone"],
             "preferred_units": user["preferred_units"],
+            "theme_preference": user["theme_preference"],
             "avatar_url": user["avatar_url"],
             "stats": {
                 "routes_created": 0,
@@ -337,6 +348,7 @@ async def test_update_my_profile_blank_phone_becomes_none(ac_profile, monkeypatc
 
     # Y en el perfil devuelto también se refleja como null (None en JSON)
     assert data["phone"] is None
+    assert data.get("theme_preference") in ("light", "dark", None)
     assert data["preferred_units"] == "km"
 
 
