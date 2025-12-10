@@ -31,7 +31,7 @@ type ProfileResponse = {
   email?: string;
   phone?: string | null;
   preferred_units?: Units | null;
-  preferred_theme?: ThemePref | null;
+  theme_preference?: ThemePref | null;
   avatar_url?: string | null;
   stats?: Partial<ProfileStats> | null;
 };
@@ -778,11 +778,11 @@ export default function Profile() {
             onGoToCreated={() => setActive("created")}
             activeTab={active}
             onChangeTab={setActive}
-          onLogout={() => {
-            logout();
-            navigate("/");
-          }}
-        />
+            onLogout={() => {
+              logout();
+              navigate("/");
+            }}
+          />
           {active === "favorites" && (
             <FavoritesPanel
               favorites={favorites}
