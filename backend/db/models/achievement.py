@@ -16,7 +16,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Completa tu primera ruta.",
         "category": "completed_routes",
         "threshold_value": 1,
-        "icon": "🧭",
+        "icon": "compass-badge",
         "rarity": "common",
     },
     {
@@ -25,7 +25,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Marca 5 rutas como realizadas.",
         "category": "completed_routes",
         "threshold_value": 5,
-        "icon": "🥾",
+        "icon": "boot-badge",
         "rarity": "common",
     },
     {
@@ -34,7 +34,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Completa 10 rutas distintas.",
         "category": "completed_routes",
         "threshold_value": 10,
-        "icon": "🏅",
+        "icon": "medal-badge",
         "rarity": "rare",
     },
     {
@@ -43,7 +43,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Sella 25 rutas completadas.",
         "category": "completed_routes",
         "threshold_value": 25,
-        "icon": "🚩",
+        "icon": "map-badge",
         "rarity": "epic",
     },
     {
@@ -52,7 +52,7 @@ DEFAULT_COMPLETED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Alcanza 50 rutas realizadas.",
         "category": "completed_routes",
         "threshold_value": 50,
-        "icon": "🌌",
+        "icon": "trophy-badge",
         "rarity": "legendary",
     },
 ]
@@ -65,7 +65,7 @@ DEFAULT_CREATED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Publica tu primera ruta.",
         "category": "created_routes",
         "threshold_value": 1,
-        "icon": "🖋️",
+        "icon": "pen-badge",
         "rarity": "common",
     },
     {
@@ -74,7 +74,7 @@ DEFAULT_CREATED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Publica 3 rutas.",
         "category": "created_routes",
         "threshold_value": 3,
-        "icon": "📌",
+        "icon": "toolkit-badge",
         "rarity": "common",
     },
     {
@@ -83,38 +83,38 @@ DEFAULT_CREATED_ROUTES_ACHIEVEMENTS: list[dict[str, Any]] = [
         "description": "Publica 5 rutas.",
         "category": "created_routes",
         "threshold_value": 5,
-        "icon": "🗺️",
+        "icon": "rocket-badge",
         "rarity": "rare",
     },
     {
         "code": "created_routes_10",
-        "name": "Cartógrafo Amateur",
+        "name": "Cartografo Amateur",
         "description": "Alcanza 10 rutas publicadas.",
         "category": "created_routes",
         "threshold_value": 10,
-        "icon": "🏆",
+        "icon": "crane-badge",
         "rarity": "epic",
     },
     {
         "code": "created_routes_20",
-        "name": "Cartógrafo Experto",
+        "name": "Cartografo Experto",
         "description": "Comparte 20 rutas.",
         "category": "created_routes",
         "threshold_value": 20,
-        "icon": "🚀",
+        "icon": "castle-badge",
         "rarity": "legendary",
     },
 ]
 
-# === Seeds: logros por temática ===
+# === Seeds: logros por tem?tica ===
 THEME_DEFINITIONS: list[dict[str, Any]] = [
-    {"id": "naturaleza", "name": "Naturaleza", "icon": "🌲"},
-    {"id": "gastronomia", "name": "Gastronomía", "icon": "🍲"},
-    {"id": "exploracion-urbana", "name": "Exploración urbana", "icon": "🏙️"},
-    {"id": "aventura", "name": "Aventura", "icon": "🧗"},
-    {"id": "cultura", "name": "Cultura", "icon": "🏛️"},
-    {"id": "deporte", "name": "Deporte", "icon": "🏃"},
-    {"id": "entretenimiento", "name": "Entretenimiento", "icon": "🎉"},
+    {"id": "naturaleza", "name": "Naturaleza", "icon": "leaf-badge"},
+    {"id": "gastronomia", "name": "Gastronomia", "icon": "plate-badge"},
+    {"id": "exploracion-urbana", "name": "Exploracion urbana", "icon": "city-badge"},
+    {"id": "aventura", "name": "Aventura", "icon": "climb-badge"},
+    {"id": "cultura", "name": "Cultura", "icon": "mask-badge"},
+    {"id": "deporte", "name": "Deporte", "icon": "run-badge"},
+    {"id": "entretenimiento", "name": "Entretenimiento", "icon": "tent-badge"},
 ]
 
 THEME_LEVELS = [
@@ -124,14 +124,13 @@ THEME_LEVELS = [
 ]
 
 DISTANCE_ACHIEVEMENTS: list[dict[str, Any]] = [
-    {"code": "distance_10", "name": "Caminante I", "threshold_value": 10, "rarity": "common"},
-    {"code": "distance_25", "name": "Caminante II", "threshold_value": 25, "rarity": "common"},
-    {"code": "distance_50", "name": "Caminante III", "threshold_value": 50, "rarity": "rare"},
-    {"code": "distance_100", "name": "Senderista", "threshold_value": 100, "rarity": "epic"},
-    {"code": "distance_250", "name": "Ultrawalker", "threshold_value": 250, "rarity": "legendary"},
-    {"code": "distance_500", "name": "Maratonista", "threshold_value": 500, "rarity": "legendary"},
+    {"code": "distance_10", "name": "Caminante I", "threshold_value": 10, "icon": "track-badge", "rarity": "common"},
+    {"code": "distance_25", "name": "Caminante II", "threshold_value": 25, "icon": "atlas-badge", "rarity": "common"},
+    {"code": "distance_50", "name": "Caminante III", "threshold_value": 50, "icon": "camp-badge", "rarity": "rare"},
+    {"code": "distance_100", "name": "Senderista", "threshold_value": 100, "icon": "peak-badge", "rarity": "epic"},
+    {"code": "distance_250", "name": "Ultrawalker", "threshold_value": 250, "icon": "shield-badge", "rarity": "legendary"},
+    {"code": "distance_500", "name": "Maratonista", "threshold_value": 500, "icon": "flag-badge", "rarity": "legendary"},
 ]
-
 
 async def ensure_completed_routes_seed() -> None:
     col = db_client.db[ACHIEVEMENTS_COLL]
