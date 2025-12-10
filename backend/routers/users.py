@@ -23,12 +23,14 @@ async def register_user(payload: UserCreate):
         email=payload.email,
         password=payload.password,
         username=payload.username,
+        theme_preference=payload.theme_preference,
     )
 
     return {
         "id": str(user["_id"]),
         "email": user["email"],
         "username": user.get("username"),
+        "theme_preference": user.get("theme_preference"),
         #"name": user.get("name"),
         #"phone": user.get("phone"),
         #"preferred_units": user.get("preferred_units") or "km",

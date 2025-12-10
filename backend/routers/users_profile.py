@@ -17,6 +17,7 @@ async def get_me(user = Depends(get_current_user)):
         "email": user.get("email"),
         "username": user.get("username"),
         "is_active": user.get("is_active", True),
+        "theme_preference": user.get("theme_preference") or "light",
     }
 
 # Perfil completo (datos + métricas)
@@ -57,6 +58,7 @@ async def update_my_profile(payload: UserUpdate, user = Depends(get_current_user
             username=payload.username,
             phone=payload.phone,
             preferred_units=payload.preferred_units,
+            theme_preference=payload.theme_preference,
             avatar_url=payload.avatar_url,
         )
     except DuplicateKeyError:

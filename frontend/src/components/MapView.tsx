@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl, { Map, Marker } from "mapbox-gl";
 import type { Feature, FeatureCollection, Point, LineString } from "geojson";
+import { useTheme } from "../context/ThemeContext";
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
 
@@ -62,6 +63,7 @@ export default function MapView({
   popupNode,
   popupLocation,
 }: Props) {
+  const { resolvedTheme } = useTheme();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const markerRefs = useRef<Marker[]>([]);
@@ -71,55 +73,15 @@ export default function MapView({
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevViewportRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
   const lastSyncedPropsRef = useRef<{ center: [number, number]; zoom: number } | null>(null);
+  const lastStyleRef = useRef<string | null>(null);
 
-  const forceMapResize = useCallback(() => {
-    if (mapRef.current) {
-      mapRef.current.resize();
-      requestAnimationFrame(() => {
-        mapRef.current?.resize();
-      });
-    }
-  }, []);
+  const styleUrl =
+    resolvedTheme === "dark"
+      ? "mapbox://styles/mapbox/navigation-night-v1"
+      : "mapbox://styles/mapbox/streets-v12";
 
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-
-    const safeResize = () => {
-      if (mapRef.current) {
-        mapRef.current.resize();
-      }
-    };
-
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center,
-      zoom,
-      preserveDrawingBuffer: true,
-      trackResize: true,
-    });
-
-    mapRef.current = map;
-
-    map.on("load", () => {
-      setTimeout(safeResize, 50);
-      setTimeout(safeResize, 150);
-      setTimeout(safeResize, 300);
-      setTimeout(safeResize, 500);
-
-      const trafficLayers = [
-        "traffic-lines-incidents-day",
-        "traffic-lines-incidents-night",
-        "traffic-incidents",
-        "traffic-line-casing",
-        "traffic-line-fill",
-      ];
-      trafficLayers.forEach((layerId) => {
-        if (map.getLayer(layerId)) {
-          map.setLayoutProperty(layerId, "visibility", "none");
-        }
-      });
-
+  const ensureHighlightStructure = useCallback((map: Map) => {
+    if (!map.getSource("highlight-route")) {
       map.addSource("highlight-route", {
         type: "geojson",
         lineMetrics: true,
@@ -128,7 +90,9 @@ export default function MapView({
           features: [],
         } as FeatureCollection,
       });
+    }
 
+    if (!map.getLayer("highlight-line-glow")) {
       map.addLayer({
         id: "highlight-line-glow",
         type: "line",
@@ -145,7 +109,9 @@ export default function MapView({
         },
         filter: ["==", "$type", "LineString"],
       });
+    }
 
+    if (!map.getLayer("highlight-line")) {
       map.addLayer({
         id: "highlight-line",
         type: "line",
@@ -170,7 +136,9 @@ export default function MapView({
         },
         filter: ["==", "$type", "LineString"],
       });
+    }
 
+    if (!map.getLayer("highlight-line-pulse")) {
       map.addLayer({
         id: "highlight-line-pulse",
         type: "line",
@@ -186,7 +154,9 @@ export default function MapView({
         },
         filter: ["==", "$type", "LineString"],
       });
+    }
 
+    if (!map.getLayer("highlight-points-glow")) {
       map.addLayer({
         id: "highlight-points-glow",
         type: "circle",
@@ -199,7 +169,9 @@ export default function MapView({
         },
         filter: ["==", "$type", "Point"],
       });
+    }
 
+    if (!map.getLayer("highlight-points")) {
       map.addLayer({
         id: "highlight-points",
         type: "circle",
@@ -212,7 +184,9 @@ export default function MapView({
         },
         filter: ["==", "$type", "Point"],
       });
+    }
 
+    if (!map.getLayer("highlight-point-labels")) {
       map.addLayer({
         id: "highlight-point-labels",
         type: "symbol",
@@ -230,6 +204,60 @@ export default function MapView({
         },
         filter: ["==", "$type", "Point"],
       });
+    }
+  }, []);
+
+  const forceMapResize = useCallback(() => {
+    if (mapRef.current) {
+      mapRef.current.resize();
+      requestAnimationFrame(() => {
+        mapRef.current?.resize();
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    const safeResize = () => {
+      if (mapRef.current) {
+        mapRef.current.resize();
+      }
+    };
+
+    const map = new mapboxgl.Map({
+      container: containerRef.current,
+      style: styleUrl,
+      center,
+      zoom,
+      preserveDrawingBuffer: true,
+      trackResize: true,
+    });
+
+    mapRef.current = map;
+    lastStyleRef.current = styleUrl;
+    map.on("styledata", () => ensureHighlightStructure(map));
+
+    map.on("load", () => {
+      setTimeout(safeResize, 50);
+      setTimeout(safeResize, 150);
+      setTimeout(safeResize, 300);
+      setTimeout(safeResize, 500);
+
+      const trafficLayers = [
+        "traffic-lines-incidents-day",
+        "traffic-lines-incidents-night",
+        "traffic-incidents",
+        "traffic-line-casing",
+        "traffic-line-fill",
+      ];
+      trafficLayers.forEach((layerId) => {
+        if (map.getLayer(layerId)) {
+          map.setLayoutProperty(layerId, "visibility", "none");
+        }
+      });
+
+      ensureHighlightStructure(map);
 
       setMapLoaded(true);
     });
@@ -336,6 +364,20 @@ export default function MapView({
     if (!map || !mapLoaded) return;
     map.resize();
   }, [allowPickPoint, mapLoaded]);
+
+  // Cambia el estilo del mapa cuando cambia el tema
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (lastStyleRef.current === styleUrl) return;
+    lastStyleRef.current = styleUrl;
+    setMapLoaded(false);
+    map.setStyle(styleUrl);
+    map.once("styledata", () => {
+      ensureHighlightStructure(map);
+      setMapLoaded(true);
+    });
+  }, [styleUrl, ensureHighlightStructure]);
 
   useEffect(() => {
     const map = mapRef.current;
