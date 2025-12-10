@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
+import { useTheme } from "../../context/ThemeContext";
 
 type Props = {
   points: Array<[number, number]>;
@@ -13,6 +14,7 @@ type Props = {
 export default function RouteMiniMap({ points, className }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const token = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -20,9 +22,14 @@ export default function RouteMiniMap({ points, className }: Props) {
 
     mapboxgl.accessToken = token;
 
+    const styleUrl =
+      resolvedTheme === "dark"
+        ? "mapbox://styles/mapbox/navigation-night-v1"
+        : "mapbox://styles/mapbox/streets-v11";
+
     const map = new mapboxgl.Map({
       container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v11",
+      style: styleUrl,
       interactive: false,
       attributionControl: false,
       preserveDrawingBuffer: true,
@@ -77,7 +84,7 @@ export default function RouteMiniMap({ points, className }: Props) {
       map.remove();
       mapRef.current = null;
     };
-  }, [points]);
+  }, [points, resolvedTheme]);
 
   return <div ref={containerRef} className={className} />;
 }

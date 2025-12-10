@@ -419,6 +419,10 @@ body.profile-body-host {
   color: var(--ink);
 }
 
+.theme-dark .profile-hero-name {
+  color: #e5edff;
+}
+
 .profile-hero-subtitle {
   margin: 0;
   color: var(--muted);
