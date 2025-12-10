@@ -35,7 +35,7 @@ body,
 
 body {
   margin: 0;
-  background: radial-gradient(120% 120% at 18% 12%, #f7f9ff 0%, #e6edf7 45%, #dde4ef 100%) fixed;
+  background: var(--page-gradient, radial-gradient(120% 120% at 18% 12%, #f7f9ff 0%, #e6edf7 45%, #dde4ef 100%)) fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
     Arial;
@@ -62,7 +62,7 @@ button {
     radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.55), transparent 34%),
     radial-gradient(circle at 60% 80%, rgba(226, 234, 246, 0.7), transparent 40%);
   filter: blur(65px);
-  opacity: 0.45;
+  opacity: var(--page-overlay-opacity, 0.45);
   pointer-events: none;
 }
 
@@ -71,7 +71,13 @@ button {
   background: linear-gradient(130deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.08));
   mix-blend-mode: screen;
   filter: blur(52px);
-  opacity: 0.4;
+  opacity: var(--page-overlay-strong, 0.4);
+}
+
+.theme-dark .home::before,
+.theme-dark .home::after {
+  opacity: 0;
+  background: none;
 }
 
 .home__header {
@@ -101,6 +107,18 @@ button {
   background: var(--gradient-primary);
   color: #fff;
   box-shadow: 0 12px 24px rgba(99, 102, 241, 0.26);
+}
+
+.theme-dark .home__header {
+  background: var(--glass-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.theme-dark .home .main-nav {
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .category-label {
@@ -141,6 +159,7 @@ button {
   grid-template-columns: 34% 65%;
   gap: 20px;
   padding: 20px;
+  margin: 10px;
   position: relative;
   min-height: 0;
   overflow: hidden;
@@ -176,6 +195,32 @@ button {
 
 .home__left-skeleton .route-card-panel {
   height: 100%;
+}
+
+.theme-dark .home__content {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+}
+
+.theme-dark .home__left-skeleton {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.theme-dark .home__header,
+.theme-dark .home__map-skeleton {
+  background: #0f172a;
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: none;
+}
+
+.theme-dark .home .main-nav {
+  background: #475569;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 .comments-full {
@@ -280,6 +325,10 @@ button {
 .routes-count {
   font-weight: 800;
   color: var(--text);
+}
+
+.theme-dark .routes-count {
+  color: #e5edff;
 }
 
 .routes-active-filters {
