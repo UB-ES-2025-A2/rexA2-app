@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDistanceAchievements, type AchievementProgress } from "../../services/achievements";
 import { translateErrorMessage } from "../../utils/errorTranslator";
+import { resolveAchievementIcon } from "./achievementIcons";
 
 type Props = {
   userId?: string;
@@ -86,10 +87,16 @@ export default function DistanceAchievementsBlock({ userId, refreshToken }: Prop
             ach.threshold_value > 0
               ? Math.min(100, Math.round((Number(ach.current_value ?? 0) / ach.threshold_value) * 100))
               : 0;
+          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category });
           return (
             <div key={ach.code} className={`distance-level ${locked ? "locked" : "unlocked"}`}>
               <div className="distance-level__header">
-                <h4>{ach.name}</h4>
+                <div className="distance-level__title">
+                  <div className="achievement-card__icon small" aria-hidden>
+                    <Icon />
+                  </div>
+                  <h4>{ach.name}</h4>
+                </div>
                 <span className="muted">{ach.threshold_value} km</span>
               </div>
               <div className="distance-level__progress">
