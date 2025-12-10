@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCreatedRoutesAchievements, type AchievementProgress } from "../../services/achievements";
 import { translateErrorMessage } from "../../utils/errorTranslator";
+import { resolveAchievementIcon } from "./achievementIcons";
 
 type Props = {
   userId?: string;
@@ -73,6 +74,7 @@ export default function CreatedRoutesAchievements({ userId, refreshToken }: Prop
               ? Math.min(100, Math.round((ach.current_value / ach.threshold_value) * 100))
               : 0;
           const locked = !ach.is_unlocked;
+          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category });
           return (
             <article
               key={ach.code}
@@ -80,7 +82,7 @@ export default function CreatedRoutesAchievements({ userId, refreshToken }: Prop
               aria-label={ach.name}
             >
               <div className="achievement-card__icon" aria-hidden>
-                {ach.icon || "🛠️"}
+                <Icon />
               </div>
               <div className="achievement-card__body">
                 <div className="achievement-card__title-row">
