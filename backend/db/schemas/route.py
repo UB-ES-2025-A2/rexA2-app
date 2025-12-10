@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator, AliasChoices
 from typing import List
 from datetime import datetime
+from .achievement import AchievementUnlock
 
 
 class CommentCreate(BaseModel):
@@ -160,6 +161,10 @@ class RoutePublic(RouteBase):
     user_rating: float | None = None
     images: List[str] = Field(default_factory=list)
     is_completed: bool = False
+
+
+class RouteCreateResponse(RoutePublic):
+    newly_unlocked: list[AchievementUnlock] = Field(default_factory=list)
 
 
 class RouteUpdate(BaseModel):

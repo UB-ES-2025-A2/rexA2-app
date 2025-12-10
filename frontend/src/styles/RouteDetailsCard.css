@@ -34,11 +34,6 @@
   animation: fadeIn 0.4s ease-in-out;
   overflow: hidden;
 }
-.theme-dark .route-details-card {
-  background: linear-gradient(180deg, rgba(39, 59, 92, 0.75) 0%, rgba(28, 44, 70, 0.92) 100%);
-  border-color: rgba(144, 164, 255, 0.35);
-  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
-}
 
 .route-details-card__header {
   display: flex;
@@ -285,12 +280,6 @@
   width: 100%;
 }
 
-.theme-dark .route-details-card__rating-summary {
-  border-color: var(--glass-border);
-  background: var(--glass-bg);
-  box-shadow: var(--glass-shadow);
-}
-
 .route-details-card__rating-meta {
   display: flex;
   flex-direction: column;
@@ -318,13 +307,6 @@
   background: #fff7ec;
   color: var(--ink);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
-}
-
-.theme-dark .route-details-card__rating-number {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f7f9ff;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--glass-border);
 }
 
 .route-details-card__rating-average {
@@ -367,25 +349,10 @@
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
 }
 
-.theme-dark .route-details-card__rating {
-  border-color: var(--glass-border);
-  background: var(--glass-bg);
-  box-shadow: var(--glass-shadow);
-}
-
 .route-details-card__rating-hint {
   margin: 0;
   color: var(--muted);
   font-weight: 600;
-}
-
-.theme-dark .route-details-card__rating-label,
-.theme-dark .route-details-card__rating-hint,
-.theme-dark .route-details-card__rating-scale,
-.theme-dark .route-details-card__rating-title,
-.theme-dark .route-details-card__rating-value,
-.theme-dark .route-details-card__rating-count {
-  color: #e9ecf8;
 }
 
 .route-details-card__rating-divider {
