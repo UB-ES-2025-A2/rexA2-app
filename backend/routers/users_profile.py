@@ -58,6 +58,7 @@ async def update_my_profile(payload: UserUpdate, user = Depends(get_current_user
             username=payload.username,
             phone=payload.phone,
             preferred_units=payload.preferred_units,
+            theme_preference=payload.theme_preference,
             avatar_url=payload.avatar_url,
         )
     except DuplicateKeyError:
