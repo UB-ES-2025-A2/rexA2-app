@@ -31,6 +31,7 @@ async def me(current_user: dict = Depends(get_current_user)):
         "email": current_user["email"],
         "username": current_user.get("username"),
         "is_active": current_user["is_active"],
+        "theme_preference": current_user.get("theme_preference"),
     }
 
 @router.post("/refresh", response_model=TokenOut)

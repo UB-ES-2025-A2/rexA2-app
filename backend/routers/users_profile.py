@@ -17,6 +17,7 @@ async def get_me(user = Depends(get_current_user)):
         "email": user.get("email"),
         "username": user.get("username"),
         "is_active": user.get("is_active", True),
+        "theme_preference": user.get("theme_preference") or "light",
     }
 
 # Perfil completo (datos + métricas)

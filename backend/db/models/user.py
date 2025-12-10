@@ -7,6 +7,7 @@ from ..client import get_db
 from ...core.security import get_password_hash
 from . import follow as follow_crud
 USERS_COL = None
+UNSET = object()
 
 def _users_col():
     """
@@ -26,6 +27,7 @@ async def create_user(
     name: Optional[str] = None,
     phone: Optional[str] = None,
     preferred_units: str = "km",
+    theme_preference: str = "light",
     avatar_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -45,6 +47,7 @@ async def create_user(
         "name": name,                               # None por defecto
         "phone": phone,                             # None por defecto
         "preferred_units": preferred_units or "km", # valor por defecto
+        "theme_preference": theme_preference or "light", # valor por defecto
         "avatar_url": avatar_url,                   # None por defecto
         "is_active": True,
     }
@@ -127,6 +130,7 @@ async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
         "email": user.get("email", ""),
         "phone": user.get("phone"),
         "preferred_units": user.get("preferred_units") or "km",
+        "theme_preference": user.get("theme_preference") or "light",
         "avatar_url": user.get("avatar_url"),
         "stats": {
             "routes_created": created,
@@ -155,6 +159,7 @@ async def update_user_fields(
     username: Optional[str] = None,
     phone: Optional[str] = None,
     preferred_units: Optional[str] = None,
+    theme_preference: Optional[str] | object = UNSET,
     avatar_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
@@ -165,7 +170,7 @@ async def update_user_fields(
     to_set: Dict[str, Any] = {}
     to_unset: Dict[str, Any] = {}
 
-    if username is not None:
+    if username is not None and username is not UNSET:
         to_set["username"] = username
 
     # Si phone/avatar_url llegan como None, eliminamos el campo (unset)
@@ -176,6 +181,9 @@ async def update_user_fields(
 
     if preferred_units is not None:
         to_set["preferred_units"] = preferred_units
+    
+    if theme_preference is not None and theme_preference is not UNSET:
+        to_set["theme_preference"] = theme_preference
 
     if avatar_url is None:
         to_unset["avatar_url"] = ""
