@@ -57,7 +57,7 @@ async def test_register_user_created_201(test_app, monkeypatch):
         return None  # no existe
 
     # Stub: creación existosa; devuelve doc "persisitido"
-    async def fake_create_user(email: str, password: str, username: str):
+    async def fake_create_user(email: str, password: str, username: str, **kwargs):
         return {
             "_id": "64fa0c8dbb5d2f0f12345678",
             "email": email,

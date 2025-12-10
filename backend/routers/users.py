@@ -30,7 +30,7 @@ async def register_user(payload: UserCreate):
         "id": str(user["_id"]),
         "email": user["email"],
         "username": user.get("username"),
-        "theme_preference": user.get("theme_preference"),
+        "theme_preference": user.get("theme_preference") or "light",
         #"name": user.get("name"),
         #"phone": user.get("phone"),
         #"preferred_units": user.get("preferred_units") or "km",
