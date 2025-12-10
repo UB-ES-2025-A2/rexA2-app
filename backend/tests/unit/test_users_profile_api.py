@@ -90,6 +90,7 @@ async def test_get_my_profile_uses_crud_and_returns_profile(ac_profile, monkeypa
         "email": "me@example.com",
         "phone": None,
         "preferred_units": "km",
+        "theme_preference": "dark",
         "avatar_url": None,
         "stats": {
             "routes_created": 1,
