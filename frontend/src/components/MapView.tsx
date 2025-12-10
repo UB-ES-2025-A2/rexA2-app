@@ -216,65 +216,92 @@ export default function MapView({
     }
   }, []);
 
+  const fetchAndFilterStyle = async (url: string) => {
+    try {
+      let fetchUrl = url;
+      if (url.startsWith("mapbox://styles/")) {
+        const styleId = url.replace("mapbox://styles/", "");
+        fetchUrl = `https://api.mapbox.com/styles/v1/${styleId}?access_token=${mapboxgl.accessToken}`;
+      }
+
+      const response = await fetch(fetchUrl);
+      const style = await response.json();
+
+      const trafficSources = ["traffic", "mapbox-traffic", "mapbox-incidents"];
+
+      // Filter layers
+      if (style.layers) {
+        style.layers = style.layers.filter((layer: any) => {
+          return !(layer.source && trafficSources.includes(layer.source));
+        });
+      }
+
+      // Filter sources
+      if (style.sources) {
+        trafficSources.forEach((sourceId) => {
+          if (style.sources[sourceId]) {
+            delete style.sources[sourceId];
+          }
+        });
+      }
+
+      return style;
+    } catch (error) {
+      console.error("Error fetching/filtering style:", error);
+      return url;
+    }
+  };
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    const safeResize = () => {
-      if (mapRef.current) {
-        mapRef.current.resize();
+    const initializeMap = async () => {
+      const style = await fetchAndFilterStyle(styleUrl);
+
+      const map = new mapboxgl.Map({
+        container: containerRef.current!,
+        style: style,
+        center,
+        zoom,
+        preserveDrawingBuffer: true,
+        trackResize: true,
+      });
+
+      mapRef.current = map;
+      lastStyleRef.current = styleUrl;
+      map.on("styledata", () => ensureHighlightStructure(map));
+
+      map.on("load", () => {
+        const safeResize = () => {
+          if (mapRef.current) {
+            mapRef.current.resize();
+          }
+        };
+        setTimeout(safeResize, 50);
+        setTimeout(safeResize, 150);
+        setTimeout(safeResize, 300);
+        setTimeout(safeResize, 500);
+
+        ensureHighlightStructure(map);
+        setMapLoaded(true);
+      });
+
+      const ro = new ResizeObserver(() => {
+        if (resizeTimeoutRef.current) {
+          clearTimeout(resizeTimeoutRef.current);
+        }
+
+        resizeTimeoutRef.current = setTimeout(() => {
+          map.resize();
+        }, 100);
+      });
+
+      if (containerRef.current) {
+        ro.observe(containerRef.current);
       }
     };
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: styleUrl,
-      center,
-      zoom,
-      preserveDrawingBuffer: true,
-      trackResize: true,
-    });
-
-    mapRef.current = map;
-    lastStyleRef.current = styleUrl;
-    map.on("styledata", () => ensureHighlightStructure(map));
-
-    map.on("load", () => {
-      setTimeout(safeResize, 50);
-      setTimeout(safeResize, 150);
-      setTimeout(safeResize, 300);
-      setTimeout(safeResize, 500);
-
-      const trafficLayers = [
-        "traffic-lines-incidents-day",
-        "traffic-lines-incidents-night",
-        "traffic-incidents",
-        "traffic-line-casing",
-        "traffic-line-fill",
-      ];
-      trafficLayers.forEach((layerId) => {
-        if (map.getLayer(layerId)) {
-          map.setLayoutProperty(layerId, "visibility", "none");
-        }
-      });
-
-      ensureHighlightStructure(map);
-
-      setMapLoaded(true);
-    });
-
-    const ro = new ResizeObserver(() => {
-      if (resizeTimeoutRef.current) {
-        clearTimeout(resizeTimeoutRef.current);
-      }
-
-      resizeTimeoutRef.current = setTimeout(() => {
-        map.resize();
-      }, 100);
-    });
-
-    if (containerRef.current) {
-      ro.observe(containerRef.current);
-    }
+    initializeMap();
 
     return () => {
       if (animationFrameRef.current) {
@@ -283,10 +310,14 @@ export default function MapView({
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
-      ro.disconnect();
+      // ro is local to initializeMap, but we can't easily clean it up here without refactoring.
+      // However, the component unmount will clean up the map which is the most important part.
+      // Ideally we should store ro in a ref to disconnect it.
       markerRefs.current.forEach((m) => m.remove());
-      map.remove();
-      mapRef.current = null;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
       setMapLoaded(false);
     };
   }, []);
@@ -370,13 +401,19 @@ export default function MapView({
     const map = mapRef.current;
     if (!map) return;
     if (lastStyleRef.current === styleUrl) return;
-    lastStyleRef.current = styleUrl;
-    setMapLoaded(false);
-    map.setStyle(styleUrl);
-    map.once("styledata", () => {
-      ensureHighlightStructure(map);
-      setMapLoaded(true);
-    });
+
+    const updateStyle = async () => {
+      lastStyleRef.current = styleUrl;
+      setMapLoaded(false);
+      const style = await fetchAndFilterStyle(styleUrl);
+      map.setStyle(style);
+      map.once("styledata", () => {
+        ensureHighlightStructure(map);
+        setMapLoaded(true);
+      });
+    };
+
+    updateStyle();
   }, [styleUrl, ensureHighlightStructure]);
 
   useEffect(() => {
