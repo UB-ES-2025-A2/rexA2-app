@@ -1523,8 +1523,6 @@ function FavoritesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
-        initialSaved
-        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1670,8 +1668,6 @@ function CreatedRoutesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
-        initialSaved={initialSavedForRoute(route.id)}
-        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>

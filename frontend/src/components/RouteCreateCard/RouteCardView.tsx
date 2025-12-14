@@ -5,7 +5,6 @@ type Props = {
   mode: Mode;
   name: string;
   description: string;
-  isPrivate: boolean;
   category: Category | "";
   images: { id: string; url: string; name: string; size?: number }[];
   difficulty: "" | "easy" | "medium" | "hard";
@@ -21,7 +20,6 @@ type Props = {
   nameTooLong: boolean;
 
   onChangeName: (v: string) => void;
-  onTogglePrivate: (v: boolean) => void;
   onChangeCategory: (v: Category | "") => void;
   onChangeDifficulty: (v: "" | "easy" | "medium" | "hard") => void;
   onChangeMode: (m: Mode) => void;
@@ -38,7 +36,6 @@ type Props = {
 const RouteCardView: React.FC<Props> = ({
   mode,
   name,
-  isPrivate,
   category,
   images,
   difficulty,
@@ -54,7 +51,6 @@ const RouteCardView: React.FC<Props> = ({
   description,
 
   onChangeName,
-  onTogglePrivate,
   onChangeCategory,
   onChangeDifficulty,
   onChangeMode,
@@ -197,22 +193,6 @@ const RouteCardView: React.FC<Props> = ({
               {errors.difficulty && <p className="input-error">{errors.difficulty}</p>}
             </div>
 
-            <div className="input-group">
-              <label className="route-card__section-title" htmlFor="privacy-toggle">
-                Visibilidad
-              </label>
-              <label className="route-card__toggle" id="privacy-toggle">
-                <input
-                  type="checkbox"
-                  checked={isPrivate}
-                  onChange={(e) => onTogglePrivate(e.target.checked)}
-                />
-                Privada
-              </label>
-              <p className="route-card__helper">
-                {isPrivate ? "Solo tu podras verla" : "Se mostrara a otros usuarios"}
-              </p>
-            </div>
           </div>
         </div>
 
@@ -397,7 +377,7 @@ const RouteCardView: React.FC<Props> = ({
           {isSaving ? "Guardando..." : "Guardar ruta"}
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 

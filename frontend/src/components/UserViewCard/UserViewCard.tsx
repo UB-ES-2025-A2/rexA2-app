@@ -382,7 +382,6 @@ const UserViewCard: React.FC<Props> = ({
               difficulty={r.difficulty}
               ratingAverage={r.rating ?? null}
               ratingCount={r.rating_count ?? null}
-              initialSaved={false}
               isCompleted={normalizeCompletedFlag(r.isCompleted ?? false)}
               onClick={() => onRouteClick?.(r)}
             />
