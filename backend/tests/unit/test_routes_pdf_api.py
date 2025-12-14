@@ -98,7 +98,7 @@ async def test_get_route_pdf_internal_error_returns_clear_message(ac: AsyncClien
             "points": [],
         }
 
-    def fake_build_pdf_bytes(route):
+    def fake_build_pdf_bytes(route, **kwargs):
         raise RuntimeError("PDF generation failure")
 
     monkeypatch.setattr(route_crud, "get_route_by_id", fake_get_route_by_id, raising=True)

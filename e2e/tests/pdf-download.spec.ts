@@ -61,13 +61,13 @@ test("US36 - descarga de PDF desde la ficha de la ruta (subset de criterios)", a
   };
 
   await disableSearchArea();
-  await routeCards.first().waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+  await routeCards.first().waitFor({ state: "visible", timeout: 20000 }).catch(() => { });
   if (page.isClosed()) return;
   if ((await routeCards.count()) === 0) return;
 
   const detailsCard = page.locator(".route-details-card");
   await routeCards.first().click({ force: true });
-  await detailsCard.waitFor({ state: "visible", timeout: 20000 }).catch(() => {});
+  await detailsCard.waitFor({ state: "visible", timeout: 20000 }).catch(() => { });
   if ((await detailsCard.count()) === 0) return;
 
   const downloadButton = detailsCard.getByRole("button", {
@@ -105,17 +105,17 @@ test("US36 - descarga de PDF desde la ficha de la ruta (subset de criterios)", a
   const urlBefore = page.url();
 
   const [requestOk] = await Promise.all([
-    page.waitForRequest((req) => req.url().includes("/routes/") && req.url().endsWith("/pdf")),
+    page.waitForRequest((req) => req.url().includes("/routes/") && req.url().includes("/pdf")),
     downloadButton.click(),
   ]);
   expect(requestOk.method()).toBe("GET");
 
-  await detailsCard.waitFor({ state: "visible", timeout: 5000 }).catch(() => {});
+  await detailsCard.waitFor({ state: "visible", timeout: 5000 }).catch(() => { });
   const urlAfterOk = page.url();
   expect(urlAfterOk).toBe(urlBefore);
   logCriterion("Descarga OK sin recargar pagina");
 
-  await downloadButton.click({ force: true }).catch(() => {});
+  await downloadButton.click({ force: true }).catch(() => { });
   await page.waitForTimeout(250);
   const cardCount = await detailsCard.count();
   if (cardCount > 0) {
