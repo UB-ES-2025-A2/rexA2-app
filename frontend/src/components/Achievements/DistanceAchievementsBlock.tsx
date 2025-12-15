@@ -87,7 +87,7 @@ export default function DistanceAchievementsBlock({ userId, refreshToken }: Prop
             ach.threshold_value > 0
               ? Math.min(100, Math.round((Number(ach.current_value ?? 0) / ach.threshold_value) * 100))
               : 0;
-          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category });
+          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category ?? undefined });
           return (
             <div key={ach.code} className={`distance-level ${locked ? "locked" : "unlocked"}`}>
               <div className="distance-level__header">

@@ -37,6 +37,8 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
+from reportlab.lib.utils import ImageReader
+from backend.core.config import settings
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
@@ -131,18 +133,16 @@ def _draw_badges(
 
 def _draw_section_title(c: canvas.Canvas, title: str, x: float, y: float, color=colors.HexColor("#6366f1")) -> float:
     c.setFont("Helvetica-Bold", 12)
-    c.setFillColor(color)
-    bar_w, bar_h = 6, 10
-    bar_y = y - (bar_h - 2)
-    c.roundRect(x, bar_y, bar_w, bar_h, 3, stroke=0, fill=1)
-    text_x = x + bar_w + 6
     c.setFillColor(colors.HexColor("#0f172a"))
-    c.drawString(text_x, y, title)
-    underline_width = max(60, c.stringWidth(title, "Helvetica-Bold", 12) + 4)
+    # Eliminamos la barra azul lateral para evitar problemas de alineación visual que disgustan al usuario.
+    # Simplemente texto en negrita y una línea suave debajo.
+    c.drawString(x, y, title)
+    
+    underline_width = c.stringWidth(title, "Helvetica-Bold", 12) + 4
     c.setStrokeColor(color)
-    c.setLineWidth(1.2)
-    c.line(text_x, y - 2, text_x + underline_width, y - 2)
-    return y - max(bar_h + 6, 18)
+    c.setLineWidth(1.5)
+    c.line(x, y - 4, x + underline_width, y - 4)
+    return y - 20
 
 
 def _draw_divider(c: canvas.Canvas, x1: float, x2: float, y: float, color=colors.HexColor("#e5e7eb")) -> float:
@@ -224,18 +224,143 @@ def _draw_wrapped_text(c: canvas.Canvas, text: str, x: float, y: float, max_widt
     return y
 
 
-def _draw_route_map(c: canvas.Canvas, points: list[tuple[float, float]], x: float, y: float, width: float, height: float):
+def _encode_polyline(points: list[tuple[float, float]]) -> str:
+    """
+    Codifica lista de tuplas (lng, lat) usando algoritmo Google Polyline (5 decimales).
+    """
+    def _encode_val(val: int) -> str:
+        val = ~(val << 1) if val < 0 else (val << 1)
+        chars = []
+        while val >= 0x20:
+            chars.append(chr((0x20 | (val & 0x1F)) + 63))
+            val >>= 5
+        chars.append(chr(val + 63))
+        return "".join(chars)
+
+    result = []
+    last_lat = 0
+    last_lng = 0
+
+    for lng, lat in points:
+        lat_int = int(round(lat * 1e5))
+        lng_int = int(round(lng * 1e5))
+        d_lat = lat_int - last_lat
+        d_lng = lng_int - last_lng
+        result.append(_encode_val(d_lat))
+        result.append(_encode_val(d_lng))
+        last_lat = lat_int
+        last_lng = lng_int
+    return "".join(result)
+
+
+    return "".join(result)
+
+
+def _fetch_directions_geometry(points: list[tuple[float, float]], token: str) -> list[tuple[float, float]] | None:
+    """
+    Obtiene la geometría detallada (walking) usando Mapbox Directions API.
+    Acepta máx 25 puntos para la petición.
+    """
+    if not points or len(points) < 2:
+        return None
+    
+    # Mapbox Directions API limit is 25 coords per request.
+    # Si hay más, simplificamos o devolvemos None (usamos línea recta).
+    if len(points) > 25:
+        return None
+
+    coords_str = ";".join([f"{p[0]},{p[1]}" for p in points])
+    url = f"https://api.mapbox.com/directions/v5/mapbox/walking/{coords_str}?access_token={token}&geometries=geojson&overview=full"
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "rex-app-pdf/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("routes") and len(data["routes"]) > 0:
+                geometry = data["routes"][0]["geometry"]
+                return [tuple(p) for p in geometry["coordinates"]]
+    except Exception as e:
+        print(f"Error fetching directions: {e}")
+        return None
+    return None
+
+
+def _fetch_static_map_image(points: list[tuple[float, float]], width: int, height: int, token: str | None = None) -> bytes | None:
+    # Prioridad: Token pasado explícitamente > Token en settings
+    api_token = token or settings.VITE_MAPBOX_TOKEN
+    if not api_token:
+        # Fallback de último recurso si no hay token
+        return None
+    
+    # 1. Intentar obtener ruta detallada (curvas reales) si son pocos puntos (waypoints)
+    path_points = points
+    if 2 <= len(points) <= 25:
+        detailed = _fetch_directions_geometry(points, api_token)
+        if detailed:
+            path_points = detailed
+
+    # 2. Simplificación para URL de Static Image (limite de chars)
+    # Mapbox soporta bastante, pero >100-200 puntos puede fallar o cortar.
+    # Si tenemos path detallado, muestreamos.
+    limit_points = 100
+    if len(path_points) > limit_points:
+        step = len(path_points) // limit_points
+        simplified = path_points[::step]
+        if simplified[-1] != path_points[-1]:
+            simplified.append(path_points[-1])
+        path_points = simplified
+        
+    polyline = _encode_polyline(path_points)
+    # path-{stroke_width}+{stroke_color}-{stroke_opacity}({polyline})
+    path_param = f"path-4+7c3aed-0.9({urllib.parse.quote(polyline)})"
+    
+    # Añadir marcadores de inicio y fin si caben en la URL?
+    # Mejor no complicar, el path ya se ve bien.
+    
+    url = f"https://api.mapbox.com/styles/v1/mapbox/outdoors-v12/static/{path_param}/auto/{width}x{height}@2x?access_token={api_token}&padding=40"
+    
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "rex-app-pdf/1.0"}
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return resp.read()
+    except Exception as e:
+        print(f"Error fetching static map: {e}")
+        return None
+
+
+def _draw_route_map(c: canvas.Canvas, points: list[tuple[float, float]], x: float, y: float, width: float, height: float, token: str | None = None):
     c.saveState()
+    
+    # Intentar obtener imagen
+    img_data = _fetch_static_map_image(points, int(width), int(height), token=token)
+    
+    if img_data:
+        try:
+            img = ImageReader(io.BytesIO(img_data))
+            c.drawImage(img, x, y, width=width, height=height, mask='auto', preserveAspectRatio=True, anchor='c')
+            
+            # Marco simple
+            c.setStrokeColor(colors.HexColor("#e5e7eb"))
+            c.setLineWidth(1)
+            c.rect(x, y, width, height, stroke=1, fill=0)
+            
+            c.restoreState()
+            return
+        except Exception:
+            pass
+
+    # Fallback vectorial
     c.setStrokeColor(colors.HexColor("#d7ddf2"))
     c.setFillColor(colors.HexColor("#f5f7ff"))
     c.roundRect(x, y, width, height, 12, stroke=1, fill=1)
-    c.setFillColor(colors.HexColor("#e0e7ff"))
-    c.roundRect(x + 6, y + 6, width - 12, height - 12, 10, stroke=0, fill=1)
-
+    
     if not points:
         c.setFillColor(colors.HexColor("#6b7280"))
         c.setFont("Helvetica", 10)
-        c.drawString(x + 12, y + height / 2, "Sin puntos para mostrar")
+        c.drawCentredString(x + width / 2, y + height / 2, "Sin datos de ruta")
         c.restoreState()
         return
 
@@ -246,39 +371,50 @@ def _draw_route_map(c: canvas.Canvas, points: list[tuple[float, float]], x: floa
     span_lng = max(max_lng - min_lng, 1e-6)
     span_lat = max(max_lat - min_lat, 1e-6)
 
-    padding = 10
+    padding = 20
     usable_w = max(width - padding * 2, 1)
     usable_h = max(height - padding * 2, 1)
+    
+    scale_x = usable_w / span_lng
+    scale_y = usable_h / span_lat
+    scale = min(scale_x, scale_y)
+    
+    content_w = span_lng * scale
+    content_h = span_lat * scale
+    offset_x = (usable_w - content_w) / 2
+    offset_y = (usable_h - content_h) / 2
 
     def project(lng: float, lat: float) -> tuple[float, float]:
-        px = x + padding + ((lng - min_lng) / span_lng) * usable_w
-        py = y + padding + ((lat - min_lat) / span_lat) * usable_h
+        px = x + padding + offset_x + (lng - min_lng) * scale
+        py = y + padding + offset_y + (lat - min_lat) * scale
         return px, py
 
     projected = [project(lng, lat) for lng, lat in points]
 
     c.setStrokeColor(colors.HexColor("#7c3aed"))
     c.setLineWidth(2.4)
-    for idx in range(1, len(projected)):
-        x1, y1 = projected[idx - 1]
-        x2, y2 = projected[idx]
-        c.line(x1, y1, x2, y2)
+    c.setLineJoin(1)
+    c.setLineCap(1)
+    
+    path = c.beginPath()
+    if projected:
+        path.moveTo(projected[0][0], projected[0][1])
+        for px, py in projected[1:]:
+            path.lineTo(px, py)
+    c.drawPath(path, stroke=1, fill=0)
 
     if projected:
         start_x, start_y = projected[0]
         end_x, end_y = projected[-1]
         c.setFillColor(colors.HexColor("#22c55e"))
-        c.circle(start_x, start_y, 3, fill=1, stroke=0)
-        c.setFillColor(colors.HexColor("#7c3aed"))
-        c.circle(end_x, end_y, 3.6, fill=1, stroke=0)
-        for px, py in projected:
-            c.setFillColor(colors.HexColor("#111827"))
-            c.circle(px, py, 1.6, fill=1, stroke=0)
+        c.circle(start_x, start_y, 4, fill=1, stroke=0)
+        c.setFillColor(colors.HexColor("#ef4444"))
+        c.circle(end_x, end_y, 4, fill=1, stroke=0)
 
     c.restoreState()
 
 
-def _build_route_pdf(route: dict) -> bytes:
+def _build_route_pdf(route: dict, token: str | None = None) -> bytes:
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
@@ -397,7 +533,7 @@ def _build_route_pdf(route: dict) -> bytes:
         map_height = 8 * cm
         y = _draw_section_title(c, "Mapa de la ruta", margin, y, color=brand_primary)
         y -= 4
-        _draw_route_map(c, points, margin, y - map_height, width - 2 * margin, map_height)
+        _draw_route_map(c, points, margin, y - map_height, width - 2 * margin, map_height, token=token)
         y -= map_height + 10
         start_addr = address_map.get(0)
         end_addr = address_map.get(len(points) - 1)
@@ -659,6 +795,7 @@ async def get_route(
 @router.get("/{route_id}/pdf")
 async def generate_route_pdf(
     route_id: str,
+    mapbox_token: str | None = Query(None),
     current_user: dict | None = Depends(get_current_user_optional),
 ):
     """
@@ -677,7 +814,7 @@ async def generate_route_pdf(
         # Si no se pueden obtener las stats, continuamos con los datos disponibles
         pass
 
-    pdf_bytes = _build_route_pdf(route)
+    pdf_bytes = _build_route_pdf(route, token=mapbox_token)
     filename = f"{_slugify_filename(route.get('name') or 'ruta')}-rex.pdf"
     headers = {"Content-Disposition": f'attachment; filename=\"{filename}\"'}
     return StreamingResponse(io.BytesIO(pdf_bytes), media_type="application/pdf", headers=headers)

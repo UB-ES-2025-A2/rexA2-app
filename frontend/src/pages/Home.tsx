@@ -337,7 +337,7 @@ export default function Home() {
   const [filterByBounds, setFilterByBounds] = useState(true);
 
 
-  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
 
   const [searchMode, setSearchMode] = useState<"routes" | "users">("routes");
@@ -654,20 +654,9 @@ export default function Home() {
       setRoutesLoading(true);
       setRoutesError(null);
       try {
-        let favSet = new Set<string>();
         let completedSet = new Set<string>();
         if (token) {
-          try {
-            const favRes = await fetch(`${API}/favorites/me`, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (favRes.ok) {
-              const favData: { route_ids: string[] } = await favRes.json();
-              favSet = new Set((favData?.route_ids ?? []).map(String));
-            }
-          } catch (e) {
-            console.warn("Error cargando favoritos:", e);
-          }
+
           try {
             const completedIds = await getMyCompletedRouteIds();
             completedSet = new Set((completedIds ?? []).map(String));
@@ -675,7 +664,7 @@ export default function Home() {
             console.warn("Error cargando completadas:", e);
           }
         }
-        setFavoriteIds(favSet);
+
         setCompletedIds(completedSet);
 
         const response = await fetch(`${API}/routes`);
@@ -1445,7 +1434,6 @@ export default function Home() {
                                   difficulty={r.difficulty ?? null}
                                   ratingAverage={r.rating ?? null}
                                   ratingCount={r.rating_count ?? null}
-                                  initialSaved={favoriteIds.has(String(r.id))}
                                   isCompleted={normalizeCompletedFlag(
                                     (r as any).isCompleted ?? (r as any).completed ?? false
                                   )}

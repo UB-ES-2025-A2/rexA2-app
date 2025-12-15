@@ -74,7 +74,7 @@ export default function CreatedRoutesAchievements({ userId, refreshToken }: Prop
               ? Math.min(100, Math.round((ach.current_value / ach.threshold_value) * 100))
               : 0;
           const locked = !ach.is_unlocked;
-          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category });
+          const Icon = resolveAchievementIcon({ code: ach.code, category: ach.category ?? undefined });
           return (
             <article
               key={ach.code}
