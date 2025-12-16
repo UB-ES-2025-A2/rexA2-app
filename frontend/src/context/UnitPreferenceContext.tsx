@@ -10,9 +10,10 @@ import type { ReactNode } from "react";
 import type { UnitPreference } from "../utils/formatDistance";
 import { formatDistance as formatDistanceUtil } from "../utils/formatDistance";
 import { useAuth } from "./AuthContext";
+import { getApiBaseUrl } from "../services/api";
 
 const STORAGE_KEY = "rex_unit_preference";
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 
 type UnitPreferenceContextValue = {
     unit: UnitPreference;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import type { User } from "../services/auth";
+import { getApiBaseUrl } from "../services/api";
 
 type AuthState = {
   user: User | null;
@@ -11,7 +12,7 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {

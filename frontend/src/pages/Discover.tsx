@@ -8,6 +8,8 @@ import Modal from "../components/Modal";
 import AuthCard from "../components/AuthCard";
 import { translateErrorMessage } from "../utils/errorTranslator";
 
+import { getApiBaseUrl } from "../services/api";
+
 type DiscoverRoute = {
   id: string;
   name: string;
@@ -29,10 +31,7 @@ type DiscoverRoute = {
 type CountryBlock = { country: string; routes: DiscoverRoute[] };
 type ThemeBlock = { theme: string; routes: DiscoverRoute[] };
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "")
-).replace(/\/$/, "");
+const API_BASE = getApiBaseUrl().replace(/\/$/, "");
 
 const CATEGORY_LABELS: Record<string, string> = {
   gastronomia: "Gastronomía",

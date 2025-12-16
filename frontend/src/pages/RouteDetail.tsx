@@ -5,6 +5,8 @@ import "../styles/RouteDetail.css";
 import { subscribeToRatingUpdates } from "../services/ratingEvents";
 import { useAlert } from "../context/AlertContext";
 
+import { getApiBaseUrl } from "../services/api";
+
 type ApiPoint = { latitude?: number; longitude?: number; lat?: number; lng?: number } | [number, number];
 type ApiRoute = {
   id?: string;
@@ -28,10 +30,7 @@ type ApiRoute = {
   completed_at?: string;
 };
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "")
-).replace(/\/$/, "");
+const API_BASE = getApiBaseUrl().replace(/\/$/, "");
 
 const normalizeCompletedFlag = (value: any, fallback = false) => {
   if (value === undefined || value === null) return fallback;
@@ -103,10 +102,10 @@ export default function RouteDetail() {
       setRoute((prev) =>
         prev
           ? {
-              ...prev,
-              rating: average ?? prev.rating ?? null,
-              rating_count: count ?? prev.rating_count ?? null,
-            }
+            ...prev,
+            rating: average ?? prev.rating ?? null,
+            rating_count: count ?? prev.rating_count ?? null,
+          }
           : prev
       );
     });
@@ -187,11 +186,11 @@ export default function RouteDetail() {
                 setRoute((prev) =>
                   prev
                     ? {
-                        ...prev,
-                        is_completed: next,
-                        completed: next,
-                        isCompleted: next,
-                      }
+                      ...prev,
+                      is_completed: next,
+                      completed: next,
+                      isCompleted: next,
+                    }
                     : prev
                 )
               }

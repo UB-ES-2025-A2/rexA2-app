@@ -4,8 +4,9 @@ import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import type { Category, Mode } from "../types";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
+import { getApiBaseUrl } from "../../services/api";
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 const PUBLIC_CATEGORIES: Category[] = [
   "gastronomia",
   "naturaleza",

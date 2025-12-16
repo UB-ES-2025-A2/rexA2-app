@@ -4,8 +4,9 @@ import type { Category } from "../types";
 import { useAlert } from "../../context/AlertContext";
 import { useAuth } from "../../context/AuthContext";
 import "../../styles/UserViewCard.css";
+import { getApiBaseUrl } from "../../services/api";
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 
 const normalizeCompletedFlag = (value: any, fallback = false) => {
   if (value === undefined || value === null) return fallback;

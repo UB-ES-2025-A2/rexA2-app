@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAlert } from '../context/AlertContext';
 import { useAuth } from '../context/AuthContext';
+import { fetchWithAuth } from '../services/api';
 
 type Props = {
   routeId: string;
@@ -15,9 +16,11 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
 
   const { showAlert } = useAlert();
   const { token } = useAuth();
-  const API = import.meta.env.VITE_API_URL as string || window.location.origin ;
 
-  const favUrl = `${API}/favorites/${routeId}`;
+
+  // fetchWithAuth internally handles the base URL (including the fix for "undefined" string)
+  // so we don't need to manually construct API base here.
+
 
   // Verificar estado de favorito al montar o cambiar routeId/token
   useEffect(() => {
@@ -30,9 +33,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
 
 
       try {
-        const res = await fetch(`${API}/users/me/routes/favorites`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await fetchWithAuth(`/users/me/routes/favorites`);
 
         if (res.ok) {
           const favRoutes = await res.json();
@@ -52,7 +53,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
     };
 
     checkFavoriteStatus();
-  }, [routeId, token, initialSaved, API]);
+  }, [routeId, token, initialSaved]);
 
   const handleSaveToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     // Prevent default isn't needed for checkbox onChange, but stopPropagation is good
@@ -76,9 +77,8 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
     setLoading(true);
 
     try {
-      const res = await fetch(favUrl, {
+      const res = await fetchWithAuth(`/favorites/${routeId}`, {
         method: next ? "POST" : "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (!res.ok) {
