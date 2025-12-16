@@ -80,8 +80,14 @@ export async function fetchWithAuth(
     headers["Content-Type"] = "application/json";
   }
 
+  const baseUrl = getApiBaseUrl();
+  const fullUrl = `${baseUrl}${path}`;
+
+  // Debug logging para diagnosticar problemas de URL
+  console.log("[fetchWithAuth] baseUrl:", baseUrl, "path:", path, "fullUrl:", fullUrl);
+
   return fetch(
-    `${getApiBaseUrl()}${path}`,
+    fullUrl,
     {
       ...options,
       headers: { ...headers, ...(options?.headers as Record<string, string>) },

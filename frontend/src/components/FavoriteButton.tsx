@@ -33,7 +33,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
 
 
       try {
-        const res = await fetchWithAuth(`/users/me/routes/favorites`);
+        const res = await fetch(`/users/me/routes/favorites`);
 
         if (res.ok) {
           const favRoutes = await res.json();
