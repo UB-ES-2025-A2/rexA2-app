@@ -15,7 +15,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
 
   const { showAlert } = useAlert();
   const { token } = useAuth();
-  const API = import.meta.env.VITE_API_URL as string;
+  const API = import.meta.env.VITE_API_URL as string || window.location.origin ;
 
   const favUrl = `${API}/favorites/${routeId}`;
 
