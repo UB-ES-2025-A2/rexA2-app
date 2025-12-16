@@ -26,6 +26,7 @@ vi.mock("../../src/context/UnitPreferenceContext", () => ({
 
 vi.mock("../../src/services/api", () => ({
   fetchWithAuth: (...args: any[]) => fetchWithAuthMock(...args),
+  getApiBaseUrl: () => "http://test-api",
 }));
 
 vi.mock("../../src/components/FavoriteButton", () => ({
@@ -94,7 +95,7 @@ describe("RouteDetailsCard - valoración de rutas", () => {
           [3, 3],
         ]}
         isPrivate={false}
-        onClose={() => {}}
+        onClose={() => { }}
       />
     );
 
@@ -161,7 +162,7 @@ describe("RouteDetailsCard - valoración de rutas", () => {
           [3, 3],
         ]}
         isPrivate={false}
-        onClose={() => {}}
+        onClose={() => { }}
         isOwnRoute
       />
     );
