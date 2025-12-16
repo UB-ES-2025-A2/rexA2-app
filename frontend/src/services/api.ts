@@ -1,10 +1,44 @@
 import axios from "axios";
 
 export const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (!envUrl || envUrl === "undefined" || envUrl === "null") {
-    return typeof window !== "undefined" ? window.location.origin : "";
+  let envUrl = import.meta.env.VITE_API_URL;
+
+  if (typeof window !== "undefined") {
+    console.log("[API-DEBUG] Raw VITE_API_URL:", envUrl, "Type:", typeof envUrl);
   }
+
+  // Handle cases where envUrl is falsy OR is a string representation of undefined/null
+  // Vite sometimes inlines "undefined" as a literal string instead of the primitive
+  if (!envUrl ||
+    (typeof envUrl === "string" &&
+      (envUrl.trim().toLowerCase() === "undefined" ||
+        envUrl.trim().toLowerCase() === "null" ||
+        envUrl.trim() === ""))) {
+    if (typeof window !== "undefined") {
+      console.log("[API-DEBUG] No valid VITE_API_URL, falling back to origin:", window.location.origin);
+      return window.location.origin;
+    }
+    return "";
+  }
+
+  // Sanitize: trim whitespace
+  envUrl = envUrl.trim();
+
+  // Sanitize: remove quotes if present (e.g. '"undefined"')
+  if ((envUrl.startsWith('"') && envUrl.endsWith('"')) || (envUrl.startsWith("'") && envUrl.endsWith("'"))) {
+    envUrl = envUrl.slice(1, -1);
+  }
+
+  // Re-check after quote removal for invalid string values
+  const lower = envUrl.toLowerCase();
+  if (lower === "undefined" || lower === "null" || lower === "") {
+    if (typeof window !== "undefined") {
+      console.log("[API-DEBUG] Detected invalid URL value after quote removal, falling back to origin:", window.location.origin);
+      return window.location.origin;
+    }
+    return "";
+  }
+
   return envUrl;
 };
 
