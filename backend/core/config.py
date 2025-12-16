@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    VITE_MAPBOX_TOKEN: str = "pk.eyJ1IjoiZ3J1cG9lc2UiLCJhIjoiY200ajJ0aXAwMDR4aTJpcHJ4Y2w0N25xYiJ9.l3C0d-13wM_fq1rpS-hX-A"
 
     CORS_ORIGINS: List[str]
 

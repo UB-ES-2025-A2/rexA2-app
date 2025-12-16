@@ -9,6 +9,7 @@ export type AchievementProgress = {
   icon?: string | null;
   rarity?: string | null;
   theme_id?: string | null;
+  category?: string | null;
 };
 
 export async function getCompletedRoutesAchievements(
@@ -32,6 +33,7 @@ export async function getCompletedRoutesAchievements(
     icon: item.icon,
     rarity: item.rarity,
     theme_id: item.theme_id,
+    category: item.category,
   }));
 }
 
@@ -56,6 +58,7 @@ export async function getCreatedRoutesAchievements(
     icon: item.icon,
     rarity: item.rarity,
     theme_id: item.theme_id,
+    category: item.category,
   }));
 }
 
@@ -78,6 +81,7 @@ export async function getThemeAchievements(userId: string): Promise<AchievementP
     icon: item.icon,
     rarity: item.rarity,
     theme_id: item.theme_id,
+    category: item.category,
   }));
 }
 

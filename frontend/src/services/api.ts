@@ -1,10 +1,49 @@
 import axios from "axios";
 
-const baseURL =
-  import.meta.env.VITE_API_URL || window.location.origin;
+export const getApiBaseUrl = () => {
+  let envUrl = import.meta.env.VITE_API_URL;
+
+  if (typeof window !== "undefined") {
+    console.log("[API-DEBUG] Raw VITE_API_URL:", envUrl, "Type:", typeof envUrl);
+  }
+
+  // Handle cases where envUrl is falsy OR is a string representation of undefined/null
+  // Vite sometimes inlines "undefined" as a literal string instead of the primitive
+  if (!envUrl ||
+    (typeof envUrl === "string" &&
+      (envUrl.trim().toLowerCase() === "undefined" ||
+        envUrl.trim().toLowerCase() === "null" ||
+        envUrl.trim() === ""))) {
+    if (typeof window !== "undefined") {
+      console.log("[API-DEBUG] No valid VITE_API_URL, falling back to origin:", window.location.origin);
+      return window.location.origin;
+    }
+    return "";
+  }
+
+  // Sanitize: trim whitespace
+  envUrl = envUrl.trim();
+
+  // Sanitize: remove quotes if present (e.g. '"undefined"')
+  if ((envUrl.startsWith('"') && envUrl.endsWith('"')) || (envUrl.startsWith("'") && envUrl.endsWith("'"))) {
+    envUrl = envUrl.slice(1, -1);
+  }
+
+  // Re-check after quote removal for invalid string values
+  const lower = envUrl.toLowerCase();
+  if (lower === "undefined" || lower === "null" || lower === "") {
+    if (typeof window !== "undefined") {
+      console.log("[API-DEBUG] Detected invalid URL value after quote removal, falling back to origin:", window.location.origin);
+      return window.location.origin;
+    }
+    return "";
+  }
+
+  return envUrl;
+};
 
 const api = axios.create({
-  baseURL,
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -41,8 +80,14 @@ export async function fetchWithAuth(
     headers["Content-Type"] = "application/json";
   }
 
+  const baseUrl = getApiBaseUrl();
+  const fullUrl = `${baseUrl}${path}`;
+
+  // Debug logging para diagnosticar problemas de URL
+  console.log("[fetchWithAuth] baseUrl:", baseUrl, "path:", path, "fullUrl:", fullUrl);
+
   return fetch(
-    `${import.meta.env.VITE_API_URL || window.location.origin}${path}`,
+    fullUrl,
     {
       ...options,
       headers: { ...headers, ...(options?.headers as Record<string, string>) },

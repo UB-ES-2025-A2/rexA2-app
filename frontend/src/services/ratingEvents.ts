@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "./api";
+
 export type RatingUpdatePayload = {
   type?: string;
   route_id: string;
@@ -5,10 +7,7 @@ export type RatingUpdatePayload = {
   count: number;
 };
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "")
-).replace(/\/$/, "");
+const API_BASE = getApiBaseUrl().replace(/\/$/, "");
 
 /**
  * Suscribe a las actualizaciones de rating vía SSE.

@@ -17,6 +17,8 @@ import CreatedRoutesAchievements from "../components/Achievements/CreatedRoutesA
 import ThemeAchievementsBlock from "../components/Achievements/ThemeAchievementsBlock";
 import DistanceAchievementsBlock from "../components/Achievements/DistanceAchievementsBlock";
 
+import { getApiBaseUrl } from "../services/api";
+
 type TabKey = "favorites" | "created" | "followers" | "following";
 type Units = "km" | "mi";
 type ThemePref = ThemePreference;
@@ -88,10 +90,7 @@ type FavoriteRoute = {
   completedAt?: string | null;
 };
 
-const API_BASE = (
-  import.meta.env.VITE_API_URL?.trim() ||
-  (typeof window !== "undefined" ? window.location.origin : "")
-).replace(/\/$/, "");
+const API_BASE = getApiBaseUrl().replace(/\/$/, "");
 const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 const EMPTY_STATS: ProfileStats = {
   routes_created: 0,
@@ -1523,8 +1522,6 @@ function FavoritesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
-        initialSaved
-        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>
@@ -1670,8 +1667,6 @@ function CreatedRoutesPanel({
         ratingAverage={route.rating ?? null}
         ratingCount={route.rating_count ?? null}
         isCompleted={normalizeCompletedFlag(route.isCompleted ?? false)}
-        initialSaved={initialSavedForRoute(route.id)}
-        onSavedChange={onSavedChange}
         onClick={() => onViewRoute(route)}
       />
     </div>

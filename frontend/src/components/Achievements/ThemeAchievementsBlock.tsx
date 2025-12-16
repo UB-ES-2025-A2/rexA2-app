@@ -1,27 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { getThemeAchievements, type AchievementProgress } from "../../services/achievements";
 import { translateErrorMessage } from "../../utils/errorTranslator";
+import { resolveThemeIcon, resolveAchievementIcon } from "./achievementIcons";
 
 type Props = {
   userId?: string;
   refreshToken?: number;
 };
 
-const THEME_META: Record<
-  string,
-  {
-    label: string;
-    icon: string;
-  }
-> = {
-  naturaleza: { label: "Naturaleza", icon: "🌲" },
-  gastronomia: { label: "Gastronomía", icon: "🍲" },
-  "exploracion-urbana": { label: "Exploración urbana", icon: "🏙️" },
-  aventura: { label: "Aventura", icon: "🧗" },
-  cultura: { label: "Cultura", icon: "🏛️" },
-  deporte: { label: "Deporte", icon: "🏃" },
-  entretenimiento: { label: "Entretenimiento", icon: "🎉" },
-  otros: { label: "Otros", icon: "✨" },
+const THEME_META: Record<string, { label: string }> = {
+  naturaleza: { label: "Naturaleza" },
+  gastronomia: { label: "Gastronomia" },
+  "exploracion-urbana": { label: "Exploracion urbana" },
+  aventura: { label: "Aventura" },
+  cultura: { label: "Cultura" },
+  deporte: { label: "Deporte" },
+  entretenimiento: { label: "Entretenimiento" },
+  otros: { label: "Otros" },
 };
 
 export default function ThemeAchievementsBlock({ userId, refreshToken }: Props) {
@@ -61,9 +56,9 @@ export default function ThemeAchievementsBlock({ userId, refreshToken }: Props) 
   const grouped = useMemo(() => {
     const map: Record<string, AchievementProgress[]> = {};
     achievements.forEach((ach) => {
-      const themeId = (ach.theme_id || "otros").toLowerCase();
-      if (!map[themeId]) map[themeId] = [];
-      map[themeId].push(ach);
+      const themeKey = (ach.theme_id ?? "otros").toLowerCase();
+      if (!map[themeKey]) map[themeKey] = [];
+      map[themeKey].push(ach);
     });
     Object.values(map).forEach((list) =>
       list.sort((a, b) => (a.threshold_value || 0) - (b.threshold_value || 0))
@@ -88,14 +83,16 @@ export default function ThemeAchievementsBlock({ userId, refreshToken }: Props) 
 
       <div className="achievements-grid themes-grid">
         {Object.entries(grouped).map(([themeId, list]) => {
-          const meta = THEME_META[themeId] ?? { label: themeId, icon: "✨" };
+          const meta = THEME_META[themeId] ?? { label: themeId };
           const unlocked = list.filter((ach) => ach.is_unlocked).length;
           const total = list.length;
+          const ThemeIcon = resolveThemeIcon(themeId);
+
           return (
             <article key={themeId} className="theme-card">
               <header className="theme-card__header">
                 <div className="theme-card__icon" aria-hidden>
-                  {meta.icon}
+                  <ThemeIcon />
                 </div>
                 <div>
                   <p className="eyebrow">{meta.label}</p>
@@ -110,22 +107,24 @@ export default function ThemeAchievementsBlock({ userId, refreshToken }: Props) 
                     ach.threshold_value > 0
                       ? Math.min(100, Math.round((ach.current_value / ach.threshold_value) * 100))
                       : 0;
+                  const LevelIcon = resolveAchievementIcon({
+                    code: ach.code,
+                    category: ach.category ?? "theme",
+                    themeId: ach.theme_id ?? undefined,
+                  });
                   return (
                     <div key={ach.code} className={`theme-level ${ach.is_unlocked ? "unlocked" : "locked"}`}>
                       <div className="theme-level__top">
                         <span className="theme-level__name">{ach.name}</span>
                         <span className="theme-level__count">
-                          {ach.current_value} / {ach.threshold_value}
+                          <LevelIcon /> {ach.current_value} / {ach.threshold_value}
                         </span>
                       </div>
-                      <div className="achievement-progress__bar">
-                        <div
-                          className="achievement-progress__fill"
-                          style={{ width: `${pct}%` }}
-                          aria-hidden
-                        />
+                      <div className="theme-level__progress">
+                        <div className="achievement-progress__bar dotted">
+                          <div className="achievement-progress__fill" style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <span className="theme-level__threshold">{ach.threshold_value} rutas</span>
                     </div>
                   );
                 })}
@@ -133,12 +132,6 @@ export default function ThemeAchievementsBlock({ userId, refreshToken }: Props) 
             </article>
           );
         })}
-        {status === "loading" && achievements.length === 0 && (
-          <p className="muted">Cargando logros...</p>
-        )}
-        {status !== "loading" && achievements.length === 0 && (
-          <p className="muted">Aún no hay logros temáticos.</p>
-        )}
       </div>
     </section>
   );

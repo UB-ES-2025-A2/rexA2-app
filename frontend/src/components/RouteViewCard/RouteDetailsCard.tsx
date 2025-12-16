@@ -527,7 +527,8 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
     setDownloadingPdf(true);
     setDownloadError(null);
     try {
-      const res = await fetchWithAuth(`/routes/${routeId}/pdf`, { method: "GET" });
+      const mapboxToken = import.meta.env.VITE_MAPBOX_TOKEN || "";
+      const res = await fetchWithAuth(`/routes/${routeId}/pdf?mapbox_token=${mapboxToken}`, { method: "GET" });
 
       if (!res.ok) {
         let detail = "No se pudo generar el PDF. Inténtalo de nuevo más tarde.";
@@ -804,21 +805,21 @@ const RouteDetailsCard: React.FC<RouteDetailsCardProps> = ({
               flexWrap: "wrap",
             }}
           >
-            <div style={{ display: "flex", gap: "12px" }}>
-              <CommentButton onClick={handleCommentClick} />
-              <FavoriteButton
-                routeId={routeId}
-                initialSaved={initialSaved}
-                onSavedChange={onSavedChange}
-              />
-              <ShareButton onClick={() => setShareModalOpen(true)} />
-            </div>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: "10px", alignItems: "center", marginRight: "auto" }}>
               {canDelete && (
                 <DeleteButton
                   onClick={() => setDeleteModalOpen(true)}
                 />
               )}
+            </div>
+            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+              <FavoriteButton
+                routeId={routeId}
+                initialSaved={initialSaved}
+                onSavedChange={onSavedChange}
+              />
+              <CommentButton onClick={handleCommentClick} />
+              <ShareButton onClick={() => setShareModalOpen(true)} />
             </div>
           </div>
           {downloadError ? (

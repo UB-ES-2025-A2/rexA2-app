@@ -4,8 +4,9 @@ import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import type { Category, Mode } from "../types";
 import { useAuth } from "../../context/AuthContext";
 import { useAlert } from "../../context/AlertContext";
+import { getApiBaseUrl } from "../../services/api";
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 const PUBLIC_CATEGORIES: Category[] = [
   "gastronomia",
   "naturaleza",
@@ -44,7 +45,7 @@ export function useRouteCard({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState<Category | "">(PUBLIC_CATEGORIES[0] ?? "");
-  const [isPrivate, setIsPrivate] = useState(true);
+
   const [difficulty, setDifficulty] = useState<"" | "easy" | "medium" | "hard">("");
   const [searchPoints, setSearchPoints] = useState<Array<[number, number]>>([]);
   const [selectedCoord, setSelectedCoord] = useState<[number, number] | null>(null);
@@ -73,7 +74,7 @@ export function useRouteCard({
     if (mode !== "search") {
       try {
         geocoderInstance.current?.clear();
-      } catch {}
+      } catch { }
       geocoderInstance.current = null;
       if (geocoderRef.current) geocoderRef.current.innerHTML = "";
       setSelectedCoord(null);
@@ -99,7 +100,7 @@ export function useRouteCard({
     return () => {
       try {
         geocoder.clear();
-      } catch {}
+      } catch { }
       geocoderInstance.current = null;
       if (geocoderRef.current) geocoderRef.current.innerHTML = "";
     };
@@ -141,7 +142,7 @@ export function useRouteCard({
     clearFieldError("points");
     try {
       geocoderInstance.current?.clear();
-    } catch {}
+    } catch { }
     setSelectedCoord(null);
   };
 
@@ -154,7 +155,7 @@ export function useRouteCard({
     clearFieldError("points");
     try {
       geocoderInstance.current?.clear();
-    } catch {}
+    } catch { }
   };
 
   const changeMode = (m: Mode) => {
@@ -247,7 +248,7 @@ export function useRouteCard({
       name: name.trim(),
       description: description.trim(),
       points: formattedPoints,
-      visibility: !isPrivate,
+      visibility: true,
       category: category as Category,
       images: images.map((img) => img.url),
       difficulty,
@@ -296,7 +297,6 @@ export function useRouteCard({
       mode,
       name,
       description,
-      isPrivate,
       category,
       images,
       errors,
@@ -309,7 +309,6 @@ export function useRouteCard({
       drawPoints,
       selectedCoord,
       onChangeName,
-      onTogglePrivate: setIsPrivate,
       onChangeCategory,
       onChangeDescription,
       difficulty,
