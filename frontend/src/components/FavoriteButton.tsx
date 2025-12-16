@@ -12,7 +12,7 @@ type Props = {
 const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSavedChange }) => {
   const [saved, setSaved] = useState(initialSaved);
   const [loading, setLoading] = useState(false);
-  const [checking, setChecking] = useState(true);
+
   const { showAlert } = useAlert();
   const { token } = useAuth();
   const API = import.meta.env.VITE_API_URL as string;
@@ -24,11 +24,11 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
     const checkFavoriteStatus = async () => {
       if (!token || !routeId) {
         setSaved(initialSaved);
-        setChecking(false);
+
         return;
       }
 
-      setChecking(true);
+
       try {
         const res = await fetch(`${API}/users/me/routes/favorites`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -47,7 +47,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
         console.error("Error checking favorite:", err);
         setSaved(initialSaved);
       } finally {
-        setChecking(false);
+
       }
     };
 
@@ -58,7 +58,7 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
     // Prevent default isn't needed for checkbox onChange, but stopPropagation is good
     e.stopPropagation();
 
-    if (loading || checking) return;
+    if (loading) return;
 
     if (!routeId) {
       showAlert("No se puede guardar: id de ruta desconocido.", "error");
@@ -106,21 +106,8 @@ const FavoriteButton: React.FC<Props> = ({ routeId, initialSaved = false, onSave
     e.stopPropagation();
   };
 
-  if (checking) {
-    // Optional: Render a small loader or empty placeholder while checking
-    return (
-      <StyledWrapper>
-        <div className="con-like" style={{ opacity: 0.5 }}>
-          <div className="checkmark">
-            {/* Placeholder simple heart outline while checking */}
-            <svg xmlns="http://www.w3.org/2000/svg" className="outline" viewBox="0 0 24 24">
-              <path d="M17.5,1.917a6.4,6.4,0,0,0-5.5,3.3,6.4,6.4,0,0,0-5.5-3.3A6.8,6.8,0,0,0,0,8.967c0,4.547,4.786,9.513,8.8,12.88a4.974,4.974,0,0,0,6.4,0C19.214,18.48,24,13.514,24,8.967A6.8,6.8,0,0,0,17.5,1.917Zm-3.585,18.4a2.973,2.973,0,0,1-3.83,0C4.947,16.006,2,11.87,2,8.967a4.8,4.8,0,0,1,4.5-5.05A4.8,4.8,0,0,1,11,8.967a1,1,0,0,0,2,0,4.8,4.8,0,0,1,4.5-5.05A4.8,4.8,0,0,1,22,8.967C22,11.87,19.053,16.006,13.915,20.313Z" />
-            </svg>
-          </div>
-        </div>
-      </StyledWrapper>
-    );
-  }
+  // Removed blocking check to allow immediate interaction + initial state display
+  // if (checking) { ... }
 
   return (
     <StyledWrapper onClick={handleContainerClick}>

@@ -1,5 +1,6 @@
+# Reload trigger 2
 from fastapi import FastAPI
-from fastapi.concurrency import asynccontextmanager
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path

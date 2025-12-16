@@ -104,11 +104,29 @@ async def _count_routes_completed(user_id: str) -> int:
     return await db["user_routes_completed"].count_documents({"user_id": user_id})
 
 
+
 async def _count_favorites(user_id: str) -> int:
     db = get_db()
-    if "favorites" not in await db.list_collection_names():
+    # 1. Obtener lista de IDs de favoritos
+    doc = await db["favorites"].find_one({"_id": user_id}, {"route_ids": 1})
+    if not doc or "route_ids" not in doc or not doc["route_ids"]:
         return 0
-    return await db["favorites"].count_documents({"user_id": user_id})
+
+    raw_ids = doc["route_ids"]
+
+    # 2. Filtrar solo las que existen en la colección 'routes'
+    # Convertimos a ObjectId para la consulta
+    valid_oids = []
+    for rid in raw_ids:
+        try:
+            valid_oids.append(ObjectId(rid))
+        except Exception:
+            pass
+
+    if not valid_oids:
+        return 0
+
+    return await db["routes"].count_documents({"_id": {"$in": valid_oids}})
 
 
 async def get_user_profile_dict(user: Dict[str, Any]) -> Dict[str, Any]:
