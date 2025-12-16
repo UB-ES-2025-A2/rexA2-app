@@ -31,6 +31,7 @@ import AnimatedList from "../components/AnimatedList";
 import RouteSummaryCard from "../components/RouteSummaryCard";
 import { getMyCompletedRouteIds } from "../services/completion";
 import { translateErrorMessage } from "../utils/errorTranslator";
+import { getApiBaseUrl } from "../services/api";
 
 type RouteItem = {
   id: string;
@@ -79,7 +80,7 @@ type SelectedUser = {
 
 
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 
 const DEFAULT_CENTER: [number, number] = [2.1734, 41.3851];
 const DEFAULT_ZOOM = 11;

@@ -1,10 +1,15 @@
 import axios from "axios";
 
-const baseURL =
-  import.meta.env.VITE_API_URL || window.location.origin;
+export const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (!envUrl || envUrl === "undefined" || envUrl === "null") {
+    return typeof window !== "undefined" ? window.location.origin : "";
+  }
+  return envUrl;
+};
 
 const api = axios.create({
-  baseURL,
+  baseURL: getApiBaseUrl(),
   headers: {
     "Content-Type": "application/json",
   },
@@ -42,7 +47,7 @@ export async function fetchWithAuth(
   }
 
   return fetch(
-    `${import.meta.env.VITE_API_URL || window.location.origin}${path}`,
+    `${getApiBaseUrl()}${path}`,
     {
       ...options,
       headers: { ...headers, ...(options?.headers as Record<string, string>) },

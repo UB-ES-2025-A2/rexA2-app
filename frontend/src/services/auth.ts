@@ -3,7 +3,10 @@ import { translateErrorMessage } from "../utils/errorTranslator";
 import type { ThemePreference } from "../context/ThemeContext";
 
 
-const API = import.meta.env.VITE_API_URL || "";
+import { getApiBaseUrl } from "./api";
+
+
+const API = getApiBaseUrl();
 
 export type User = {
   id?: string;

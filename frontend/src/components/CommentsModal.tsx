@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useAlert } from "../context/AlertContext";
 import "../styles/Comments.css";
+import { getApiBaseUrl } from "../services/api";
 
 type Props = {
   open: boolean;
@@ -24,7 +25,7 @@ type CommentThread = CommentReply & {
   replies: CommentReply[];
 };
 
-const API = import.meta.env.VITE_API_URL || window.location.origin;
+const API = getApiBaseUrl();
 
 const CommentsModal: React.FC<Props> = ({
   open,
@@ -73,7 +74,7 @@ const CommentsModal: React.FC<Props> = ({
             const dateB = new Date(b.created_at).getTime();
             return dateB - dateA; // Descendente: más reciente primero
           });
-          
+
           // También ordenar las respuestas dentro de cada comentario
           sortedData.forEach(comment => {
             if (comment.replies && comment.replies.length > 0) {
@@ -84,7 +85,7 @@ const CommentsModal: React.FC<Props> = ({
               });
             }
           });
-          
+
           setComments(sortedData);
         }
       } catch (err) {
@@ -168,9 +169,8 @@ const CommentsModal: React.FC<Props> = ({
 
   const content = (
     <div
-      className={`comments-modal-content ${
-        isPanel ? "comments-modal-content--panel" : ""
-      }`}
+      className={`comments-modal-content ${isPanel ? "comments-modal-content--panel" : ""
+        }`}
       onClick={(e) => e.stopPropagation()}
     >
       <div className="comments-modal-header">

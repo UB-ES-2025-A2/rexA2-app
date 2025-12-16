@@ -8,6 +8,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { useAuth } from "./AuthContext";
+import { getApiBaseUrl } from "../services/api";
 
 export type ThemePreference = "light" | "dark" | "system";
 
@@ -19,7 +20,7 @@ type ThemeContextValue = {
 };
 
 const STORAGE_KEY = "rex_theme_preference";
-const API = (import.meta.env.VITE_API_URL || window.location.origin).replace(/\/$/, "");
+const API = getApiBaseUrl().replace(/\/$/, "");
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
